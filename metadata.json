@@ -1,0 +1,6 @@
+{
+  "name": "Digital Khata - Warsha Aluminium Workshop Management",
+  "description": "Digital Khata workshop management app for Warsha Aluminium with customer ledgers, sq.ft order billing, stock, staff, expenses, reports, Cloud Sync, daily backup, and KYC.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

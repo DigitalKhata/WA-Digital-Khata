@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isNonEmptyString(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalNumber(data, field) {
+      return !(field in data) || (data[field] is int || data[field] is float);
+    }
+
+    function isOptionalBool(data, field) {
+      return !(field in data) || (data[field] is bool);
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'name', 'updatedAt'])
+        && data.keys().hasOnly([
+          'uid', 'name', 'identifier', 'email', 'mobile', 'authType',
+          'pinEnabled', 'pinHash', 'lastSyncAt', 'lastBackupAt',
+          'createdAt', 'updatedAt'
+        ])
+        && data.uid == userId
+        && isNonEmptyString(data.name, 120)
+        && (data.updatedAt is int || data.updatedAt is float) && data.updatedAt > 0
+        && isOptionalString(data, 'identifier', 160)
+        && isOptionalString(data, 'email', 160)
+        && isOptionalString(data, 'mobile', 40)
+        && (!( 'authType' in data ) || data.authType in ['email', 'mobile'])
+        && isOptionalBool(data, 'pinEnabled')
+        && isOptionalString(data, 'pinHash', 128)
+        && isOptionalNumber(data, 'lastSyncAt')
+        && isOptionalNumber(data, 'lastBackupAt')
+        && isOptionalNumber(data, 'createdAt');
+    }
+
+    function isValidVaultDoc(data, userId, docId) {
+      return docId in ['core', 'ledger', 'operations', 'kyc']
+        && data.keys().hasAll(['uid', 'docType', 'payloadJson', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'docType', 'payloadJson', 'updatedAt'])
+        && data.uid == userId
+        && data.docType == docId
+        && data.payloadJson is string
+        && data.payloadJson.size() >= 2
+        && data.payloadJson.size() <= 900000
+        && (data.updatedAt is int || data.updatedAt is float) && data.updatedAt > 0;
+    }
+
+    function isValidBackupDoc(data, userId, backupId) {
+      return isNonEmptyString(backupId, 64)
+        && data.keys().hasAll(['uid', 'id', 'kind', 'dateKey', 'payloadJson', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'id', 'kind', 'dateKey', 'label', 'payloadJson', 'createdAt'])
+        && data.uid == userId
+        && data.id == backupId
+        && data.kind in ['daily', 'manual']
+        && data.dateKey is string
+        && data.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && isOptionalString(data, 'label', 120)
+        && data.payloadJson is string
+        && data.payloadJson.size() >= 2
+        && data.payloadJson.size() <= 900000
+        && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidUserProfile(request.resource.data, userId);
+      allow update: if isOwner(userId)
+        && isValidUserProfile(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isOwner(userId);
+
+      match /vault/{docId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidVaultDoc(request.resource.data, userId, docId);
+        allow update: if isOwner(userId)
+          && isValidVaultDoc(request.resource.data, userId, docId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.docType == resource.data.docType;
+        allow delete: if isOwner(userId);
+      }
+
+      match /backups/{backupId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidBackupDoc(request.resource.data, userId, backupId);
+        allow update: if isOwner(userId)
+          && isValidBackupDoc(request.resource.data, userId, backupId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.id == resource.data.id;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

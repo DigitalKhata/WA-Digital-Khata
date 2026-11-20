@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Workshop owner account profile, sync metadata, and security preferences stored per Firebase UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID matching document ID." },
+        "name": { "type": "string", "description": "Workshop owner display name." },
+        "identifier": { "type": "string", "description": "Email address or normalized mobile number." },
+        "email": { "type": "string", "description": "Account email address if provided." },
+        "mobile": { "type": "string", "description": "Account mobile number if provided." },
+        "authType": { "type": "string", "description": "Sign-up method: email or mobile." },
+        "pinEnabled": { "type": "boolean", "description": "Whether 4-digit PIN lock is active." },
+        "pinHash": { "type": "string", "description": "SHA-256 hex digest of 4-digit app PIN." },
+        "lastSyncAt": { "type": "number", "description": "Epoch ms of last cloud sync." },
+        "lastBackupAt": { "type": "number", "description": "Epoch ms of last cloud backup snapshot." },
+        "createdAt": { "type": "number", "description": "Epoch ms of account creation." },
+        "updatedAt": { "type": "number", "description": "Epoch ms of last update." }
+      },
+      "required": ["uid", "name", "updatedAt"]
+    },
+    "UserVaultDoc": {
+      "title": "UserVaultDoc",
+      "description": "Segmented workshop data shard under users/{userId}/vault/{docId} (core, ledger, operations, kyc) to stay well under Firestore 1MB doc limit.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "docType": { "type": "string", "description": "Shard type: core, ledger, operations, or kyc." },
+        "payloadJson": { "type": "string", "description": "Serialized JSON payload for the shard." },
+        "updatedAt": { "type": "number", "description": "Epoch ms of last write." }
+      },
+      "required": ["uid", "docType", "payloadJson", "updatedAt"]
+    },
+    "UserBackupSnapshot": {
+      "title": "UserBackupSnapshot",
+      "description": "Daily automatic or manual full cloud backup snapshot under users/{userId}/backups/{backupId}.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "id": { "type": "string", "description": "Backup document ID (e.g. daily_YYYY-MM-DD)." },
+        "kind": { "type": "string", "description": "Backup kind: daily or manual." },
+        "dateKey": { "type": "string", "description": "ISO date YYYY-MM-DD." },
+        "label": { "type": "string", "description": "Human-readable date and time label." },
+        "payloadJson": { "type": "string", "description": "Serialized JSON snapshot of workshop data." },
+        "createdAt": { "type": "number", "description": "Epoch ms when snapshot was recorded." }
+      },
+      "required": ["uid", "id", "kind", "dateKey", "payloadJson", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["password"]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "schema": { "$ref": "#/entities/UserProfile" },
+        "description": "Owner profile and security metadata scoped strictly to userId == request.auth.uid."
+      },
+      {
+        "path": "/users/{userId}/vault/{docId}",
+        "schema": { "$ref": "#/entities/UserVaultDoc" },
+        "description": "Domain-sharded workshop data (core, ledger, operations, kyc) scoped to userId == request.auth.uid."
+      },
+      {
+        "path": "/users/{userId}/backups/{backupId}",
+        "schema": { "$ref": "#/entities/UserBackupSnapshot" },
+        "description": "Auto daily and manual cloud backup snapshots scoped to userId == request.auth.uid."
+      }
+    ]
+  }
+}
