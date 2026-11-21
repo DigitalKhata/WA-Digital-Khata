@@ -13,6 +13,15 @@
         "authType": { "type": "string", "description": "Sign-up method: email or mobile." },
         "pinEnabled": { "type": "boolean", "description": "Whether 4-digit PIN lock is active." },
         "pinHash": { "type": "string", "description": "SHA-256 hex digest of 4-digit app PIN." },
+        "cnicHash": { "type": "string", "description": "SHA-256 hex digest of normalized 13-digit CNIC." },
+        "cnicLast4": { "type": "string", "description": "Last 4 digits of CNIC for Admin display." },
+        "mobileHash": { "type": "string", "description": "SHA-256 hex digest of normalized mobile number." },
+        "kycStatus": { "type": "string", "enum": ["none", "verifying", "approved", "duplicate"], "description": "Authoritative KYC verification state." },
+        "kycDuplicateOf": { "type": "string", "description": "Original UID if flagged as duplicate CNIC." },
+        "blocked": { "type": "boolean", "description": "Admin block status." },
+        "totalKhataAmount": { "type": "number", "description": "Cached workshop total bill amount for Admin summary." },
+        "totalPendingAmount": { "type": "number", "description": "Cached total pending balance for Admin summary." },
+        "customerCount": { "type": "number", "description": "Cached customer count for Admin summary." },
         "lastSyncAt": { "type": "number", "description": "Epoch ms of last cloud sync." },
         "lastBackupAt": { "type": "number", "description": "Epoch ms of last cloud backup snapshot." },
         "createdAt": { "type": "number", "description": "Epoch ms of account creation." },
@@ -57,6 +66,17 @@
         "createdAt": { "type": "number", "description": "Epoch ms when CNIC was registered." }
       },
       "required": ["cnicHash", "uid", "createdAt"]
+    },
+    "MobileClaim": {
+      "title": "MobileClaim",
+      "description": "Global SHA-256 hashed normalized mobile uniqueness lock ensuring strictly 1 Mobile = 1 Account.",
+      "type": "object",
+      "properties": {
+        "mobileHash": { "type": "string", "pattern": "^[a-f0-9]{64}$", "minLength": 64, "maxLength": 64, "description": "SHA-256 hex digest of normalized mobile digits." },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Owner Firebase Auth UID." },
+        "createdAt": { "type": "number", "description": "Epoch ms when mobile was registered." }
+      },
+      "required": ["mobileHash", "uid", "createdAt"]
     }
   },
   "auth": {
@@ -67,22 +87,27 @@
       {
         "path": "/users/{userId}",
         "schema": { "$ref": "#/entities/UserProfile" },
-        "description": "Owner profile and security metadata scoped strictly to userId == request.auth.uid."
+        "description": "Owner profile and security metadata scoped to userId == request.auth.uid or Admin."
       },
       {
         "path": "/users/{userId}/vault/{docId}",
         "schema": { "$ref": "#/entities/UserVaultDoc" },
-        "description": "Domain-sharded workshop data (core, ledger, operations, kyc) scoped to userId == request.auth.uid."
+        "description": "Domain-sharded workshop data (core, ledger, operations, kyc) scoped to userId == request.auth.uid or Admin read."
       },
       {
         "path": "/users/{userId}/backups/{backupId}",
         "schema": { "$ref": "#/entities/UserBackupSnapshot" },
-        "description": "Auto daily and manual cloud backup snapshots scoped to userId == request.auth.uid."
+        "description": "Auto daily and manual cloud backup snapshots scoped to userId == request.auth.uid or Admin read."
       },
       {
         "path": "/cnicRegistry/{cnicHash}",
         "schema": { "$ref": "#/entities/CnicClaim" },
-        "description": "Immutable single-account CNIC hash claim enforcing 1 CNIC = 1 Account."
+        "description": "Single-account CNIC hash claim enforcing 1 CNIC = 1 Account."
+      },
+      {
+        "path": "/mobileRegistry/{mobileHash}",
+        "schema": { "$ref": "#/entities/MobileClaim" },
+        "description": "Single-account mobile hash claim enforcing 1 Mobile = 1 Account."
       }
     ]
   }

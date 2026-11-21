@@ -11,7 +11,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
   <script type="module" src="/src/main.tsx"></script>
   <style>
     :root, html[data-theme="dark-blue"] {
@@ -25,24 +25,24 @@
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
-      --nav-bg: rgba(6, 13, 32, 0.92);
+      --nav-bg: rgba(15, 25, 55, 0.55);
       --accent: #38bdf8;
       --accent-soft: rgba(56, 189, 248, 0.14);
     }
     html[data-theme="light"] {
-      --bg-canvas: #eef2f7;
-      --bg-glow-1: rgba(37, 99, 235, 0.10);
-      --bg-glow-2: rgba(14, 165, 233, 0.08);
-      --glass-bg: rgba(255, 255, 255, 0.92);
-      --glass-bg-strong: rgba(255, 255, 255, 0.98);
-      --glass-border: rgba(15, 23, 42, 0.10);
-      --input-bg: rgba(241, 245, 249, 0.95);
-      --text-primary: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #64748b;
-      --nav-bg: rgba(255, 255, 255, 0.94);
-      --accent: #2563eb;
-      --accent-soft: rgba(37, 99, 235, 0.10);
+      --bg-canvas: #FFFFFF;
+      --bg-glow-1: rgba(37, 99, 235, 0.06);
+      --bg-glow-2: rgba(14, 165, 233, 0.06);
+      --glass-bg: #EAF4FF;
+      --glass-bg-strong: #DDEFFF;
+      --glass-border: #BFD9FF;
+      --input-bg: #FFFFFF;
+      --text-primary: #0F2340;
+      --text-secondary: #33507A;
+      --text-muted: #5B7399;
+      --nav-bg: rgba(234, 244, 255, 0.85);
+      --accent: #2563EB;
+      --accent-soft: rgba(37, 99, 235, 0.12);
     }
     html[data-theme="green"] {
       --bg-canvas: #031510;
@@ -55,7 +55,7 @@
       --text-primary: #f0fdf4;
       --text-secondary: #86efac;
       --text-muted: #4ade80;
-      --nav-bg: rgba(4, 23, 17, 0.92);
+      --nav-bg: rgba(4, 23, 17, 0.85);
       --accent: #34d399;
       --accent-soft: rgba(52, 211, 153, 0.14);
     }
@@ -70,7 +70,7 @@
       --text-primary: #f8fafc;
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
-      --nav-bg: rgba(10, 10, 13, 0.94);
+      --nav-bg: rgba(14, 15, 20, 0.85);
       --accent: #60a5fa;
       --accent-soft: rgba(96, 165, 250, 0.14);
     }
@@ -80,34 +80,43 @@
       margin: 0;
       min-height: 100vh;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-      background-color: #e5e7eb;
+      background-color: var(--bg-canvas);
       color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
     }
-    @media (max-width: 430px) {
-      html, body {
-        background-color: var(--bg-canvas);
-      }
-    }
     .app-shell-frame {
       width: 100%;
-      max-width: 430px;
+      max-width: 100%;
       margin: 0 auto;
       min-height: 100vh;
       background-color: var(--bg-canvas);
       background-image:
         radial-gradient(65% 45% at 15% 0%, var(--bg-glow-1), transparent 70%),
         radial-gradient(55% 40% at 90% 18%, var(--bg-glow-2), transparent 70%);
-      background-attachment: local;
+      background-attachment: fixed;
       position: relative;
       overflow-x: hidden;
-      box-shadow: 0 24px 60px -15px rgba(15, 23, 42, 0.45);
     }
-    @media (max-width: 430px) {
+    @media (min-width: 640px) {
       .app-shell-frame {
-        box-shadow: none;
+        max-width: 760px;
       }
+    }
+    @media (min-width: 1024px) {
+      .app-shell-frame {
+        max-width: 1120px;
+      }
+    }
+    @media (min-width: 1400px) {
+      .app-shell-frame {
+        max-width: 1320px;
+      }
+    }
+    .auth-card-container {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
     }
     .tabular-nums {
       font-variant-numeric: tabular-nums;
@@ -139,16 +148,15 @@
     .glass-input::placeholder { color: var(--text-muted); }
     .text-sec { color: var(--text-secondary); }
     .text-mut { color: var(--text-muted); }
-    .nav-bar {
-      background: var(--nav-bg);
-      border-top: 1px solid var(--glass-border);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
     .blue-hero-card {
       background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 52%, #0f172a 100%);
       border: 1px solid rgba(147, 197, 253, 0.25);
       box-shadow: 0 18px 45px -16px rgba(29, 78, 216, 0.55);
+    }
+    html[data-theme="light"] .blue-hero-card {
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 55%, #1E40AF 100%);
+      border: 1px solid #93C5FD;
+      box-shadow: 0 16px 36px -14px rgba(37, 99, 235, 0.35);
     }
     .blue-inner-card {
       background: rgba(255, 255, 255, 0.11);
@@ -161,7 +169,141 @@
       box-shadow: 0 10px 25px -8px rgba(6, 182, 212, 0.45);
       transition: transform 150ms ease, opacity 150ms ease;
     }
+    html[data-theme="light"] .btn-primary-grad {
+      background: linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%);
+      box-shadow: 0 10px 22px -8px rgba(37, 99, 235, 0.42);
+    }
     .btn-primary-grad:active { transform: scale(0.985); }
+
+    /* Light Theme (White + Light Blue Contrast) text & surface contrast overrides */
+    html[data-theme="light"] body { background-color: #FFFFFF; color: #0F2340; }
+    html[data-theme="light"] .glass-card { box-shadow: 0 8px 24px -10px rgba(37, 99, 235, 0.14); }
+    html[data-theme="light"] .glass-card .text-white,
+    html[data-theme="light"] .glass-strong .text-white { color: #0F2340; }
+    html[data-theme="light"] .btn-primary-grad.text-white,
+    html[data-theme="light"] .btn-primary-grad .text-white,
+    html[data-theme="light"] .bg-emerald-600.text-white,
+    html[data-theme="light"] .bg-blue-600.text-white,
+    html[data-theme="light"] .bg-rose-500.text-white,
+    html[data-theme="light"] .bg-rose-600.text-white,
+    html[data-theme="light"] .blue-hero-card .text-white { color: #FFFFFF !important; }
+    html[data-theme="light"] .text-cyan-300,
+    html[data-theme="light"] .text-cyan-400,
+    html[data-theme="light"] .text-cyan-200 { color: #1D4ED8; }
+    html[data-theme="light"] .text-emerald-300,
+    html[data-theme="light"] .text-emerald-400 { color: #047857; }
+    html[data-theme="light"] .text-amber-300,
+    html[data-theme="light"] .text-amber-400 { color: #B45309; }
+    html[data-theme="light"] .text-rose-300,
+    html[data-theme="light"] .text-rose-400 { color: #BE123C; }
+    html[data-theme="light"] .blue-hero-card .text-emerald-300 { color: #6EE7B7; }
+    html[data-theme="light"] .blue-hero-card .text-amber-300 { color: #FDE047; }
+    html[data-theme="light"] .blue-hero-card .text-cyan-300 { color: #BAE6FD; }
+    html[data-theme="light"] .border-white\/10,
+    html[data-theme="light"] .border-white\/15 { border-color: #BFD9FF; }
+    html[data-theme="light"] .divide-white\/10 > :not([hidden]) ~ :not([hidden]) { border-color: #BFD9FF; }
+    html[data-theme="light"] .bg-white\/5 { background-color: #DDEFFF; }
+    html[data-theme="light"] .bg-white\/10 { background-color: rgba(37, 99, 235, 0.12); }
+
+    /* Modern Glass Pill Navigation Bar (ALWAYS Fixed at Bottom on ALL Devices) */
+    .pill-navbar-wrap {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 20px);
+      max-width: 820px;
+      z-index: 999;
+    }
+    .pill-navbar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 0.5px solid #ccc;
+      border-radius: 60px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    }
+    .pill-navbar::-webkit-scrollbar {
+      display: none;
+    }
+    html[data-theme="light"] .pill-navbar {
+      background: rgba(234, 244, 255, 0.88);
+      border: 0.5px solid #93C5FD;
+      box-shadow: 0 15px 35px rgba(37, 99, 235, 0.24);
+    }
+    .pill-active-slider {
+      position: absolute;
+      top: 10px;
+      bottom: 10px;
+      left: 0;
+      border-radius: 40px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.45), rgba(56, 189, 248, 0.34));
+      border: 1px solid rgba(103, 232, 249, 0.72);
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.42);
+      transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+      z-index: 0;
+    }
+    html[data-theme="light"] .pill-active-slider {
+      background: #2563EB;
+      border-color: #1D4ED8;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+    }
+    .pill-nav-btn {
+      position: relative;
+      z-index: 1;
+      flex: 1 0 auto;
+      min-width: 68px;
+      height: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      border-radius: 40px;
+      cursor: pointer;
+      color: rgba(226, 232, 240, 0.72);
+      transition: color 0.25s ease, transform 0.2s ease, text-shadow 0.25s ease, box-shadow 0.25s ease;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .pill-nav-btn {
+        flex-direction: row;
+        gap: 6px;
+        height: 40px;
+        padding: 0 14px;
+      }
+    }
+    .pill-nav-btn:hover {
+      color: #a5f3fc;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.65);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.16);
+    }
+    html[data-theme="light"] .pill-nav-btn {
+      color: #33507A;
+    }
+    html[data-theme="light"] .pill-nav-btn:hover {
+      color: #1D4ED8;
+      text-shadow: none;
+    }
+    .pill-nav-btn.active {
+      color: #ffffff;
+      font-weight: 800;
+    }
+    .pill-nav-btn.active svg {
+      filter: drop-shadow(0 0 6px rgba(103, 232, 249, 0.75));
+    }
+
     .modules-theme-section {
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
@@ -176,8 +318,9 @@
       transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
     }
     html[data-theme="light"] .module-theme-card {
-      background: rgba(255, 255, 255, 0.88);
-      box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.12);
+      background: #FFFFFF;
+      border: 1px solid #BFD9FF;
+      box-shadow: 0 6px 16px -6px rgba(37, 99, 235, 0.16);
     }
     html[data-theme="green"] .module-theme-card {
       background: rgba(6, 44, 33, 0.78);
@@ -233,15 +376,111 @@
       box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.16);
     }
     html[data-theme="light"] .otp-pin-box {
-      background: #f1f5f9;
-      color: #0f172a;
-      border-color: rgba(37, 99, 235, 0.28);
-      box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.08);
+      background: #FFFFFF;
+      color: #0F2340;
+      border-color: #BFD9FF;
+      box-shadow: inset 0 1px 4px rgba(37, 99, 235, 0.08);
     }
     html[data-theme="light"] .otp-pin-box:focus {
-      background: #ffffff;
-      border-color: #2563eb;
+      background: #FFFFFF;
+      border-color: #2563EB;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.24);
+    }
+    .login-logo-glow {
+      width: 95px;
+      height: 95px;
+      border-radius: 9999px;
+      overflow: hidden;
+      background: #071330;
+      border: 1.5px solid rgba(212, 175, 55, 0.55);
+      box-shadow: none;
+      filter: none;
+      animation: none;
+    }
+    .login-title-font {
+      font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 1.75rem;
+      line-height: 1.2;
+      letter-spacing: 1px;
+      color: #ffffff;
+    }
+    .login-sub-font {
+      font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      letter-spacing: 0.5px;
+      color: #e2e8f0;
+    }
+    .login-tag-font {
+      font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+      font-weight: 400;
+      font-size: 0.72rem;
+      line-height: 1.4;
+      letter-spacing: 0.3px;
+      color: #94a3b8;
+    }
+    /* Official Sign in with Google button */
+    .gsi-material-button {
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+      -webkit-appearance: none;
+      background-color: WHITE;
+      background-image: none;
+      border: 1px solid #747775;
+      border-radius: 20px;
+      box-sizing: border-box;
+      color: #1f1f1f;
+      cursor: pointer;
+      font-family: 'Roboto', arial, sans-serif;
+      font-size: 14px;
+      height: 42px;
+      letter-spacing: 0.25px;
+      outline: none;
+      overflow: hidden;
+      padding: 0 14px;
+      position: relative;
+      text-align: center;
+      transition: background-color .218s, border-color .218s, box-shadow .218s;
+      vertical-align: middle;
+      white-space: nowrap;
+      width: 100%;
+    }
+    .gsi-material-button .gsi-material-button-icon {
+      height: 20px;
+      margin-right: 10px;
+      min-width: 20px;
+      width: 20px;
+    }
+    .gsi-material-button .gsi-material-button-content-wrapper {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      height: 100%;
+      justify-content: center;
+      position: relative;
+      width: 100%;
+    }
+    .gsi-material-button .gsi-material-button-contents {
+      flex-grow: 0;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: top;
+    }
+    .gsi-material-button .gsi-material-button-state {
+      transition: opacity .218s;
+      bottom: 0; left: 0; opacity: 0; position: absolute; right: 0; top: 0;
+    }
+    .gsi-material-button:hover {
+      box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+    }
+    .gsi-material-button:hover .gsi-material-button-state {
+      background-color: #303030;
+      opacity: 8%;
     }
     @media print {
       * {
@@ -283,9 +522,12 @@
     const ACTIVE_UID_KEY = 'dk_active_uid_v2';
     const REMEMBER_ME_KEY = 'dk_remember_me_v2';
     const LAST_PIN_USER_KEY = 'dk_last_pin_user_v2';
+    const THEME_PREF_KEY = 'dk_theme_pref_v2';
+    const BIO_META_KEY = 'dk_bio_meta_v2';
     const AUTH_LOCK_KEY = 'dk_auth_lock_v1';
     const PENDING_SYNC_KEY = 'dk_pending_sync_uid';
     const PIN_UNLOCK_SESSION_KEY = 'dk_pin_unlocked_uid';
+    const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
     const DEFAULT_LOGO_PATH = '/assets/aistudio/logo_5d9f834e.png';
     const KYC_VERIFY_DURATION_MS = 5 * 60 * 1000;
     const EMAILJS_PUBLIC_KEY = 'WyRcd-PQ5UkXjB_Sk';
@@ -339,13 +581,40 @@
       return state.stock.filter(isLowStock);
     }
 
+    function loadSavedThemePref() {
+      try {
+        const t = localStorage.getItem(THEME_PREF_KEY) || '';
+        return ['dark-blue', 'light', 'green', 'black'].includes(t) ? t : 'dark-blue';
+      } catch (e) {
+        return 'dark-blue';
+      }
+    }
+
+    function saveThemePref(theme) {
+      try {
+        if (theme) localStorage.setItem(THEME_PREF_KEY, theme);
+      } catch (e) {}
+    }
+
     function defaultData() {
+      const bioMeta = loadBioMeta();
       return {
         accounts: [],
         session: null,
         lastUserMeta: null,
         rememberMe: { email: '', remember: false },
-        biometric: {
+        biometric: bioMeta && bioMeta.enabled ? {
+          enabled: true,
+          declined: false,
+          credentialId: bioMeta.credentialId || '',
+          userId: bioMeta.uid || '',
+          userName: bioMeta.name || '',
+          userEmail: bioMeta.email || '',
+          userMobile: bioMeta.mobile || '',
+          userPhoto: '',
+          provider: bioMeta.provider || 'firebase',
+          createdAt: bioMeta.updatedAt || 0
+        } : {
           enabled: false,
           declined: false,
           credentialId: '',
@@ -368,7 +637,7 @@
           hash: ''
         },
         settings: {
-          theme: 'dark-blue',
+          theme: loadSavedThemePref(),
           customLogo: '',
           hideBalance: false,
           shopName: 'Warsha Aluminium Workshop',
@@ -387,12 +656,14 @@
         partyPayments: [],
         staff: [],
         staffLogs: [],
+        salaryHistory: [],
         messEntries: [],
         rentRecords: [],
         rentPayments: [],
         committees: [],
         archivedReports: [],
         lastActiveMonth: '',
+        blocked: false,
         kyc: {
           status: 'none',
           fullName: '',
@@ -403,6 +674,7 @@
           selfieConfirmed: false,
           shopName: '',
           mobile: '',
+          duplicateOf: '',
           submittedAt: 0,
           approvedAt: 0
         }
@@ -447,6 +719,27 @@
           return;
         }
         localStorage.setItem(LAST_PIN_USER_KEY, JSON.stringify(meta));
+      } catch (e) {}
+    }
+
+    function loadBioMeta() {
+      try {
+        const raw = localStorage.getItem(BIO_META_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && parsed.enabled && parsed.credentialId && parsed.uid ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function saveBioMeta(meta) {
+      try {
+        if (!meta || !meta.enabled || !meta.credentialId || !meta.uid) {
+          localStorage.removeItem(BIO_META_KEY);
+          return;
+        }
+        localStorage.setItem(BIO_META_KEY, JSON.stringify(meta));
       } catch (e) {}
     }
 
@@ -534,13 +827,19 @@
       };
     }
 
+    function isAdminSession() {
+      return Boolean(state.session && String(state.session.email || '').trim().toLowerCase() === ADMIN_EMAIL);
+    }
+
     function isKycVerified() {
+      if (isAdminSession()) return true;
+      if (state.blocked) return false;
       return Boolean(state.kyc && state.kyc.status === 'approved');
     }
 
     let state = loadState();
     let ui = {
-      view: state.session ? (isKycVerified() ? 'home' : 'kyc') : 'login',
+      view: state.session ? (isAdminSession() ? 'admin' : (isKycVerified() ? 'home' : 'kyc')) : 'login',
       authMode: 'login',
       signupStep: 1,
       signupData: newSignupData(),
@@ -550,7 +849,7 @@
       cloudNotice: '',
       kycWelcomeBanner: false,
       syncStatus: navigator.onLine ? (localStorage.getItem(PENDING_SYNC_KEY) ? 'pending' : 'synced') : 'offline',
-      pinLocked: Boolean(state.session && state.pinSecurity?.enabled && sessionStorage.getItem(PIN_UNLOCK_SESSION_KEY) !== (state.session.uid || state.session.id)),
+      pinLocked: Boolean(state.session && !isAdminSession() && state.pinSecurity?.enabled && sessionStorage.getItem(PIN_UNLOCK_SESSION_KEY) !== (state.session.uid || state.session.id)),
       pinEntry: '',
       pinErrorCount: 0,
       promptPinAfterLogin: false,
@@ -566,12 +865,20 @@
       paymentFilter: 'all',
       recordSearch: '',
       searchQuery: '',
+      expandedArchiveMonth: '',
+      adminUsers: [],
+      adminLoading: false,
+      adminFilter: 'all',
+      adminSearch: '',
+      adminInspectUid: '',
+      adminInspectData: null,
       kycTimer: null,
       cameraStream: null
     };
 
     let cloudSyncTimer = null;
     let isSyncInFlight = false;
+    let pendingCloudResync = false;
     let manualAuthFlow = false;
     let hydrateGeneration = 0;
 
@@ -624,7 +931,8 @@
     }
 
     function applyTheme() {
-      const t = state.settings.theme || 'dark-blue';
+      const t = state.settings?.theme || loadSavedThemePref() || 'dark-blue';
+      saveThemePref(t);
       document.documentElement.setAttribute('data-theme', t);
       if (t === 'light') document.documentElement.classList.remove('dark');
       else document.documentElement.classList.add('dark');
@@ -744,43 +1052,116 @@
       </div>`;
     }
 
-    // Auto Archive on 1st of new month
-    function checkAutoArchive() {
+    // Auto Archive & Closed Month Protection
+    function isMonthClosed(monthKey) {
+      if (!monthKey) return false;
+      const cur = currentMonthKey();
+      return monthKey < cur && (state.archivedReports || []).some(r => r.monthKey === monthKey && r.closed !== false);
+    }
+
+    function isDateInClosedMonth(dateStr) {
+      if (!dateStr || String(dateStr).length < 7) return false;
+      return isMonthClosed(String(dateStr).slice(0, 7));
+    }
+
+    function buildMonthArchiveSnapshot(mKey, isClosed = true) {
+      const [y, m] = mKey.split('-');
+      const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const inc = (state.transactions || []).filter(t => t.type === 'income' && (t.date || '').startsWith(mKey)).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const exp = (state.transactions || []).filter(t => t.type === 'expense' && (t.date || '').startsWith(mKey)).reduce((s, t) => s + Number(t.amount || 0), 0);
+      const ordList = (state.orders || []).filter(o => (o.date || '').startsWith(mKey));
+      const txCount = (state.transactions || []).filter(t => (t.date || '').startsWith(mKey)).length;
+
+      const staffSnapshot = (state.staff || []).map(st => {
+        const adv = (state.staffLogs || []).filter(l => l.staffId === st.id && l.type === 'advance' && (l.date || '').startsWith(mKey)).reduce((s, l) => s + Number(l.amount || 0), 0);
+        const sal = (state.staffLogs || []).filter(l => l.staffId === st.id && l.type === 'salary' && (l.date || '').startsWith(mKey)).reduce((s, l) => s + Number(l.amount || 0), 0);
+        return { id: st.id, name: st.name, role: st.role || 'Staff', salaryAtTime: Number(st.salary || 0), advances: adv, salaryPaid: sal };
+      });
+
+      let customerPending = 0, customerCountWithBaqaya = 0;
+      (state.customers || []).forEach(c => {
+        const cst = getCustomerStats(c.id);
+        if (cst.baqaya > 0) { customerPending += cst.baqaya; customerCountWithBaqaya++; }
+      });
+      let partyPending = 0, partyCountWithBaqaya = 0;
+      (state.suppliers || []).forEach(sup => {
+        const sst = getSupplierStats(sup.id);
+        if (sst.remaining > 0) { partyPending += sst.remaining; partyCountWithBaqaya++; }
+      });
+
+      return {
+        monthKey: mKey,
+        label: `${names[Number(m) - 1] || m} ${y}`,
+        income: inc,
+        expense: exp,
+        profit: inc - exp,
+        ordersCount: ordList.length,
+        txCount,
+        staffSnapshot,
+        pendingCarryForward: {
+          customerPending: Math.round(customerPending),
+          customerCountWithBaqaya,
+          partyPending: Math.round(partyPending),
+          partyCountWithBaqaya
+        },
+        closed: Boolean(isClosed),
+        archivedAt: new Date().toISOString()
+      };
+    }
+
+    function checkAutoArchive(forceCloseCurrentIfEndOfDay = false) {
       const curMonth = currentMonthKey();
-      if (!state.lastActiveMonth) {
-        state.lastActiveMonth = curMonth;
-        saveState();
-        return;
-      }
-      if (state.lastActiveMonth !== curMonth) {
-        const monthsSet = new Set();
-        state.transactions.forEach(t => { if (t.date && t.date.slice(0, 7) < curMonth) monthsSet.add(t.date.slice(0, 7)); });
-        state.orders.forEach(o => { if (o.date && o.date.slice(0, 7) < curMonth) monthsSet.add(o.date.slice(0, 7)); });
-        let archivedCount = 0;
-        monthsSet.forEach(mKey => {
-          if (!state.archivedReports.some(r => r.monthKey === mKey)) {
-            const inc = state.transactions.filter(t => t.type === 'income' && (t.date || '').startsWith(mKey)).reduce((s, t) => s + Number(t.amount || 0), 0);
-            const exp = state.transactions.filter(t => t.type === 'expense' && (t.date || '').startsWith(mKey)).reduce((s, t) => s + Number(t.amount || 0), 0);
-            const ord = state.orders.filter(o => (o.date || '').startsWith(mKey)).length;
-            if (inc > 0 || exp > 0 || ord > 0) {
-              const [y, m] = mKey.split('-');
-              const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              state.archivedReports.push({
-                monthKey: mKey,
-                label: `${names[Number(m) - 1] || m} ${y}`,
-                income: inc,
-                expense: exp,
-                profit: inc - exp,
-                ordersCount: ord,
-                archivedAt: new Date().toISOString()
-              });
-              archivedCount++;
-            }
+      state.archivedReports = Array.isArray(state.archivedReports) ? state.archivedReports : [];
+      let changed = false;
+
+      // Ensure legacy archive entries are marked closed if before currentMonth
+      state.archivedReports.forEach((r, idx) => {
+        if (r && r.monthKey && r.monthKey < curMonth && r.closed === undefined) {
+          const full = buildMonthArchiveSnapshot(r.monthKey, true);
+          state.archivedReports[idx] = { ...full, ...r, closed: true };
+          changed = true;
+        }
+      });
+
+      const monthsSet = new Set();
+      (state.transactions || []).forEach(t => { if (t.date && t.date.slice(0, 7) < curMonth) monthsSet.add(t.date.slice(0, 7)); });
+      (state.orders || []).forEach(o => { if (o.date && o.date.slice(0, 7) < curMonth) monthsSet.add(o.date.slice(0, 7)); });
+      if (state.lastActiveMonth && state.lastActiveMonth < curMonth) monthsSet.add(state.lastActiveMonth);
+
+      let archivedCount = 0;
+      monthsSet.forEach(mKey => {
+        if (!state.archivedReports.some(r => r.monthKey === mKey)) {
+          const snap = buildMonthArchiveSnapshot(mKey, true);
+          if (snap.income > 0 || snap.expense > 0 || snap.ordersCount > 0 || snap.pendingCarryForward.customerPending > 0) {
+            state.archivedReports.push(snap);
+            archivedCount++;
+            changed = true;
           }
-        });
+        }
+      });
+
+      // Auto-close at 23:59 on last day of the month
+      if (forceCloseCurrentIfEndOfDay) {
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const isLastDay = tomorrow.getDate() === 1;
+        if (isLastDay && now.getHours() === 23 && now.getMinutes() >= 59) {
+          if (!state.archivedReports.some(r => r.monthKey === curMonth)) {
+            state.archivedReports.push(buildMonthArchiveSnapshot(curMonth, true));
+            archivedCount++;
+            changed = true;
+          }
+        }
+      }
+
+      if (state.lastActiveMonth !== curMonth) {
         state.lastActiveMonth = curMonth;
+        changed = true;
+      }
+      if (changed) {
+        state.archivedReports.sort((a, b) => String(a.monthKey || '').localeCompare(String(b.monthKey || '')));
         saveState();
-        if (archivedCount > 0) toast(`Auto-archived ${archivedCount} previous month report(s).`, 'info');
+        if (archivedCount > 0) toast(`Auto-archived ${archivedCount} completed month report(s) ✓`, 'info');
       }
     }
 
@@ -1472,18 +1853,19 @@
       if (!s) return false;
       const ready = await isPlatformBiometricReady();
       if (!ready) {
-        toast('Pehle mobile ki Settings me Fingerprint add karein', 'error');
+        toast('Is device me Fingerprint available nahi hai', 'error');
         return false;
       }
       try {
-        const userIdBytes = new TextEncoder().encode(String(s.id || 'dk_user').slice(0, 64));
+        const uidVal = s.uid || s.cloudUid || s.id;
+        const userIdBytes = new TextEncoder().encode(String(uidVal || 'dk_user').slice(0, 64));
         const cred = await navigator.credentials.create({
           publicKey: {
             challenge: randomChallenge(),
             rp: { name: 'Digital Khata - Warsha Aluminium' },
             user: {
               id: userIdBytes,
-              name: s.email || s.name || 'user',
+              name: s.email || s.mobile || s.name || 'user',
               displayName: s.name || 'User'
             },
             pubKeyCredParams: [
@@ -1499,31 +1881,44 @@
           }
         });
         if (!cred || !cred.rawId) {
-          toast('Pehle mobile ki Settings me Fingerprint add karein', 'error');
+          toast('Is device me Fingerprint available nahi hai', 'error');
           return false;
         }
+        const credId = bufToBase64Url(cred.rawId);
         state.biometric = {
           enabled: true,
           declined: false,
-          credentialId: bufToBase64Url(cred.rawId),
-          userId: s.id,
+          credentialId: credId,
+          userId: uidVal,
           userName: s.name,
           userEmail: s.email || '',
           userMobile: s.mobile || '',
           userPhoto: s.photo || '',
-          provider: s.provider || 'email',
+          provider: s.provider || 'firebase',
           createdAt: Date.now()
         };
+        saveBioMeta({
+          enabled: true,
+          credentialId: credId,
+          uid: uidVal,
+          name: s.name || 'Workshop Owner',
+          email: s.email || '',
+          mobile: s.mobile || '',
+          identifier: s.identifier || s.email || s.mobile || '',
+          authType: s.authType || 'email',
+          provider: s.provider || 'firebase',
+          updatedAt: Date.now()
+        });
         saveState();
         closeModal();
         render();
-        toast('Fingerprint / Face ID se login ON ho gaya ✓', 'success');
+        toast('Fingerprint / Face ID Login ON ho gaya ✓', 'success');
         return true;
       } catch (err) {
         if (err && (err.name === 'NotSupportedError' || err.name === 'ConstraintError')) {
-          toast('Pehle mobile ki Settings me Fingerprint add karein', 'error');
+          toast('Is device me Fingerprint available nahi hai', 'error');
         } else if (err && err.name === 'NotAllowedError') {
-          toast('Fingerprint setup cancel hua ya device lock missing hai. Pehle mobile ki Settings me Fingerprint add karein.', 'error');
+          toast('Fingerprint cancel hua ya device lock set nahi hai.', 'error');
         } else {
           toast('Fingerprint setup nahi ho saka: ' + (err.message || err), 'error');
         }
@@ -1534,16 +1929,23 @@
     async function loginWithBiometric() {
       const ready = await isPlatformBiometricReady();
       if (!ready) {
-        toast('Pehle mobile ki Settings me Fingerprint add karein', 'error');
+        toast('Is device me Fingerprint available nahi hai', 'error');
         return;
       }
-      if (!state.biometric || !state.biometric.enabled || !state.biometric.credentialId) {
-        toast('Pehle Email/Mobile aur Password se Sign in karein aur Profile me Fingerprint ON karein.', 'info');
-        return;
-      }
-      const cloud = getCloud();
-      if (!cloud || !cloud.auth.currentUser) {
-        toast('Cloud security ke liye pehle Email/Mobile aur Password se Sign in karein.', 'info');
+      const bioMeta = loadBioMeta();
+      const activeBio = (bioMeta && bioMeta.credentialId) ? bioMeta : (state.biometric && state.biometric.enabled && state.biometric.credentialId ? {
+        enabled: true,
+        credentialId: state.biometric.credentialId,
+        uid: state.biometric.userId,
+        name: state.biometric.userName,
+        email: state.biometric.userEmail,
+        mobile: state.biometric.userMobile,
+        identifier: state.biometric.userEmail || state.biometric.userMobile || '',
+        authType: state.biometric.userMobile && !state.biometric.userEmail ? 'mobile' : 'email'
+      } : null);
+
+      if (!activeBio || !activeBio.credentialId) {
+        toast('Pehle Email/Password se Sign in karein aur Settings me Fingerprint ON karein.', 'info');
         return;
       }
       try {
@@ -1551,7 +1953,7 @@
           publicKey: {
             challenge: randomChallenge(),
             allowCredentials: [{
-              id: base64UrlToBuf(state.biometric.credentialId),
+              id: base64UrlToBuf(activeBio.credentialId),
               type: 'public-key',
               transports: ['internal']
             }],
@@ -1560,31 +1962,59 @@
           }
         });
         if (!assertion) throw new Error('Verification cancelled');
-        const b = state.biometric;
+        const cloud = getCloud();
+        const fbUser = cloud?.auth?.currentUser || null;
+        const bioUid = activeBio.uid || fbUser?.uid || '';
+        const remKeep = loadRememberMe();
+        const cached = bioUid ? loadUserCache(bioUid) : null;
+        if (cached) {
+          state = cached;
+          state.rememberMe = remKeep;
+        }
+        const isFbMatch = Boolean(fbUser && bioUid && fbUser.uid === bioUid);
+        state.biometric = {
+          ...(state.biometric || {}),
+          enabled: true,
+          declined: false,
+          credentialId: activeBio.credentialId,
+          userId: bioUid,
+          userName: activeBio.name || fbUser?.displayName || 'Workshop Owner',
+          userEmail: activeBio.email || '',
+          userMobile: activeBio.mobile || ''
+        };
         state.session = {
-          id: cloud.auth.currentUser.uid,
-          uid: cloud.auth.currentUser.uid,
-          name: b.userName || cloud.auth.currentUser.displayName || 'User',
-          email: b.userEmail || '',
-          mobile: b.userMobile || '',
-          photo: b.userPhoto || '',
-          provider: 'firebase',
+          id: bioUid || 'bio_user',
+          uid: isFbMatch ? bioUid : '',
+          cloudUid: bioUid,
+          name: activeBio.name || state.settings?.ownerName || fbUser?.displayName || 'Workshop Owner',
+          email: activeBio.email || '',
+          mobile: activeBio.mobile || '',
+          identifier: activeBio.identifier || activeBio.email || activeBio.mobile || '',
+          authType: activeBio.authType || 'email',
+          photo: '',
+          provider: isFbMatch ? 'firebase' : 'biometric-local',
           loginAt: Date.now()
         };
+        ui.authMode = 'login';
         ui.pinLocked = false;
-        sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, state.session.uid);
+        sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, bioUid || '1');
         if (!state.kyc.fullName && state.session.name) {
           state.kyc.fullName = state.session.name;
         }
+        ui.view = isAdminSession() ? 'admin' : (isKycVerified() ? 'home' : 'kyc');
         saveState(true);
-        ui.view = 'home';
-        toast(`Fingerprint Verified! Assalam o Alaikum, ${state.session.name} ✓`, 'success');
         render();
+        toast(`Fingerprint Verified! Assalam o Alaikum, ${state.session.name} ✓`, 'success');
+        if (isAdminSession()) {
+          loadAdminUsersList();
+        } else if (isFbMatch) {
+          hydrateFromFirebaseUser(fbUser, {}, { background: true });
+        }
       } catch (err) {
         if (err && (err.name === 'NotSupportedError' || err.name === 'ConstraintError')) {
-          toast('Pehle mobile ki Settings me Fingerprint add karein', 'error');
+          toast('Is device me Fingerprint available nahi hai', 'error');
         } else {
-          toast('Fingerprint verify nahi hua. Password se login karein.', 'error');
+          toast('Fingerprint verify nahi hua. MPIN ya Password se login karein.', 'error');
         }
       }
     }
@@ -1663,12 +2093,16 @@
       const s = state.session;
       if (!cloud || !s || !s.uid) return false;
       if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== s.uid) return false;
+      if (isAdminSession()) return true;
       if (!navigator.onLine) {
         ui.syncStatus = 'offline';
         updateSyncStatusBadgeDom();
         return false;
       }
-      if (isSyncInFlight) return false;
+      if (isSyncInFlight) {
+        pendingCloudResync = true;
+        return false;
+      }
       isSyncInFlight = true;
       ui.syncStatus = 'syncing';
       updateSyncStatusBadgeDom();
@@ -1683,6 +2117,7 @@
             authType: s.authType || 'email',
             pinEnabled: Boolean(state.pinSecurity?.enabled),
             pinHash: state.pinSecurity?.hash || '',
+            kycDuplicateOf: state.kyc?.duplicateOf || '',
             lastBackupAt: Number(state.cloudMeta?.lastBackupAt || 0)
           },
           state
@@ -1698,6 +2133,13 @@
         updateSyncStatusBadgeDom();
         return true;
       } catch (err) {
+        if (err && err.message === 'ACCOUNT_BLOCKED') {
+          state.blocked = true;
+          saveState(true);
+          ui.view = 'kyc';
+          render();
+          return false;
+        }
         if (err && err.message === 'AUTH_SESSION_CHANGED') {
           return false;
         }
@@ -1706,6 +2148,10 @@
         return false;
       } finally {
         isSyncInFlight = false;
+        if (pendingCloudResync) {
+          pendingCloudResync = false;
+          setTimeout(() => { flushCloudSync(); }, 180);
+        }
       }
     }
 
@@ -1780,6 +2226,187 @@
       }
     }
 
+    function getDrive() {
+      return window.__DK_DRIVE__ || null;
+    }
+
+    let pendingDriveAction = null;
+
+    function formatDriveLastBackupText() {
+      const ts = Number(state.cloudMeta?.lastDriveBackupAt || 0);
+      if (!ts) return 'Abhi tak Drive Backup nahi hua';
+      const d = new Date(ts);
+      const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const tm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      return formatDateTime(iso, tm);
+    }
+
+    function formatDriveIsoTime(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      if (Number.isNaN(d.getTime())) return isoStr;
+      const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const tm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      return formatDateTime(iso, tm);
+    }
+
+    async function connectGoogleDriveAccount() {
+      const drive = getDrive();
+      if (!drive) { toast('Google Drive module load ho raha hai, thodi der baad try karein.', 'error'); return; }
+      if (!navigator.onLine) { toast('Google Drive connect karne ke liye internet zaroori hai.', 'error'); return; }
+      try {
+        toast('Google account popup khul raha hai...', 'info');
+        const res = await drive.connectGoogleDrive();
+        render();
+        toast(`Google Drive connected (${res.user.email || 'Google'}) ✓`, 'success');
+      } catch (err) {
+        const msg = String(err?.message || err || '');
+        if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
+          toast('Google Sign-In cancel ho gaya.', 'info');
+        } else {
+          toast('Google Drive connect error: ' + msg, 'error');
+        }
+      }
+    }
+
+    async function disconnectGoogleDriveAccount() {
+      const drive = getDrive();
+      if (!drive) return;
+      try {
+        await drive.disconnectGoogleDrive();
+        render();
+        toast('Google Drive disconnect ho gaya.', 'info');
+      } catch (err) {
+        toast('Disconnect error: ' + (err?.message || err), 'error');
+      }
+    }
+
+    async function startGoogleDriveBackup() {
+      const drive = getDrive();
+      if (!drive || !drive.isConnected()) {
+        toast('Pehle "Sign in with Google" se Google Drive connect karein.', 'info');
+        return;
+      }
+      if (!navigator.onLine) { toast('Internet connect karein Google Drive Backup ke liye.', 'error'); return; }
+      toast('Google Drive check ho raha hai...', 'info');
+      try {
+        const existing = await drive.findLatestBackup();
+        if (existing) {
+          pendingDriveAction = {
+            type: 'overwrite',
+            fileId: existing.id,
+            fileName: existing.name || 'DigitalKhata_Warsha_Backup.json',
+            modifiedTime: existing.modifiedTime || ''
+          };
+          openModal('confirm-drive-overwrite');
+          return;
+        }
+        await executeGoogleDriveBackup(null);
+      } catch (err) {
+        const msg = String(err?.message || err || '');
+        if (msg === 'DRIVE_AUTH_REQUIRED' || msg === 'DRIVE_AUTH_EXPIRED') {
+          render();
+          toast('Google Drive session expire ho gayi hai. Dobara Sign in with Google karein.', 'error');
+        } else {
+          toast('Google Drive check failed: ' + msg, 'error');
+        }
+      }
+    }
+
+    async function executeGoogleDriveBackup(existingFileId) {
+      const drive = getDrive();
+      if (!drive || !drive.isConnected()) {
+        closeModal();
+        render();
+        toast('Dobara Sign in with Google karein.', 'error');
+        return;
+      }
+      toast('Google Drive me backup save ho raha hai...', 'info');
+      try {
+        const uploaded = await drive.uploadBackup(buildBackupPayload(), existingFileId || undefined);
+        state.cloudMeta = {
+          ...(state.cloudMeta || {}),
+          lastDriveBackupAt: Date.now(),
+          lastDriveFileName: uploaded.name || 'DigitalKhata_Warsha_Backup.json'
+        };
+        pendingDriveAction = null;
+        saveState(true);
+        closeModal();
+        render();
+        toast('Google Drive Backup save ho gaya ✓', 'success');
+      } catch (err) {
+        const msg = String(err?.message || err || '');
+        if (msg === 'DRIVE_AUTH_REQUIRED' || msg === 'DRIVE_AUTH_EXPIRED') {
+          closeModal();
+          render();
+          toast('Google Drive session expire ho gayi hai. Dobara Sign in with Google karein.', 'error');
+        } else {
+          toast('Google Drive Backup failed: ' + msg, 'error');
+        }
+      }
+    }
+
+    async function startGoogleDriveRestore() {
+      const drive = getDrive();
+      if (!drive || !drive.isConnected()) {
+        toast('Pehle "Sign in with Google" se Google Drive connect karein.', 'info');
+        return;
+      }
+      if (!navigator.onLine) { toast('Internet connect karein Google Drive Restore ke liye.', 'error'); return; }
+      toast('Google Drive backup file dhoondi ja rahi hai...', 'info');
+      try {
+        const latest = await drive.findLatestBackup();
+        if (!latest) {
+          toast('Google Drive me koi Digital Khata backup file nahi mili.', 'info');
+          return;
+        }
+        pendingDriveAction = {
+          type: 'restore',
+          fileId: latest.id,
+          fileName: latest.name || 'DigitalKhata_Warsha_Backup.json',
+          modifiedTime: latest.modifiedTime || ''
+        };
+        openModal('confirm-drive-restore');
+      } catch (err) {
+        const msg = String(err?.message || err || '');
+        if (msg === 'DRIVE_AUTH_REQUIRED' || msg === 'DRIVE_AUTH_EXPIRED') {
+          render();
+          toast('Google Drive session expire ho gayi hai. Dobara Sign in with Google karein.', 'error');
+        } else {
+          toast('Google Drive search failed: ' + msg, 'error');
+        }
+      }
+    }
+
+    async function executeGoogleDriveRestore(fileId) {
+      const drive = getDrive();
+      if (!drive || !drive.isConnected()) {
+        closeModal();
+        render();
+        toast('Dobara Sign in with Google karein.', 'error');
+        return;
+      }
+      toast('Google Drive se data restore ho raha hai...', 'info');
+      try {
+        const payload = await drive.downloadBackup(fileId);
+        applyBackupPayload(payload, false, false);
+        pendingDriveAction = null;
+        await flushCloudSync();
+        closeModal();
+        render();
+        toast('Google Drive se Data Restore ho gaya ✓', 'success');
+      } catch (err) {
+        const msg = String(err?.message || err || '');
+        if (msg === 'DRIVE_AUTH_REQUIRED' || msg === 'DRIVE_AUTH_EXPIRED') {
+          closeModal();
+          render();
+          toast('Google Drive session expire ho gayi hai. Dobara Sign in with Google karein.', 'error');
+        } else {
+          toast('Google Drive Restore failed: ' + msg, 'error');
+        }
+      }
+    }
+
     function hasWorkshopRecords(st) {
       if (!st) return false;
       return Boolean(
@@ -1821,18 +2448,54 @@
       return otp;
     }
 
-    async function hydrateFromFirebaseUser(fbUser, overrideInfo = {}) {
+    async function loadAdminUsersList() {
+      const cloud = getCloud();
+      if (!cloud || !isAdminSession()) return;
+      ui.adminLoading = true;
+      render();
+      try {
+        ui.adminUsers = await cloud.adminListAllUsers();
+      } catch (err) {
+        toast('Users list load nahi ho saki: ' + (err.message || err), 'error');
+      } finally {
+        ui.adminLoading = false;
+        render();
+      }
+    }
+
+    async function openAdminInspectUser(uidVal) {
+      const cloud = getCloud();
+      if (!cloud || !isAdminSession() || !uidVal) return;
+      ui.adminInspectUid = uidVal;
+      ui.adminInspectData = null;
+      ui.adminLoading = true;
+      ui.view = 'admin-inspect';
+      render();
+      try {
+        ui.adminInspectData = await cloud.adminLoadUserInspection(uidVal);
+      } catch (err) {
+        toast('User data load error: ' + (err.message || err), 'error');
+      } finally {
+        ui.adminLoading = false;
+        render();
+      }
+    }
+
+    async function hydrateFromFirebaseUser(fbUser, overrideInfo = {}, opts = {}) {
       const cloud = getCloud();
       if (!cloud || !fbUser) return;
       if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) return;
       const myGen = ++hydrateGeneration;
-      ui.cloudHydrating = true;
-      render();
+      const isBg = Boolean(opts.background);
+      if (!isBg && (!state.session || state.session.uid !== fbUser.uid)) {
+        ui.cloudHydrating = true;
+      }
       try {
         try {
           await fbUser.getIdToken();
         } catch (tokErr) {
-          if (navigator.onLine) {
+          const code = tokErr?.code || '';
+          if (navigator.onLine && (code === 'auth/user-token-expired' || code === 'auth/user-disabled' || code === 'auth/user-not-found')) {
             if (myGen === hydrateGeneration) {
               try { await cloud.signOutUser(); } catch (e) {}
             }
@@ -1847,8 +2510,35 @@
         const isNewSignup = Boolean(overrideInfo.isNewSignup);
         const remCopy = loadRememberMe();
 
+        // Admin direct account check
+        const emailLower = String(overrideInfo.email || fbUser.email || '').trim().toLowerCase();
+        if (cloud.isAdminEmail(emailLower)) {
+          state = defaultData();
+          state.rememberMe = remCopy;
+          state.session = {
+            id: fbUser.uid,
+            uid: fbUser.uid,
+            name: fbUser.displayName || 'Admin',
+            email: emailLower,
+            mobile: '',
+            identifier: emailLower,
+            authType: 'email',
+            photo: '',
+            provider: 'firebase',
+            isAdmin: true,
+            loginAt: Date.now()
+          };
+          state.kyc.status = 'approved';
+          ui.pinLocked = false;
+          ui.cloudHydrating = false;
+          ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
+          saveState(true);
+          render();
+          loadAdminUsersList();
+          return;
+        }
+
         // STRICT PER-ACCOUNT ISOLATION:
-        // Never carry another user's local records into a new signup or different account.
         if (isNewSignup || prevUid !== fbUser.uid) {
           state = defaultData();
           state.rememberMe = remCopy;
@@ -1889,12 +2579,18 @@
         if (bundle.hasCloudData) {
           const hasPending = localStorage.getItem(PENDING_SYNC_KEY) === fbUser.uid;
           if (hasPending && uidCache && hasWorkshopRecords(uidCache)) {
-            applyBackupPayload({ data: uidCache }, true);
+            applyBackupPayload({ data: uidCache }, true, true);
           } else {
-            applyBackupPayload({ data: bundle.vaultData }, true);
+            applyBackupPayload({ data: bundle.vaultData }, true, true);
           }
         } else if (uidCache) {
-          applyBackupPayload({ data: uidCache }, true);
+          applyBackupPayload({ data: uidCache }, true, true);
+        }
+
+        // Preserve local theme preference if user explicitly toggled it locally before cloud caught up
+        const localTheme = loadSavedThemePref();
+        if (localTheme && state.settings.theme !== localTheme && localStorage.getItem(PENDING_SYNC_KEY) === fbUser.uid) {
+          state.settings.theme = localTheme;
         }
 
         const displayName = String(overrideInfo.name || prof.name || fbUser.displayName || 'User');
@@ -1905,6 +2601,7 @@
         state.session = {
           id: fbUser.uid,
           uid: fbUser.uid,
+          cloudUid: fbUser.uid,
           name: displayName,
           email: emailVal,
           mobile: mobileVal,
@@ -1914,8 +2611,15 @@
           provider: 'firebase',
           loginAt: Date.now()
         };
+        state.blocked = Boolean(prof.blocked);
         if (prof.pinEnabled && prof.pinHash) {
           state.pinSecurity = { enabled: true, hash: String(prof.pinHash) };
+        }
+        if (prof.kycStatus === 'duplicate') {
+          state.kyc.status = 'duplicate';
+          state.kyc.duplicateOf = String(prof.kycDuplicateOf || state.kyc.duplicateOf || '');
+        } else if (prof.kycStatus === 'approved' && state.kyc.status !== 'approved') {
+          state.kyc.status = 'approved';
         }
         state.cloudMeta = {
           ...(state.cloudMeta || {}),
@@ -1925,6 +2629,17 @@
         };
         if (!state.kyc.fullName && displayName) state.kyc.fullName = displayName;
         if (!state.kyc.mobile && mobileVal) state.kyc.mobile = mobileVal;
+
+        // Legacy / Existing accounts duplicate CNIC audit (never auto-deletes any account!)
+        if (state.kyc?.cnic && state.kyc.status !== 'duplicate' && !prof.kycStatusOverrideByAdmin) {
+          try {
+            const cnicAudit = await cloud.checkOrClaimLegacyCnic(state.kyc.cnic, fbUser.uid);
+            if (cnicAudit.isDuplicate) {
+              state.kyc.status = 'duplicate';
+              state.kyc.duplicateOf = cnicAudit.ownerUid || '';
+            }
+          } catch (e) {}
+        }
 
         ui.pinLocked = Boolean(
           state.pinSecurity?.enabled &&
@@ -1936,10 +2651,11 @@
           state.kyc.approvedAt = Date.now();
           ui.kycWelcomeBanner = true;
         }
+        checkAutoArchive();
         saveState(true);
-        await flushCloudSync();
-        if (myGen !== hydrateGeneration) return;
-        await maybeRunAutoDailyBackup();
+        flushCloudSync().then(() => {
+          if (myGen === hydrateGeneration) maybeRunAutoDailyBackup();
+        });
       } catch (err) {
         if (myGen !== hydrateGeneration) return;
         if (!err || err.message !== 'AUTH_SESSION_CHANGED') {
@@ -1950,11 +2666,13 @@
         ui.cloudHydrating = false;
         if (!state.session) {
           ui.view = 'login';
-        } else if (!isKycVerified()) {
+        } else if (isAdminSession()) {
+          ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
+        } else if (state.blocked || !isKycVerified()) {
           ui.view = 'kyc';
           if (state.kyc?.status === 'verifying') startKycCountdownTimer();
         } else {
-          ui.view = ui.view === 'login' ? 'home' : ui.view;
+          ui.view = (ui.view === 'login' || ui.view === 'kyc') ? 'home' : ui.view;
         }
         render();
       }
@@ -1977,6 +2695,7 @@
           partyPayments: state.partyPayments,
           staff: state.staff,
           staffLogs: state.staffLogs,
+          salaryHistory: state.salaryHistory,
           messEntries: state.messEntries,
           rentRecords: state.rentRecords,
           rentPayments: state.rentPayments,
@@ -1988,7 +2707,7 @@
       };
     }
 
-    function applyBackupPayload(payload, resetFirst = false) {
+    function applyBackupPayload(payload, resetFirst = false, skipRender = false) {
       const d = payload && payload.data ? payload.data : payload;
       if (!d || typeof d !== 'object') throw new Error('Invalid backup format');
       const def = defaultData();
@@ -2016,6 +2735,7 @@
       if (Array.isArray(d.partyPayments)) state.partyPayments = d.partyPayments;
       if (Array.isArray(d.staff)) state.staff = d.staff;
       if (Array.isArray(d.staffLogs)) state.staffLogs = d.staffLogs;
+      if (Array.isArray(d.salaryHistory)) state.salaryHistory = d.salaryHistory;
       if (Array.isArray(d.messEntries)) state.messEntries = d.messEntries;
       if (Array.isArray(d.rentRecords)) state.rentRecords = d.rentRecords;
       if (Array.isArray(d.rentPayments)) state.rentPayments = d.rentPayments;
@@ -2026,7 +2746,7 @@
       migrateLegacyData();
       applyTheme();
       saveState(true);
-      render();
+      if (!skipRender) render();
     }
 
     // ========================
@@ -2414,16 +3134,14 @@
             </button>
           </form>
 
-          <button type="button" data-action="login-with-pin" class="w-full h-11 mt-3 rounded-xl glass-card border border-cyan-400/35 hover:bg-cyan-500/15 transition-colors flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 cursor-pointer">
-            <span>🔢 Login with 4-Digit PIN</span>
-          </button>
-
-          ${state.biometric?.enabled ? `
-            <button type="button" data-action="biometric-login" class="w-full h-11 mt-2.5 rounded-xl glass-card border border-cyan-400/35 hover:bg-cyan-500/15 transition-colors flex items-center justify-center gap-2 text-xs font-semibold text-cyan-300 cursor-pointer">
-              ${icon('fingerprint', 'w-4 h-4')}
-              <span>Fingerprint / Face ID se Unlock</span>
+          <div class="grid grid-cols-12 gap-2 mt-3">
+            <button type="button" data-action="login-with-pin" class="col-span-9 h-11 rounded-xl glass-card border border-cyan-400/35 hover:bg-cyan-500/15 transition-colors flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 cursor-pointer">
+              <span>🔢 Login with 4-Digit MPIN</span>
             </button>
-          ` : ''}
+            <button type="button" data-action="biometric-login" aria-label="Fingerprint Login" title="Fingerprint / Face ID" class="col-span-3 h-11 rounded-xl glass-card border ${state.biometric?.enabled ? 'border-emerald-400/50 text-emerald-300 bg-emerald-500/10' : 'border-cyan-400/35 text-cyan-300'} hover:bg-cyan-500/15 transition-colors flex items-center justify-center gap-1 text-xs font-bold cursor-pointer">
+              ${icon('fingerprint', 'w-5 h-5')}
+            </button>
+          </div>
 
           <p class="text-center text-sm text-sec mt-6">
             New here?
@@ -2456,7 +3174,13 @@
               <button type="button" data-pin-digit="0" class="h-12 rounded-2xl glass-card hover:bg-white/15 text-lg font-extrabold tabular-nums cursor-pointer">0</button>
               <button type="button" data-action="pin-backspace" class="h-12 rounded-2xl glass-card text-sm font-bold text-sec cursor-pointer">⌫</button>
             </div>
-            <button type="button" data-action="go-login" class="mt-2 text-xs text-sec hover:text-cyan-300 cursor-pointer">Email / Password se Login karein</button>
+            <div class="flex items-center justify-between gap-2 pt-2">
+              <button type="button" data-action="go-login" class="text-xs text-sec hover:text-cyan-300 cursor-pointer">Email / Password se Login</button>
+              <button type="button" data-action="biometric-login" class="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 hover:text-cyan-200 cursor-pointer">
+                ${icon('fingerprint', 'w-4 h-4')}
+                <span>Fingerprint</span>
+              </button>
+            </div>
           </div>
         `;
       } else if (mode === 'signup') {
@@ -2590,14 +3314,28 @@
         `;
       }
 
+      const authHeaderHtml = mode === 'login' ? `
+        <div class="flex flex-col items-center text-center mb-6 border-0">
+          <div class="login-logo-glow mb-3.5 shrink-0 flex items-center justify-center">
+            <img src="${esc(DEFAULT_LOGO_PATH)}" alt="Digital Khata Logo" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+            <div class="w-full h-full hidden">${defaultSvgLogoData()}</div>
+          </div>
+          <h1 class="login-title-font no-underline">Digital Khata</h1>
+          <p class="login-sub-font mt-1 no-underline border-0">Dive Into Your Digital Khata</p>
+          <p class="login-tag-font mt-0.5 no-underline border-0">Manage Your Business, Effortlessly.</p>
+        </div>
+      ` : `
+        <div class="flex flex-col items-center text-center mb-6 border-0">
+          ${renderLogoAvatar('w-20 h-20 mb-3', 'ring-2 ring-blue-400/70')}
+          <h1 class="text-2xl font-extrabold tracking-tight no-underline">Digital Khata</h1>
+          <p class="text-xs text-sec mt-1 no-underline border-0">Cloud Workshop Khata · Offline &amp; Auto Sync</p>
+        </div>
+      `;
+
       return `
         <div class="min-h-screen flex items-center justify-center px-4 py-8">
-          <div class="w-full glass-card rounded-3xl p-6 shadow-2xl">
-            <div class="flex flex-col items-center text-center mb-6 border-0">
-              ${renderLogoAvatar('w-20 h-20 mb-3', 'ring-2 ring-blue-400/70')}
-              <h1 class="text-2xl font-extrabold tracking-tight no-underline">Digital Khata</h1>
-              <p class="text-xs text-sec mt-1 no-underline border-0">Cloud Workshop Khata · Offline &amp; Auto Sync</p>
-            </div>
+          <div class="auth-card-container glass-card rounded-3xl p-6 shadow-2xl">
+            ${authHeaderHtml}
             ${cardHtml}
           </div>
         </div>
@@ -2766,10 +3504,10 @@
             </button>
           </section>
 
-          <!-- 3) MODULES (THEME-MATCHED DARK BLUE GLASSMORPHISM) -->
+          <!-- 3) MODULES (THEME-MATCHED GLASSMORPHISM) -->
           <section class="modules-theme-section rounded-3xl p-3.5">
             <h2 class="text-sm font-extrabold mb-2.5 px-0.5">Modules</h2>
-            <div class="grid grid-cols-3 gap-2.5">
+            <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
               ${modules.map(mod => `
                 <button type="button" data-nav="${mod.id}" class="module-theme-card rounded-2xl p-2.5 flex flex-col items-center justify-center gap-1.5 min-h-[88px] cursor-pointer">
                   <span class="text-3xl emoji-3d select-none" aria-hidden="true">${mod.emoji}</span>
@@ -2809,8 +3547,8 @@
             </div>
           </section>
 
-          <!-- 5) DASHBOARD - 8 SMALL CARDS IN 2 COLUMNS (2x4 Grid) -->
-          <section class="grid grid-cols-2 gap-2.5">
+          <!-- 5) DASHBOARD - 8 SMALL CARDS (2 cols mobile, 4 cols desktop) -->
+          <section class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <button type="button" data-nav="customers" class="glass-card rounded-2xl p-4 text-left hover:border-cyan-400/40 transition-colors cursor-pointer">
               <div class="text-xs text-sec">Total Work</div>
               <div class="text-xl font-extrabold tabular-nums mt-1">${m.totalWork}</div>
@@ -3595,6 +4333,8 @@
       const totalAllSalary = salLogs.reduce((s, l) => s + Number(l.amount || 0), 0);
       const netPayable = Math.max(0, Number(st.salary || 0) - monthAdvances);
 
+      const salaryRevs = (state.salaryHistory || []).filter(h => h.staffId === st.id).slice().reverse();
+
       return `
         <div class="space-y-4">
           <div class="flex items-center justify-between">
@@ -3603,9 +4343,12 @@
           </div>
 
           <div class="blue-hero-card rounded-3xl p-5 text-white space-y-4">
-            <div>
-              <div class="text-lg font-extrabold">${esc(st.name)}</div>
-              <div class="text-xs text-blue-100/85">${esc(st.role || 'Staff')} · ${esc(st.mobile || 'No phone')}</div>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="text-lg font-extrabold">${esc(st.name)}</div>
+                <div class="text-xs text-blue-100/85">${esc(st.role || 'Staff')} · ${esc(st.mobile || 'No phone')}</div>
+              </div>
+              <button type="button" data-edit-staff-salary="${esc(st.id)}" class="px-3 h-9 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-xs font-bold text-white shrink-0 cursor-pointer">✏️ Edit / Increase Salary</button>
             </div>
             <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/15 tabular-nums">
               <div><div class="text-[11px] text-blue-100/80">Monthly Salary</div><div class="text-base font-bold">${esc(fmtRs(st.salary))}</div></div>
@@ -3627,7 +4370,9 @@
             </div>
             ${advWithBal.length === 0 ? `<p class="text-xs text-sec">No advance taken yet.</p>` : `
               <div class="space-y-2.5">
-                ${advWithBal.map(l => `
+                ${advWithBal.map(l => {
+                  const closed = isDateInClosedMonth(l.date);
+                  return `
                   <div class="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs space-y-1">
                     <div class="flex items-start justify-between gap-2">
                       <div>
@@ -3640,11 +4385,13 @@
                       </div>
                     </div>
                     <div class="flex justify-end gap-3 pt-1 border-t border-white/10">
-                      <button type="button" data-edit-staff-log="${esc(l.id)}" class="text-cyan-400 font-semibold cursor-pointer">Edit</button>
-                      <button type="button" data-delete-staff-log="${esc(l.id)}" class="text-rose-400 font-semibold cursor-pointer">Delete</button>
+                      ${closed ? `<span class="text-[11px] text-mut font-semibold">🔒 Closed Month (Read-Only)</span>` : `
+                        <button type="button" data-edit-staff-log="${esc(l.id)}" class="text-cyan-400 font-semibold cursor-pointer">Edit</button>
+                        <button type="button" data-delete-staff-log="${esc(l.id)}" class="text-rose-400 font-semibold cursor-pointer">Delete</button>
+                      `}
                     </div>
-                  </div>
-                `).join('')}
+                  </div>`;
+                }).join('')}
               </div>
             `}
           </div>
@@ -3657,7 +4404,9 @@
             </div>
             ${salLogs.length === 0 ? `<p class="text-xs text-sec">No salary payments recorded yet.</p>` : `
               <div class="space-y-2.5">
-                ${salLogs.map(l => `
+                ${salLogs.map(l => {
+                  const closed = isDateInClosedMonth(l.date);
+                  return `
                   <div class="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs space-y-1">
                     <div class="flex items-start justify-between gap-2">
                       <div>
@@ -3669,9 +4418,32 @@
                       </div>
                     </div>
                     <div class="flex justify-end gap-3 pt-1 border-t border-white/10">
-                      <button type="button" data-edit-staff-log="${esc(l.id)}" class="text-cyan-400 font-semibold cursor-pointer">Edit</button>
-                      <button type="button" data-delete-staff-log="${esc(l.id)}" class="text-rose-400 font-semibold cursor-pointer">Delete</button>
+                      ${closed ? `<span class="text-[11px] text-mut font-semibold">🔒 Closed Month (Read-Only)</span>` : `
+                        <button type="button" data-edit-staff-log="${esc(l.id)}" class="text-cyan-400 font-semibold cursor-pointer">Edit</button>
+                        <button type="button" data-delete-staff-log="${esc(l.id)}" class="text-rose-400 font-semibold cursor-pointer">Delete</button>
+                      `}
                     </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Salary Revision / Increment History -->
+          <div class="glass-card rounded-3xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Salary Revision History (${salaryRevs.length})</h2>
+              <span class="text-[11px] text-sec">Past logs remain unchanged</span>
+            </div>
+            ${salaryRevs.length === 0 ? `<p class="text-xs text-sec">Abhi tak koi salary increase/update record nahi hua.</p>` : `
+              <div class="space-y-2">
+                ${salaryRevs.map(h => `
+                  <div class="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs flex items-center justify-between gap-2">
+                    <div>
+                      <div class="font-bold text-cyan-300 tabular-nums">${esc(fmtRs(h.previousSalary))} → <span class="text-emerald-400">${esc(fmtRs(h.newSalary))}</span></div>
+                      <div class="text-sec mt-0.5">Effective: ${esc(formatShortDate(h.effectiveDate))}${h.note ? ' · ' + esc(h.note) : ''}</div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 text-[10px] font-bold">Updated</span>
                   </div>
                 `).join('')}
               </div>
@@ -3956,18 +4728,42 @@
         catTotals[t.category] = (catTotals[t.category] || 0) + Number(t.amount || 0);
       });
       const stockVal = state.stock.reduce((s, x) => s + (Number(x.qty || 0) * Number(x.cost || 0)), 0);
+      const curMKey = currentMonthKey();
 
       return `
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-2">
-            <h1 class="text-xl font-extrabold">Monthly &amp; Profit Report</h1>
+            <div>
+              <h1 class="text-xl font-extrabold">Monthly &amp; Profit Report</h1>
+              <p class="text-xs text-sec mt-0.5">Active Month: ${esc(formatMonthLabel(curMKey))}</p>
+            </div>
             <button type="button" data-action="print-summary" class="px-4 h-10 rounded-xl glass-card text-xs font-semibold cursor-pointer">Export PDF</button>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div class="glass-card rounded-2xl p-4"><div class="text-xs text-sec">This Month Income</div><div class="text-base font-bold text-emerald-400 tabular-nums mt-1">${esc(fmtRs(m.monthIncome))}</div></div>
             <div class="glass-card rounded-2xl p-4"><div class="text-xs text-sec">This Month Expense</div><div class="text-base font-bold text-orange-400 tabular-nums mt-1">${esc(fmtRs(m.monthExpense))}</div></div>
             <div class="glass-card rounded-2xl p-4"><div class="text-xs text-sec">All-Time Profit</div><div class="text-base font-bold text-amber-300 tabular-nums mt-1">${esc(fmtRs(m.totalProfit))}</div></div>
             <div class="glass-card rounded-2xl p-4"><div class="text-xs text-sec">Stock Valuation</div><div class="text-base font-bold text-cyan-300 tabular-nums mt-1">${esc(fmtRs(stockVal))}</div></div>
+          </div>
+
+          <!-- Carried-Forward Pending Balances (Active Until Cleared) -->
+          <div class="glass-card rounded-3xl p-5 space-y-3 border border-amber-400/25">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Carried Forward Pending Payments (Baqaya)</h2>
+              <span class="text-[11px] text-amber-300 font-bold">Active until paid ✓</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <button type="button" data-nav="customers" class="rounded-2xl bg-white/5 border border-white/10 p-3 text-left cursor-pointer">
+                <div class="text-sec">Customers Baqaya</div>
+                <div class="text-base font-extrabold text-amber-400 tabular-nums mt-1">${esc(fmtRs(m.custBaqaya))}</div>
+                <div class="text-[11px] text-mut mt-0.5">${m.baqayaBills} pending accounts</div>
+              </button>
+              <button type="button" data-nav="party" class="rounded-2xl bg-white/5 border border-white/10 p-3 text-left cursor-pointer">
+                <div class="text-sec">Party / Dealer Baqaya</div>
+                <div class="text-base font-extrabold text-rose-400 tabular-nums mt-1">${esc(fmtRs(m.supBaqaya))}</div>
+                <div class="text-[11px] text-mut mt-0.5">${state.suppliers.length} suppliers</div>
+              </button>
+            </div>
           </div>
 
           <div class="glass-card rounded-3xl p-5 space-y-3">
@@ -3981,22 +4777,62 @@
           </div>
 
           <div class="glass-card rounded-3xl p-5 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2">
               <div>
-                <h2 class="text-sm font-bold">Auto-Archived Monthly Reports</h2>
-                <p class="text-xs text-sec">Automatically snapshots closed months on the 1st of every month.</p>
+                <h2 class="text-sm font-bold">Closed Months Archive 🔒</h2>
+                <p class="text-xs text-sec">Maheena khatam hone par 23:59 par automatic lock &amp; archive hota hai (Read-Only).</p>
               </div>
-              <button type="button" data-action="archive-now" class="px-3 h-9 rounded-xl glass-card text-xs font-semibold cursor-pointer">Snapshot Month</button>
+              <button type="button" data-action="archive-now" class="px-3 h-9 rounded-xl glass-card text-xs font-semibold shrink-0 cursor-pointer">Snapshot Month</button>
             </div>
-            ${state.archivedReports.length === 0 ? `<p class="text-xs text-sec">No archived months yet.</p>` : [...state.archivedReports].reverse().map(r => `
-              <div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
-                <div>
-                  <div class="font-bold text-sm">${esc(r.label)}</div>
-                  <div class="text-sec">${r.ordersCount || 0} orders · Inc ${esc(fmtRs(r.income))} · Exp ${esc(fmtRs(r.expense))}</div>
+            ${state.archivedReports.length === 0 ? `<p class="text-xs text-sec">Abhi koi archived month nahi hai.</p>` : [...state.archivedReports].reverse().map(r => {
+              const isExp = ui.expandedArchiveMonth === r.monthKey;
+              const isLocked = r.closed !== false && r.monthKey < curMKey;
+              const staffSnap = Array.isArray(r.staffSnapshot) ? r.staffSnapshot : [];
+              const cf = r.carryForward || r.pendingCarryForward || {};
+              return `
+                <div class="rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+                  <button type="button" data-toggle-archive="${esc(r.monthKey)}" class="w-full p-3.5 flex items-center justify-between text-xs text-left cursor-pointer hover:bg-white/5">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-sm">${esc(r.label || formatMonthLabel(r.monthKey))}</span>
+                        ${isLocked ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold">🔒 Closed</span>` : `<span class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[10px] font-bold">Snapshot</span>`}
+                      </div>
+                      <div class="text-sec mt-0.5">${r.ordersCount || 0} orders · Inc ${esc(fmtRs(r.income))} · Exp ${esc(fmtRs(r.expense))}</div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-extrabold tabular-nums text-sm ${r.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${esc(fmtRs(r.profit))}</div>
+                      <div class="text-[10px] text-cyan-300 font-semibold">${isExp ? 'Hide ▲' : 'Details ▼'}</div>
+                    </div>
+                  </button>
+                  ${isExp ? `
+                    <div class="px-3.5 pb-3.5 pt-2 border-t border-white/10 space-y-2.5 text-xs">
+                      <div class="grid grid-cols-3 gap-2 tabular-nums">
+                        <div class="rounded-xl bg-white/5 p-2"><div class="text-[10px] text-sec">Income</div><div class="font-bold text-emerald-400">${esc(fmtRs(r.income))}</div></div>
+                        <div class="rounded-xl bg-white/5 p-2"><div class="text-[10px] text-sec">Expense</div><div class="font-bold text-orange-400">${esc(fmtRs(r.expense))}</div></div>
+                        <div class="rounded-xl bg-white/5 p-2"><div class="text-[10px] text-sec">Net Profit</div><div class="font-bold ${r.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}">${esc(fmtRs(r.profit))}</div></div>
+                      </div>
+                      ${(cf.customerPending !== undefined || cf.partyPending !== undefined) ? `
+                        <div class="rounded-xl bg-amber-500/10 border border-amber-400/25 p-2.5 flex justify-between tabular-nums">
+                          <span>Carry-Forward Customers: <strong class="text-amber-300">${esc(fmtRs(cf.customerPending || 0))}</strong></span>
+                          <span>Party: <strong class="text-rose-300">${esc(fmtRs(cf.partyPending || 0))}</strong></span>
+                        </div>
+                      ` : ''}
+                      ${staffSnap.length > 0 ? `
+                        <div class="space-y-1">
+                          <div class="text-[11px] font-bold text-sec">Staff Snapshot (${esc(r.label)})</div>
+                          ${staffSnap.map(st => `
+                            <div class="flex justify-between py-1 border-b border-white/10 last:border-0 tabular-nums">
+                              <span>${esc(st.name)} (${esc(st.role)})</span>
+                              <span>Sal: ${esc(fmtRs(st.salaryPaid))} · Adv: ${esc(fmtRs(st.advances))}</span>
+                            </div>
+                          `).join('')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  ` : ''}
                 </div>
-                <div class="text-right font-extrabold tabular-nums ${r.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${esc(fmtRs(r.profit))}</div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -4083,6 +4919,53 @@
       return formatDateTime(iso, tm);
     }
 
+    function renderGoogleDriveCard() {
+      const drive = getDrive();
+      const connected = Boolean(drive && drive.isConnected());
+      const gUser = drive ? drive.getUser() : null;
+      return `
+        <div class="glass-card rounded-3xl p-4 space-y-3 border border-cyan-400/20">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-extrabold">Google Drive Backup &amp; Restore</h2>
+              <p class="text-[11px] text-sec mt-0.5">
+                ${connected ? `Connected: ${esc(gUser?.email || gUser?.name || 'Google Account')}` : 'Apna Khata backup apne Google Drive me safe rakhein'}
+              </p>
+            </div>
+            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full ${connected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-white/10 text-sec'}">
+              ${connected ? 'Connected ✓' : 'Not Connected'}
+            </span>
+          </div>
+          ${connected ? `
+            <div class="text-xs text-sec">
+              Last Drive Backup: <span class="font-bold text-amber-300">${esc(formatDriveLastBackupText())}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-action="drive-backup" class="h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Backup to Drive</button>
+              <button type="button" data-action="drive-restore" class="h-11 rounded-xl glass-card border border-cyan-400/30 text-cyan-200 text-xs font-bold cursor-pointer">Restore from Drive</button>
+            </div>
+            <button type="button" data-action="drive-disconnect" class="w-full h-9 rounded-xl glass-card text-[11px] font-semibold text-sec hover:text-amber-300 cursor-pointer">Disconnect Google Drive</button>
+          ` : `
+            <button type="button" data-action="drive-connect" class="gsi-material-button" aria-label="Sign in with Google">
+              <div class="gsi-material-button-state"></div>
+              <div class="gsi-material-button-content-wrapper">
+                <div class="gsi-material-button-icon">
+                  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                    <path fill="none" d="M0 0h48v48H0z"></path>
+                  </svg>
+                </div>
+                <span class="gsi-material-button-contents">Sign in with Google</span>
+              </div>
+            </button>
+          `}
+        </div>
+      `;
+    }
+
     // ========================
     // PROFILE, CLOUD BACKUP & KYC
     // ========================
@@ -4133,6 +5016,8 @@
             </div>
           </div>
 
+          ${renderGoogleDriveCard()}
+
           <div class="glass-card rounded-3xl p-4 space-y-3">
             <div class="flex items-center justify-between">
               <div>
@@ -4175,7 +5060,7 @@
       const k = state.kyc || { status: 'none' };
       const topBar = `
         <div class="flex items-center justify-between">
-          ${k.status === 'approved' ? `
+          ${isKycVerified() ? `
             <button type="button" data-nav="home" class="h-10 px-3.5 rounded-xl glass-card inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer">${icon('back', 'w-4 h-4')} Home</button>
           ` : `
             <div class="inline-flex items-center gap-2">
@@ -4187,6 +5072,37 @@
         </div>
       `;
 
+      if (state.blocked) {
+        return `
+          <div class="space-y-4">
+            ${topBar}
+            <div class="glass-card rounded-3xl p-6 text-center space-y-3 border border-rose-500/45">
+              <div class="w-16 h-16 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-2xl font-extrabold">⛔</div>
+              <h1 class="text-xl font-extrabold text-rose-400">Account Blocked</h1>
+              <p class="text-xs text-sec leading-relaxed">Aapka account Admin ne temporarily block kiya hai. Verification aur madad ke liye Admin (${esc(ADMIN_EMAIL)}) se rabta karein.</p>
+              <button type="button" data-action="signout" class="w-full h-11 rounded-xl glass-card border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">Sign Out</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (k.status === 'duplicate') {
+        return `
+          <div class="space-y-4">
+            ${topBar}
+            <div class="glass-card rounded-3xl p-6 text-center space-y-3 border border-amber-400/45">
+              <div class="w-16 h-16 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center mx-auto text-2xl font-extrabold">⚠</div>
+              <h1 class="text-xl font-extrabold text-amber-300">KYC Duplicate · Review Pending</h1>
+              <p class="text-xs text-sec leading-relaxed">
+                Ye ID Card (CNIC: <strong class="text-white tabular-nums">${esc(k.cnic || '-')}</strong>) pehle se ek aur Account me use ho chuka hai. 1 ID Card se sirf 1 Account ban sakta hai.
+              </p>
+              <p class="text-[11px] text-amber-200/90">Aapka data mehfooz hai aur delete nahi kiya gaya. Admin review (${esc(ADMIN_EMAIL)}) ke baad hi Dashboard khulega.</p>
+              <button type="button" data-action="signout" class="w-full h-11 rounded-xl glass-card border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">Sign Out</button>
+            </div>
+          </div>
+        `;
+      }
+
       if (k.status === 'approved') {
         return `
           <div class="space-y-4">
@@ -4194,7 +5110,10 @@
             <div class="glass-card rounded-3xl p-6 text-center space-y-3 border border-emerald-400/35">
               <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl font-extrabold">✓</div>
               <h1 class="text-xl font-extrabold text-emerald-400">KYC Verified - Mubarak Ho ✓</h1>
-              <p class="text-xs text-sec">${esc(k.fullName || state.session?.name || '')} · CNIC: <span class="tabular-nums font-bold text-white">${esc(k.cnic || '-')}</span></p>
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 text-xs font-bold">
+                <span>🔒 CNIC &amp; Mobile Permanently Locked ✓</span>
+              </div>
+              <p class="text-xs text-sec">${esc(k.fullName || state.session?.name || '')} · CNIC: <span class="tabular-nums font-bold text-white">${esc(k.cnic || '-')}</span>${k.mobile ? ' · Mobile: <span class="tabular-nums font-bold text-white">' + esc(k.mobile) + '</span>' : ''}</p>
               <button type="button" data-nav="home" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Open Home Page →</button>
             </div>
           </div>
@@ -4236,16 +5155,21 @@
           <div class="glass-card rounded-3xl p-5 space-y-4">
             <div>
               <h1 class="text-xl font-extrabold">KYC Verification</h1>
-              <p class="text-xs text-sec mt-1">Home Page kholne se pehle apni CNIC aur Selfie verification mukammal karein.</p>
+              <p class="text-xs text-sec mt-1">1 ID Card = 1 Account · 1 Mobile = 1 Account. Home Page kholne se pehle verification mukammal karein.</p>
             </div>
             <form id="kyc-form" class="space-y-4">
               <div>
-                <label for="kyc-cnic" class="block text-xs font-semibold text-sec mb-1.5">1. CNIC Number (13 digits) *</label>
-                <input id="kyc-cnic" type="text" inputmode="numeric" required maxlength="15" value="${esc(k.cnic || '')}" placeholder="35202-1234567-1" class="w-full h-12 px-4 rounded-xl glass-input text-sm tabular-nums" />
+                <label for="kyc-mobile" class="block text-xs font-semibold text-sec mb-1.5">1. Mobile Number (1 Mobile = 1 Account) *</label>
+                <input id="kyc-mobile" type="tel" inputmode="tel" required value="${esc(k.mobile || state.session?.mobile || '')}" placeholder="03001234567" class="w-full h-12 px-4 rounded-xl glass-input text-sm tabular-nums" />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-sec mb-1.5">2. CNIC Front Photo *</label>
+                <label for="kyc-cnic" class="block text-xs font-semibold text-sec mb-1.5">2. CNIC Number (13 digits — Dash ke sath ya bagair) *</label>
+                <input id="kyc-cnic" type="text" inputmode="numeric" required maxlength="17" value="${esc(k.cnic || '')}" placeholder="35202-1234567-1 ya 3520212345671" class="w-full h-12 px-4 rounded-xl glass-input text-sm tabular-nums" />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-sec mb-1.5">3. CNIC Front Photo *</label>
                 <div class="w-full rounded-2xl glass-input p-3 space-y-2.5">
                   <div class="flex items-center gap-3 min-w-0">
                     ${k.frontPhoto ? `<img src="${esc(k.frontPhoto)}" class="w-16 h-12 rounded-xl object-cover ring-1 ring-emerald-400 shrink-0" />` : `<div class="w-16 h-12 rounded-xl bg-white/5 flex items-center justify-center text-xs text-sec shrink-0">Front</div>`}
@@ -4264,7 +5188,7 @@
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-sec mb-1.5">3. CNIC Back Photo *</label>
+                <label class="block text-xs font-semibold text-sec mb-1.5">4. CNIC Back Photo *</label>
                 <div class="w-full rounded-2xl glass-input p-3 space-y-2.5">
                   <div class="flex items-center gap-3 min-w-0">
                     ${k.backPhoto ? `<img src="${esc(k.backPhoto)}" class="w-16 h-12 rounded-xl object-cover ring-1 ring-emerald-400 shrink-0" />` : `<div class="w-16 h-12 rounded-xl bg-white/5 flex items-center justify-center text-xs text-sec shrink-0">Back</div>`}
@@ -4283,7 +5207,7 @@
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-sec mb-1.5">4. Selfie Photo *</label>
+                <label class="block text-xs font-semibold text-sec mb-1.5">5. Live Selfie Photo *</label>
                 <div class="w-full rounded-2xl glass-input p-3 space-y-2.5 border ${k.selfiePhoto && k.selfieConfirmed ? 'border-emerald-400/50' : 'border-cyan-400/30'}">
                   <div class="flex items-center gap-3 min-w-0">
                     ${k.selfiePhoto && k.selfieConfirmed
@@ -4318,16 +5242,36 @@
     // ========================
     function renderSettings() {
       const themes = [
-        { id: 'dark-blue', label: 'Dark Blue', swatch: 'bg-[#0a1535] border-blue-500' },
-        { id: 'light', label: 'Light Mode', swatch: 'bg-slate-100 border-slate-400' },
+        { id: 'dark-blue', label: 'Dark Mode (Blue)', swatch: 'bg-[#0a1535] border-blue-500' },
+        { id: 'light', label: 'Light Mode (White)', swatch: 'bg-white border-blue-500' },
         { id: 'green', label: 'Green', swatch: 'bg-[#052e22] border-emerald-500' },
         { id: 'black', label: 'Black', swatch: 'bg-zinc-950 border-zinc-600' }
       ];
       const pinOn = Boolean(state.pinSecurity?.enabled && state.pinSecurity?.hash);
+      const bioOn = Boolean(state.biometric?.enabled);
       const kycVerified = isKycVerified();
       return `
         <div class="space-y-4">
           <h1 class="text-xl font-extrabold">Settings</h1>
+
+          <!-- Theme Change (TOP OF SETTINGS) -->
+          <div class="glass-card rounded-3xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold">Theme Mode</h2>
+                <p class="text-xs text-sec mt-0.5">Dark Mode ya White + Light Blue Theme choose karein.</p>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/15 border border-cyan-400/35 text-cyan-300">${state.settings.theme === 'light' ? '☀️ Light' : '🌙 Dark'}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              ${themes.map(t => `
+                <button type="button" data-set-theme="${t.id}" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer ${state.settings.theme === t.id ? 'border-cyan-400 bg-cyan-500/15' : 'border-white/10 glass-card'}">
+                  <span class="w-4 h-4 rounded-full border shrink-0 ${t.swatch}"></span>
+                  <span class="truncate">${esc(t.label)}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
 
           <!-- KYC Status -->
           <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3">
@@ -4406,17 +5350,20 @@
             </div>
           </div>
 
-          <!-- Theme Change -->
+          <!-- Fingerprint / Face ID Login -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
-            <h2 class="text-sm font-bold">Theme Change</h2>
-            <div class="grid grid-cols-2 gap-2.5">
-              ${themes.map(t => `
-                <button type="button" data-set-theme="${t.id}" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer ${state.settings.theme === t.id ? 'border-cyan-400 bg-cyan-500/15' : 'border-white/10 glass-card'}">
-                  <span class="w-4 h-4 rounded-full border ${t.swatch}"></span>
-                  <span>${esc(t.label)}</span>
-                </button>
-              `).join('')}
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold">Fingerprint / Biometric Login</h2>
+                <p class="text-xs text-sec mt-0.5">${bioOn ? 'Mobile sensor se 1-tap login active hai.' : 'Real device Fingerprint / Face ID login ON karein.'}</p>
+              </div>
+              <span class="text-xs font-bold ${bioOn ? 'text-emerald-400' : 'text-sec'}">${bioOn ? 'ON ✓' : 'OFF'}</span>
             </div>
+            ${bioOn ? `
+              <button type="button" data-action="disable-biometric" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-amber-400 cursor-pointer">Turn Off Fingerprint Login</button>
+            ` : `
+              <button type="button" data-action="enable-biometric" class="w-full h-10 rounded-xl btn-primary-grad text-xs font-bold flex items-center justify-center gap-2 cursor-pointer">${icon('fingerprint', 'w-4 h-4')} Turn On Fingerprint Login</button>
+            `}
           </div>
 
           <!-- Cloud Backup, Export, WhatsApp -->
@@ -4439,6 +5386,8 @@
             <button type="button" data-share-wa="" class="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer">WhatsApp Share Khata</button>
           </div>
 
+          ${renderGoogleDriveCard()}
+
           <!-- Password & Danger Zone -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
             <h2 class="text-sm font-bold">Security &amp; Data</h2>
@@ -4453,11 +5402,277 @@
     }
 
     // ========================
-    // MAIN SHELL & BOTTOM NAV (ONLY Home | Customers | Stock | Party | Profile, 430px MAX WIDTH)
+    // ADMIN CONTROL PANEL (ONLY FOR ADMIN_EMAIL)
     // ========================
+    function renderAdminDashboard() {
+      const users = (ui.adminUsers || []).filter(u => String(u.email || '').toLowerCase() !== ADMIN_EMAIL);
+      const q = (ui.adminSearch || '').trim().toLowerCase();
+      const flt = ui.adminFilter || 'all';
+      const filtered = users.filter(u => {
+        const matchQ = !q
+          || String(u.name || '').toLowerCase().includes(q)
+          || String(u.email || '').toLowerCase().includes(q)
+          || String(u.mobile || '').toLowerCase().includes(q)
+          || String(u.cnicLast4 || '').includes(q);
+        if (!matchQ) return false;
+        if (flt === 'duplicate') return u.kycStatus === 'duplicate';
+        if (flt === 'verifying') return u.kycStatus === 'verifying' || u.kycStatus === 'none';
+        if (flt === 'approved') return u.kycStatus === 'approved' && !u.blocked;
+        if (flt === 'blocked') return Boolean(u.blocked);
+        return true;
+      });
+      const dupCount = users.filter(u => u.kycStatus === 'duplicate').length;
+      const verCount = users.filter(u => u.kycStatus === 'approved' && !u.blocked).length;
+      const pendCount = users.filter(u => u.kycStatus === 'verifying' || u.kycStatus === 'none').length;
+      const blkCount = users.filter(u => u.blocked).length;
+      const totalPendingRs = users.reduce((s, u) => s + Number(u.totalPendingAmount || 0), 0);
+
+      return `
+        <div class="space-y-4">
+          <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-3 min-w-0">
+                ${renderLogoAvatar('w-12 h-12', 'ring-2 ring-amber-400')}
+                <div class="min-w-0">
+                  <div class="text-xs font-bold text-amber-300 uppercase tracking-wider">Admin Control Panel</div>
+                  <h1 class="text-lg font-extrabold truncate">${esc(state.session?.name || 'Admin')}</h1>
+                  <div class="text-[11px] text-blue-100/85 truncate">${esc(ADMIN_EMAIL)}</div>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" data-action="admin-refresh" class="px-3 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-xs font-bold cursor-pointer">🔄 Refresh</button>
+                <button type="button" data-set-theme="${state.settings.theme === 'light' ? 'dark-blue' : 'light'}" class="px-3 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-xs font-bold cursor-pointer">${state.settings.theme === 'light' ? '🌙 Dark' : '☀️ Light'}</button>
+                <button type="button" data-modal="change-password" class="px-3 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-xs font-bold cursor-pointer">Password</button>
+                <button type="button" data-action="signout" class="px-3 h-9 rounded-xl bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold cursor-pointer">Logout</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-white/15 tabular-nums">
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Total Users</div><div class="text-lg font-extrabold">${users.length}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Verified ✓</div><div class="text-lg font-extrabold text-emerald-300">${verCount}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Duplicate KYC</div><div class="text-lg font-extrabold text-amber-300">${dupCount}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Blocked</div><div class="text-lg font-extrabold text-rose-300">${blkCount}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5 col-span-2 sm:col-span-1"><div class="text-[10px] text-blue-100">All Pending</div><div class="text-sm font-extrabold text-cyan-200">${esc(fmtRs(totalPendingRs))}</div></div>
+            </div>
+          </div>
+
+          <div class="space-y-2.5">
+            <input id="admin-user-search" type="search" value="${esc(ui.adminSearch)}" placeholder="Search Name, Email, Mobile, CNIC last 4..." class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
+            <div class="flex flex-wrap gap-1.5">
+              ${[
+                { id: 'all', label: `All (${users.length})` },
+                { id: 'duplicate', label: `Duplicate KYC (${dupCount})` },
+                { id: 'verifying', label: `Pending (${pendCount})` },
+                { id: 'approved', label: `Verified (${verCount})` },
+                { id: 'blocked', label: `Blocked (${blkCount})` }
+              ].map(tab => `
+                <button type="button" data-admin-filter="${tab.id}" class="px-3.5 h-9 rounded-xl text-xs font-bold cursor-pointer ${flt === tab.id ? 'bg-blue-600 text-white' : 'glass-card text-sec'}">${esc(tab.label)}</button>
+              `).join('')}
+            </div>
+          </div>
+
+          ${ui.adminLoading ? `
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Users aur Cloud Khata load ho raha hai...</div>
+          ` : filtered.length === 0 ? `
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Is filter me koi user nahi mila.</div>
+          ` : `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${filtered.map(u => {
+                const kSt = u.kycStatus || 'none';
+                const statusBadge = u.blocked
+                  ? `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[10px] font-bold">⛔ Blocked</span>`
+                  : kSt === 'duplicate'
+                    ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/45 text-amber-300 text-[10px] font-bold">⚠ KYC Duplicate</span>`
+                    : kSt === 'approved'
+                      ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">Verified ✓</span>`
+                      : `<span class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[10px] font-bold">${esc(kSt === 'verifying' ? 'Verifying' : 'Pending KYC')}</span>`;
+                return `
+                  <div class="glass-card rounded-3xl p-4 space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="text-base font-extrabold truncate">${esc(u.name || 'User')}</span>
+                          ${statusBadge}
+                        </div>
+                        <div class="text-xs text-sec truncate mt-0.5">${esc(u.email || u.identifier || '-')}</div>
+                        <div class="text-[11px] text-mut mt-0.5 tabular-nums">Mobile: ${esc(u.mobile || '-')} · CNIC: ${u.cnicLast4 ? '****-*******-' + esc(u.cnicLast4[3] || u.cnicLast4) : '-'}</div>
+                      </div>
+                      <div class="text-right shrink-0 tabular-nums">
+                        <div class="text-[11px] text-sec">${Number(u.customerCount || 0)} Customers</div>
+                        <div class="text-sm font-extrabold text-amber-400">${esc(fmtRs(u.totalPendingAmount || 0))}</div>
+                        <div class="text-[10px] text-mut">Pending</div>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
+                      <button type="button" data-admin-inspect="${esc(u.uid)}" class="h-9 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">View Data</button>
+                      ${kSt !== 'approved' ? `
+                        <button type="button" data-admin-approve-kyc="${esc(u.uid)}" class="h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold cursor-pointer">Approve KYC</button>
+                      ` : `
+                        <button type="button" data-admin-mark-duplicate="${esc(u.uid)}" class="h-9 rounded-xl bg-amber-500/15 border border-amber-400/35 text-amber-300 text-xs font-bold cursor-pointer">Mark Dup</button>
+                      `}
+                      <button type="button" data-admin-toggle-block="${esc(u.uid)}:${u.blocked ? 'unblock' : 'block'}" class="h-9 rounded-xl ${u.blocked ? 'bg-cyan-500/20 border border-cyan-400/40 text-cyan-300' : 'bg-rose-500/20 border border-rose-400/40 text-rose-300'} text-xs font-bold cursor-pointer">${u.blocked ? 'Unblock' : 'Block'}</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderAdminUserInspect() {
+      const d = ui.adminInspectData;
+      const p = d?.profile || {};
+      const v = d?.vaultData || {};
+      const uidVal = ui.adminInspectUid || p.uid || '';
+      const customers = Array.isArray(v.customers) ? v.customers : [];
+      const orders = Array.isArray(v.orders) ? v.orders : [];
+      const stock = Array.isArray(v.stock) ? v.stock : [];
+      const suppliers = Array.isArray(v.suppliers) ? v.suppliers : [];
+      const staff = Array.isArray(v.staff) ? v.staff : [];
+      const archived = Array.isArray(v.archivedReports) ? v.archivedReports : [];
+      const txs = Array.isArray(v.transactions) ? v.transactions : [];
+      const backups = Array.isArray(d?.backups) ? d.backups : [];
+      const kycObj = v.kyc || {};
+      const incomeSum = txs.filter(x => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
+      const expenseSum = txs.filter(x => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
+
+      return `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <button type="button" data-action="admin-back" class="h-10 px-3.5 rounded-xl glass-card inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer">${icon('back', 'w-4 h-4')} All Users</button>
+            <button type="button" data-action="signout" class="h-9 px-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">Logout</button>
+          </div>
+
+          ${ui.adminLoading || !d ? `
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">User ka poora Cloud data load ho raha hai...</div>
+          ` : `
+            <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div class="text-xs font-bold text-amber-300">${esc(v.settings?.shopName || 'Workshop Account')}</div>
+                  <h1 class="text-xl font-extrabold">${esc(p.name || 'User')}</h1>
+                  <div class="text-xs text-blue-100/90 mt-0.5">${esc(p.email || p.identifier || '-')} · ${esc(p.mobile || kycObj.mobile || 'No mobile')}</div>
+                  <div class="text-xs text-cyan-200 mt-0.5 tabular-nums">CNIC: ${esc(kycObj.cnic || (p.cnicLast4 ? 'Ending ' + p.cnicLast4 : 'Not submitted'))} · KYC Status: <strong class="uppercase">${esc(p.kycStatus || kycObj.status || 'none')}</strong></div>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-extrabold ${p.blocked ? 'bg-rose-500 text-white' : 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'}">${p.blocked ? '⛔ BLOCKED' : 'ACTIVE'}</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/15">
+                <button type="button" data-admin-approve-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold cursor-pointer">✓ Approve KYC</button>
+                <button type="button" data-admin-mark-duplicate="${esc(uidVal)}" class="h-10 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold cursor-pointer">⚠ Mark Duplicate</button>
+                <button type="button" data-admin-toggle-block="${esc(uidVal)}:${p.blocked ? 'unblock' : 'block'}" class="h-10 rounded-xl ${p.blocked ? 'bg-cyan-400 text-slate-950' : 'bg-rose-500 text-white'} text-xs font-extrabold cursor-pointer">${p.blocked ? 'Unblock User' : 'Block User'}</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 tabular-nums">
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Customers</div><div class="text-lg font-extrabold mt-0.5">${customers.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Work Orders</div><div class="text-lg font-extrabold mt-0.5">${orders.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Income</div><div class="text-base font-extrabold text-emerald-400 mt-0.5">${esc(fmtRs(incomeSum))}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Expense</div><div class="text-base font-extrabold text-orange-400 mt-0.5">${esc(fmtRs(expenseSum))}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Stock Items</div><div class="text-lg font-extrabold mt-0.5">${stock.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Party / Dealers</div><div class="text-lg font-extrabold mt-0.5">${suppliers.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Staff Members</div><div class="text-lg font-extrabold mt-0.5">${staff.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Backups</div><div class="text-lg font-extrabold mt-0.5">${backups.length}</div></div>
+            </div>
+
+            ${(kycObj.frontPhoto || kycObj.backPhoto || kycObj.selfiePhoto) ? `
+              <div class="glass-card rounded-3xl p-4 space-y-2.5">
+                <h2 class="text-sm font-bold">KYC Documents</h2>
+                <div class="grid grid-cols-3 gap-2">
+                  ${kycObj.frontPhoto ? `<div><div class="text-[10px] text-sec mb-1">Front</div><img src="${esc(kycObj.frontPhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
+                  ${kycObj.backPhoto ? `<div><div class="text-[10px] text-sec mb-1">Back</div><img src="${esc(kycObj.backPhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
+                  ${kycObj.selfiePhoto ? `<div><div class="text-[10px] text-sec mb-1">Selfie</div><img src="${esc(kycObj.selfiePhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="glass-card rounded-3xl p-4 space-y-2">
+                <h2 class="text-sm font-bold">Customers (${customers.length})</h2>
+                ${customers.length === 0 ? `<p class="text-xs text-sec">No customers.</p>` : customers.slice(0, 15).map(c => `
+                  <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs">
+                    <span class="font-semibold">${esc(c.name)}</span>
+                    <span class="text-sec tabular-nums">${esc(c.mobile || '-')}</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="glass-card rounded-3xl p-4 space-y-2">
+                <h2 class="text-sm font-bold">Archived Monthly Reports (${archived.length})</h2>
+                ${archived.length === 0 ? `<p class="text-xs text-sec">No archived months.</p>` : archived.map(r => `
+                  <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                    <span class="font-semibold">${esc(r.label || r.monthKey)}</span>
+                    <span class="${r.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">${esc(fmtRs(r.profit))}</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="glass-card rounded-3xl p-4 space-y-2">
+                <h2 class="text-sm font-bold">Stock (${stock.length}) &amp; Party (${suppliers.length})</h2>
+                ${stock.slice(0, 10).map(s => `
+                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                    <span>${esc(s.item)} (${esc(s.category)})</span>
+                    <span class="font-bold text-cyan-300">${esc(s.qty)} ${esc(s.unit || 'Pcs')}</span>
+                  </div>
+                `).join('') || `<p class="text-xs text-sec">No stock items.</p>`}
+              </div>
+
+              <div class="glass-card rounded-3xl p-4 space-y-2">
+                <h2 class="text-sm font-bold">Staff (${staff.length}) &amp; Cloud Backups (${backups.length})</h2>
+                ${staff.slice(0, 8).map(st => `
+                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                    <span>${esc(st.name)} (${esc(st.role)})</span>
+                    <span class="font-bold text-emerald-400">${esc(fmtRs(st.salary))}</span>
+                  </div>
+                `).join('')}
+                ${backups.slice(0, 5).map(b => `
+                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs">
+                    <span class="text-sec">${esc(b.kind || 'backup')} · ${esc(b.label || b.dateKey)}</span>
+                    <span class="text-cyan-300 font-semibold">Saved ✓</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    // ========================
+    // MAIN SHELL & MODERN PILL NAVBAR (EXACT 6 TABS: Home | Customer | Stock | Party / Dealer | Monthly Report | Profile)
+    // ========================
+    function positionPillSlider() {
+      const nav = document.getElementById('pill-navbar');
+      const slider = document.getElementById('pill-active-slider');
+      if (!nav || !slider) return;
+      const activeBtn = nav.querySelector('.pill-nav-btn.active');
+      if (!activeBtn) {
+        slider.style.opacity = '0';
+        return;
+      }
+      slider.style.opacity = '1';
+      slider.style.width = activeBtn.offsetWidth + 'px';
+      slider.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
+      if (nav.scrollWidth > nav.clientWidth + 4) {
+        const targetScroll = activeBtn.offsetLeft - (nav.clientWidth / 2) + (activeBtn.offsetWidth / 2);
+        nav.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
+      }
+    }
+
     function renderShell() {
+      if (isAdminSession()) {
+        const adminBody = ui.view === 'admin-inspect' ? renderAdminUserInspect() : renderAdminDashboard();
+        return `
+          <div class="min-h-screen pb-10">
+            <main class="w-full px-3.5 sm:px-5 pt-4">
+              ${adminBody}
+            </main>
+          </div>
+        `;
+      }
+
       const kycOk = isKycVerified();
-      // Strictly gate Home and workshop pages until KYC is Verified
+      // Strictly gate Home and workshop pages until KYC is Verified & not blocked
       const v = kycOk ? ui.view : 'kyc';
       let bodyHtml = '';
       if (!kycOk) bodyHtml = renderKyc();
@@ -4485,39 +5700,41 @@
       else bodyHtml = renderHome();
 
       const navItems = [
-        { id: 'home', label: 'Home', icon: 'home' },
-        { id: 'customers', label: 'Customers', icon: 'users' },
-        { id: 'stock', label: 'Stock', icon: 'stock' },
-        { id: 'party', label: 'Party', icon: 'party' },
-        { id: 'profile', label: 'Profile', icon: 'user' }
+        { id: 'home', label: 'Home', shortLabel: 'Home', icon: 'home' },
+        { id: 'customers', label: 'Customer', shortLabel: 'Customer', icon: 'users' },
+        { id: 'stock', label: 'Stock', shortLabel: 'Stock', icon: 'stock' },
+        { id: 'party', label: 'Party / Dealer', shortLabel: 'Party', icon: 'party' },
+        { id: 'report', label: 'Monthly Report', shortLabel: 'Report', icon: 'report' },
+        { id: 'profile', label: 'Profile', shortLabel: 'Profile', icon: 'user' }
       ];
 
+      const pillNavHtml = kycOk ? `
+        <div class="pill-navbar-wrap">
+          <nav id="pill-navbar" class="pill-navbar" aria-label="Main Navigation">
+            <div id="pill-active-slider" class="pill-active-slider"></div>
+            ${navItems.map(n => {
+              const active = v === n.id
+                || (n.id === 'customers' && (v === 'work' || v === 'customer-detail' || v === 'order-detail'))
+                || (n.id === 'stock' && v === 'stock-detail')
+                || (n.id === 'party' && v === 'supplier-detail')
+                || (n.id === 'profile' && (v === 'kyc' || v === 'settings'));
+              return `
+                <button type="button" data-nav="${n.id}" class="pill-nav-btn ${active ? 'active' : ''}">
+                  ${icon(n.icon, 'w-4 h-4 md:w-5 md:h-5 shrink-0')}
+                  <span class="text-[10px] sm:text-xs font-semibold tracking-tight">${esc(n.label)}</span>
+                </button>
+              `;
+            }).join('')}
+          </nav>
+        </div>
+      ` : '';
+
       return `
-        <div class="min-h-screen ${kycOk ? 'pb-24' : 'pb-8'}">
-          <main class="w-full px-3.5 pt-4">
+        <div class="min-h-screen flex flex-col ${kycOk ? 'pb-[112px]' : 'pb-8'}">
+          <main class="w-full px-3.5 sm:px-5 pt-4 flex-1">
             ${bodyHtml}
           </main>
-
-          ${kycOk ? `
-          <!-- 8) BOTTOM NAVIGATION - ALWAYS VISIBLE (CONSTRAINED TO 430px CENTERED) -->
-          <nav class="nav-bar fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 h-16 px-1">
-            <div class="h-full grid grid-cols-5 items-center">
-              ${navItems.map(n => {
-                const active = v === n.id
-                  || (n.id === 'customers' && (v === 'work' || v === 'customer-detail' || v === 'order-detail'))
-                  || (n.id === 'stock' && v === 'stock-detail')
-                  || (n.id === 'party' && v === 'supplier-detail')
-                  || (n.id === 'profile' && v === 'kyc');
-                return `
-                  <button type="button" data-nav="${n.id}" class="h-14 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-colors ${active ? 'text-cyan-400' : 'text-sec hover:text-white'}">
-                    ${icon(n.icon, 'w-5 h-5')}
-                    <span class="text-[11px] font-semibold tracking-tight">${esc(n.label)}</span>
-                  </button>
-                `;
-              }).join('')}
-            </div>
-          </nav>
-          ` : ''}
+          ${pillNavHtml}
         </div>
       `;
     }
@@ -4529,11 +5746,12 @@
       if (!root) return;
       if (!state.session) {
         root.innerHTML = renderAuth();
-      } else if (ui.pinLocked && state.pinSecurity?.enabled && state.pinSecurity?.hash) {
+      } else if (ui.pinLocked && !isAdminSession() && state.pinSecurity?.enabled && state.pinSecurity?.hash) {
         root.innerHTML = renderPinLock();
       } else {
         root.innerHTML = renderShell();
       }
+      requestAnimationFrame(positionPillSlider);
     }
 
     // ========================
@@ -5050,6 +6268,23 @@
             <div><label class="block text-xs text-sec mb-1">${isAdv ? 'Reason / Note' : 'Note'}</label><input name="note" type="text" value="${esc(log?.note || '')}" placeholder="Optional" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
             <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">${isEdit ? 'Update Entry' : 'Confirm &amp; Log Expense'}</button>
           </form>`;
+      } else if (type === 'edit-staff-salary') {
+        const st = state.staff.find(x => x.id === extra.staffId);
+        if (!st) return;
+        title = `Edit / Increase Salary: ${st.name}`;
+        content = `
+          <form id="modal-staff-salary-form" class="space-y-3.5">
+            <input type="hidden" name="staffId" value="${esc(st.id)}" />
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-3 text-xs flex justify-between">
+              <span class="text-sec">Current Monthly Salary</span>
+              <strong class="text-cyan-300 tabular-nums">${esc(fmtRs(st.salary))}</strong>
+            </div>
+            <div><label class="block text-xs text-sec mb-1">New Monthly Salary (Rs) *</label><input name="newSalary" type="number" min="0" required value="${esc(st.salary)}" class="w-full h-11 px-3 rounded-xl glass-input text-sm tabular-nums" /></div>
+            <div><label class="block text-xs text-sec mb-1">Effective Date *</label><input name="effectiveDate" type="date" required value="${todayISO()}" class="w-full h-11 px-3 rounded-xl glass-input text-sm tabular-nums" /></div>
+            <div><label class="block text-xs text-sec mb-1">Increment / Revision Note</label><input name="note" type="text" placeholder="e.g. Annual increment / Promotion" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            <p class="text-[11px] text-sec">Note: Pichlay maheenon ki salary/advance history unchanged rahegi.</p>
+            <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">Save Salary Revision</button>
+          </form>`;
       } else if (type === 'add-committee') {
         title = 'Add Committee Plan';
         content = `
@@ -5145,11 +6380,40 @@
               </div>
             </div>
           </div>`;
+      } else if (type === 'confirm-drive-overwrite') {
+        const info = pendingDriveAction || {};
+        title = 'Update Google Drive Backup?';
+        content = `
+          <div class="space-y-4">
+            <p class="text-xs text-sec leading-relaxed">
+              Google Drive par pehle se backup file <span class="font-bold text-white">${esc(info.fileName || 'DigitalKhata_Warsha_Backup.json')}</span> mojood hai
+              ${info.modifiedTime ? ` (Updated: <span class="font-bold text-amber-300">${esc(formatDriveIsoTime(info.modifiedTime))}</span>)` : ''}.
+              Kya aap naya data save karke purani Drive backup file ko overwrite karna chahte hain?
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Cancel</button>
+              <button type="button" data-action="confirm-drive-backup" class="h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Yes, Update Backup</button>
+            </div>
+          </div>`;
+      } else if (type === 'confirm-drive-restore') {
+        const info = pendingDriveAction || {};
+        title = 'Restore from Google Drive?';
+        content = `
+          <div class="space-y-4">
+            <p class="text-xs text-sec leading-relaxed">
+              File <span class="font-bold text-white">${esc(info.fileName || 'DigitalKhata_Warsha_Backup.json')}</span>
+              ${info.modifiedTime ? ` (Saved: <span class="font-bold text-amber-300">${esc(formatDriveIsoTime(info.modifiedTime))}</span>)` : ''} se aapka sara Khata restore hoga aur mojooda local records is backup se replace ho jayenge. Kya aap continue karna chahte hain?
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Cancel</button>
+              <button type="button" data-action="confirm-drive-restore" class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">Yes, Restore Data</button>
+            </div>
+          </div>`;
       }
 
       m.innerHTML = `
-        <div id="modal-backdrop" class="fixed inset-y-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center p-0">
-          <div class="w-full glass-strong rounded-t-3xl p-5 shadow-2xl max-h-[88vh] overflow-y-auto">
+        <div id="modal-backdrop" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div class="w-full max-w-[460px] sm:max-w-lg glass-strong rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl max-h-[88vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-base font-extrabold">${esc(title)}</h3>
               <button type="button" data-close-modal aria-label="Close modal" class="w-9 h-9 rounded-xl glass-card flex items-center justify-center text-sm cursor-pointer">✕</button>
@@ -5243,13 +6507,17 @@
       }
       const editOrdPay = t.closest('[data-edit-order-pay]');
       if (editOrdPay) {
-        openModal('edit-order-payment', { paymentId: editOrdPay.getAttribute('data-edit-order-pay') });
+        const pid = editOrdPay.getAttribute('data-edit-order-pay');
+        const pay = state.customerPayments.find(p => p.id === pid);
+        if (pay && isDateInClosedMonth(pay.date)) { toast('Closed month ka payment edit nahi ho sakta 🔒', 'error'); return; }
+        openModal('edit-order-payment', { paymentId: pid });
         return;
       }
       const delOrdPay = t.closest('[data-delete-order-pay]');
       if (delOrdPay) {
         const pid = delOrdPay.getAttribute('data-delete-order-pay');
         const pay = state.customerPayments.find(p => p.id === pid);
+        if (pay && isDateInClosedMonth(pay.date)) { toast('Closed month ka payment delete nahi ho sakta 🔒', 'error'); return; }
         if (pay) {
           state.customerPayments = state.customerPayments.filter(p => p.id !== pid);
           state.transactions = state.transactions.filter(tx => tx.id !== pay.txId && tx.orderPayId !== pid);
@@ -5288,13 +6556,23 @@
         return;
       }
 
+      const editStfSal = t.closest('[data-edit-staff-salary]');
+      if (editStfSal) { openModal('edit-staff-salary', { staffId: editStfSal.getAttribute('data-edit-staff-salary') }); return; }
+
       const editStfLog = t.closest('[data-edit-staff-log]');
-      if (editStfLog) { openModal('edit-staff-log', { logId: editStfLog.getAttribute('data-edit-staff-log') }); return; }
+      if (editStfLog) {
+        const lid = editStfLog.getAttribute('data-edit-staff-log');
+        const lg = state.staffLogs.find(l => l.id === lid);
+        if (lg && isDateInClosedMonth(lg.date)) { toast('Closed month ki staff entry edit nahi ho sakti 🔒', 'error'); return; }
+        openModal('edit-staff-log', { logId: lid });
+        return;
+      }
 
       const delStfLog = t.closest('[data-delete-staff-log]');
       if (delStfLog) {
         const lid = delStfLog.getAttribute('data-delete-staff-log');
         const lg = state.staffLogs.find(l => l.id === lid);
+        if (lg && isDateInClosedMonth(lg.date)) { toast('Closed month ki staff entry delete nahi ho sakti 🔒', 'error'); return; }
         if (lg) {
           state.staffLogs = state.staffLogs.filter(l => l.id !== lid);
           state.transactions = state.transactions.filter(tx => tx.id !== lg.txId && tx.staffLogId !== lid);
@@ -5317,12 +6595,19 @@
       if (addPartyPay) { openModal('add-party-payment', { supplierId: addPartyPay.getAttribute('data-add-party-payment') }); return; }
 
       const editPartyPay = t.closest('[data-edit-party-pay]');
-      if (editPartyPay) { openModal('edit-party-payment', { partyPaymentId: editPartyPay.getAttribute('data-edit-party-pay') }); return; }
+      if (editPartyPay) {
+        const pid = editPartyPay.getAttribute('data-edit-party-pay');
+        const pp = (state.partyPayments || []).find(p => p.id === pid);
+        if (pp && isDateInClosedMonth(pp.date)) { toast('Closed month ki party payment edit nahi ho sakti 🔒', 'error'); return; }
+        openModal('edit-party-payment', { partyPaymentId: pid });
+        return;
+      }
 
       const delPartyPay = t.closest('[data-delete-party-pay]');
       if (delPartyPay) {
         const pid = delPartyPay.getAttribute('data-delete-party-pay');
         const pp = (state.partyPayments || []).find(p => p.id === pid);
+        if (pp && isDateInClosedMonth(pp.date)) { toast('Closed month ki party payment delete nahi ho sakti 🔒', 'error'); return; }
         if (pp) {
           state.partyPayments = state.partyPayments.filter(p => p.id !== pid);
           state.transactions = state.transactions.filter(tx => tx.id !== pp.txId && tx.partyPayId !== pid);
@@ -5332,12 +6617,19 @@
       }
 
       const editMess = t.closest('[data-edit-mess]');
-      if (editMess) { openModal('edit-mess', { messId: editMess.getAttribute('data-edit-mess') }); return; }
+      if (editMess) {
+        const mid = editMess.getAttribute('data-edit-mess');
+        const me = (state.messEntries || []).find(x => x.id === mid);
+        if (me && isDateInClosedMonth(me.date)) { toast('Closed month ki mess entry edit nahi ho sakti 🔒', 'error'); return; }
+        openModal('edit-mess', { messId: mid });
+        return;
+      }
 
       const delMess = t.closest('[data-delete-mess]');
       if (delMess) {
         const mid = delMess.getAttribute('data-delete-mess');
         const me = (state.messEntries || []).find(x => x.id === mid);
+        if (me && isDateInClosedMonth(me.date)) { toast('Closed month ki mess entry delete nahi ho sakti 🔒', 'error'); return; }
         state.messEntries = (state.messEntries || []).filter(x => x.id !== mid);
         state.transactions = state.transactions.filter(tx => tx.messId !== mid && (!me || tx.id !== me.txId));
         saveState(); render(); toast('Mess entry deleted', 'info'); return;
@@ -5362,12 +6654,19 @@
       }
 
       const editRentPay = t.closest('[data-edit-rent-pay]');
-      if (editRentPay) { openModal('edit-rent-payment', { rentPaymentId: editRentPay.getAttribute('data-edit-rent-pay') }); return; }
+      if (editRentPay) {
+        const rpid = editRentPay.getAttribute('data-edit-rent-pay');
+        const rp = (state.rentPayments || []).find(p => p.id === rpid);
+        if (rp && isDateInClosedMonth(rp.date)) { toast('Closed month ka rent record edit nahi ho sakta 🔒', 'error'); return; }
+        openModal('edit-rent-payment', { rentPaymentId: rpid });
+        return;
+      }
 
       const delRentPay = t.closest('[data-delete-rent-pay]');
       if (delRentPay) {
         const rpid = delRentPay.getAttribute('data-delete-rent-pay');
         const rp = (state.rentPayments || []).find(p => p.id === rpid);
+        if (rp && isDateInClosedMonth(rp.date)) { toast('Closed month ka rent record delete nahi ho sakta 🔒', 'error'); return; }
         state.rentPayments = (state.rentPayments || []).filter(p => p.id !== rpid);
         state.transactions = state.transactions.filter(tx => tx.rentPaymentId !== rpid && (!rp || tx.id !== rp.txId));
         saveState(); render(); toast('Rent payment deleted', 'info'); return;
@@ -5458,6 +6757,7 @@
       if (delTx) {
         const tid = delTx.getAttribute('data-delete-tx');
         const tx = state.transactions.find(x => x.id === tid);
+        if (tx && isDateInClosedMonth(tx.date)) { toast('Closed month ka transaction delete nahi ho sakta 🔒', 'error'); return; }
         state.transactions = state.transactions.filter(x => x.id !== tid);
         if (tx) {
           if (tx.messId) state.messEntries = (state.messEntries || []).filter(m => m.id !== tx.messId && m.txId !== tid);
@@ -5489,6 +6789,82 @@
       if (themeBtn) {
         state.settings.theme = themeBtn.getAttribute('data-set-theme');
         saveState(); render(); toast('Theme updated', 'success'); return;
+      }
+
+      const toggleArch = t.closest('[data-toggle-archive]');
+      if (toggleArch) {
+        const mk = toggleArch.getAttribute('data-toggle-archive');
+        ui.expandedArchiveMonth = ui.expandedArchiveMonth === mk ? '' : mk;
+        render();
+        return;
+      }
+
+      const adminFilterBtn = t.closest('[data-admin-filter]');
+      if (adminFilterBtn) {
+        ui.adminFilter = adminFilterBtn.getAttribute('data-admin-filter') || 'all';
+        render();
+        return;
+      }
+
+      const adminInspectBtn = t.closest('[data-admin-inspect]');
+      if (adminInspectBtn) {
+        await openAdminInspectUser(adminInspectBtn.getAttribute('data-admin-inspect'));
+        return;
+      }
+
+      const adminApproveBtn = t.closest('[data-admin-approve-kyc]');
+      if (adminApproveBtn) {
+        const targetUid = adminApproveBtn.getAttribute('data-admin-approve-kyc');
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !targetUid) return;
+        try {
+          await cloud.adminUpdateUserStatus(targetUid, { kycStatus: 'approved', kycDuplicateOf: '' });
+          toast('User KYC Approved ✓', 'success');
+          await loadAdminUsersList();
+          if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
+            await openAdminInspectUser(targetUid);
+          }
+        } catch (err) {
+          toast('Approve failed: ' + (err.message || err), 'error');
+        }
+        return;
+      }
+
+      const adminDupBtn = t.closest('[data-admin-mark-duplicate]');
+      if (adminDupBtn) {
+        const targetUid = adminDupBtn.getAttribute('data-admin-mark-duplicate');
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !targetUid) return;
+        try {
+          await cloud.adminUpdateUserStatus(targetUid, { kycStatus: 'duplicate' });
+          toast('User marked as KYC Duplicate ⚠', 'info');
+          await loadAdminUsersList();
+          if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
+            await openAdminInspectUser(targetUid);
+          }
+        } catch (err) {
+          toast('Update failed: ' + (err.message || err), 'error');
+        }
+        return;
+      }
+
+      const adminBlkBtn = t.closest('[data-admin-toggle-block]');
+      if (adminBlkBtn) {
+        const [targetUid, mode] = String(adminBlkBtn.getAttribute('data-admin-toggle-block') || '').split(':');
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !targetUid) return;
+        const willBlock = mode === 'block';
+        try {
+          await cloud.adminUpdateUserStatus(targetUid, { blocked: willBlock });
+          toast(willBlock ? 'User Account Blocked ⛔' : 'User Account Unblocked ✓', 'success');
+          await loadAdminUsersList();
+          if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
+            await openAdminInspectUser(targetUid);
+          }
+        } catch (err) {
+          toast('Status update failed: ' + (err.message || err), 'error');
+        }
+        return;
       }
 
       // Skip card-open navigation if interacting with form controls or explicit stop-prop elements
@@ -5672,7 +7048,16 @@
       else if (act === 'biometric-login') { await loginWithBiometric(); }
       else if (act === 'enable-biometric') { await enrollBiometricForCurrentUser(); }
       else if (act === 'decline-biometric') { state.biometric.declined = true; saveState(); closeModal(); }
-      else if (act === 'disable-biometric') { state.biometric.enabled = false; state.biometric.credentialId = ''; saveState(); render(); toast('Fingerprint login turned off.', 'info'); }
+      else if (act === 'disable-biometric') {
+        state.biometric.enabled = false;
+        state.biometric.credentialId = '';
+        state.biometric.userId = '';
+        saveBioMeta(null);
+        saveState();
+        await flushCloudSync();
+        render();
+        toast('Fingerprint login turned off.', 'info');
+      }
       else if (act === 'pin-clear') { ui.pinEntry = ''; render(); }
       else if (act === 'pin-backspace') { ui.pinEntry = ui.pinEntry.slice(0, -1); render(); }
       else if (act === 'lock-app-now') {
@@ -5695,6 +7080,14 @@
       }
       else if (act === 'cloud-backup-now') { await manualCloudBackupNow(); }
       else if (act === 'cloud-restore-now') { await restoreFromCloudBackup(); }
+      else if (act === 'drive-connect') { await connectGoogleDriveAccount(); }
+      else if (act === 'drive-disconnect') { await disconnectGoogleDriveAccount(); }
+      else if (act === 'drive-backup') { await startGoogleDriveBackup(); }
+      else if (act === 'confirm-drive-backup') { await executeGoogleDriveBackup(pendingDriveAction?.fileId || null); }
+      else if (act === 'drive-restore') { await startGoogleDriveRestore(); }
+      else if (act === 'confirm-drive-restore') {
+        if (pendingDriveAction?.fileId) await executeGoogleDriveRestore(pendingDriveAction.fileId);
+      }
       else if (act === 'toggle-hide-balance') { state.settings.hideBalance = !state.settings.hideBalance; saveState(); render(); }
       else if (act === 'print-summary') { printWorkshopReport(null); }
       else if (act === 'export-excel') { exportToExcel(); }
@@ -5733,14 +7126,13 @@
       }
       else if (act === 'archive-now') {
         const mKey = currentMonthKey();
-        const inc = state.transactions.filter(tx => tx.type === 'income' && (tx.date || '').startsWith(mKey)).reduce((s, tx) => s + Number(tx.amount || 0), 0);
-        const exp = state.transactions.filter(tx => tx.type === 'expense' && (tx.date || '').startsWith(mKey)).reduce((s, tx) => s + Number(tx.amount || 0), 0);
-        const ord = state.orders.filter(o => (o.date || '').startsWith(mKey)).length;
+        const entry = buildMonthArchiveSnapshot(mKey, false);
         const idx = state.archivedReports.findIndex(r => r.monthKey === mKey);
-        const entry = { monthKey: mKey, label: mKey, income: inc, expense: exp, profit: inc - exp, ordersCount: ord, archivedAt: new Date().toISOString() };
         if (idx >= 0) state.archivedReports[idx] = entry; else state.archivedReports.push(entry);
         saveState(); render(); toast('Month snapshot saved ✓', 'success');
       }
+      else if (act === 'admin-refresh') { await loadAdminUsersList(); }
+      else if (act === 'admin-back') { ui.view = 'admin'; ui.adminInspectUid = ''; ui.adminInspectData = null; render(); }
       else if (act === 'signout') {
         hydrateGeneration++;
         if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
@@ -5918,28 +7310,78 @@
           state.rememberMe = loadRememberMe();
           sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, res.user.uid);
           ui.authLoading = false;
-          manualAuthFlow = false;
-          await hydrateFromFirebaseUser(res.user, {
-            identifier,
-            email: res.norm.email,
-            mobile: res.norm.mobile,
-            authType: res.norm.authType
-          });
-          ui.view = isKycVerified() ? 'home' : 'kyc';
-          render();
-          toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
-          if (isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
-            if (ui.promptPinAfterLogin) {
-              ui.promptPinAfterLogin = false;
-              setTimeout(() => openModal('set-pin'), 250);
-            } else {
-              setTimeout(() => openModal('pin-setup-prompt'), 350);
-            }
+
+          if (cloud.isAdminEmail(res.norm.email)) {
+            state = defaultData();
+            state.rememberMe = loadRememberMe();
+            state.session = {
+              id: res.user.uid,
+              uid: res.user.uid,
+              name: res.user.displayName || 'Admin',
+              email: res.norm.email,
+              mobile: '',
+              identifier: res.norm.email,
+              authType: 'email',
+              photo: '',
+              provider: 'firebase',
+              isAdmin: true,
+              loginAt: Date.now()
+            };
+            state.kyc.status = 'approved';
+            ui.pinLocked = false;
+            ui.view = 'admin';
+            saveState(true);
+            render();
+            toast('Welcome Admin ✓', 'success');
+            loadAdminUsersList();
           } else {
-            ui.promptPinAfterLogin = false;
+            const cached = loadUserCache(res.user.uid);
+            const overrideInfo = {
+              identifier,
+              email: res.norm.email,
+              mobile: res.norm.mobile,
+              authType: res.norm.authType
+            };
+            if (cached) {
+              state = cached;
+              state.rememberMe = loadRememberMe();
+              state.session = {
+                id: res.user.uid,
+                uid: res.user.uid,
+                cloudUid: res.user.uid,
+                name: state.session?.name || res.user.displayName || state.settings?.ownerName || 'User',
+                email: res.norm.email || state.session?.email || '',
+                mobile: res.norm.mobile || state.session?.mobile || '',
+                identifier,
+                authType: res.norm.authType,
+                photo: '',
+                provider: 'firebase',
+                loginAt: Date.now()
+              };
+              ui.pinLocked = false;
+              ui.view = (state.blocked || !isKycVerified()) ? 'kyc' : 'home';
+              saveState(true);
+              render();
+              toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
+              hydrateFromFirebaseUser(res.user, overrideInfo, { background: true });
+            } else {
+              await hydrateFromFirebaseUser(res.user, overrideInfo);
+              ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
+              render();
+              toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
+            }
+            if (!state.blocked && isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
+              if (ui.promptPinAfterLogin) {
+                ui.promptPinAfterLogin = false;
+                setTimeout(() => openModal('set-pin'), 250);
+              } else {
+                setTimeout(() => openModal('pin-setup-prompt'), 350);
+              }
+            } else {
+              ui.promptPinAfterLogin = false;
+            }
           }
         } catch (err) {
-          manualAuthFlow = false;
           ui.authLoading = false;
           const lockState = recordFailedPasswordAttempt();
           const msg = mapFirebaseAuthError(err);
@@ -5949,6 +7391,8 @@
             toast(`${msg} (${lockState.count}/5)`, 'error');
           }
           render();
+        } finally {
+          manualAuthFlow = false;
         }
         return;
       }
@@ -6229,6 +7673,7 @@
         const total = Math.round(sqFt * rate);
         const advance = Number(fd.get('advance') || 0);
         const date = fd.get('date').toString() || todayISO();
+        if (isDateInClosedMonth(date)) { toast('Closed month me work order add nahi ho sakta 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const deliveryDate = (fd.get('deliveryDate') || '').toString();
         const itemName = fd.get('itemName').toString().trim();
@@ -6281,6 +7726,8 @@
         const amount = Number(fd.get('amount') || 0);
         const method = fd.get('method').toString();
         const date = fd.get('date').toString() || todayISO();
+        const existingPay = paymentId ? state.customerPayments.find(x => x.id === paymentId) : null;
+        if (isDateInClosedMonth(date) || (existingPay && isDateInClosedMonth(existingPay.date))) { toast('Closed month ka payment change/add nahi ho sakta 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const note = fd.get('note').toString().trim();
         const custName = state.customers.find(c => c.id === customerId)?.name || 'Customer';
@@ -6314,6 +7761,7 @@
         const customerId = fd.get('customerId').toString();
         const amount = Number(fd.get('amount') || 0);
         const date = fd.get('date').toString() || todayISO();
+        if (isDateInClosedMonth(date)) { toast('Closed month me wasooli entry nahi ho sakti 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const method = fd.get('method').toString();
         const note = fd.get('note').toString().trim();
@@ -6336,6 +7784,8 @@
         const qty = fd.get('qty').toString().trim();
         const amount = Number(fd.get('amount') || 0);
         const date = fd.get('date').toString() || todayISO();
+        const existingMe = messId ? state.messEntries.find(x => x.id === messId) : null;
+        if (isDateInClosedMonth(date) || (existingMe && isDateInClosedMonth(existingMe.date))) { toast('Closed month ki mess entry change/add nahi ho sakti 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const paidBy = fd.get('paidBy').toString().trim() || 'Workshop / Owner';
         const note = fd.get('note').toString().trim();
@@ -6392,6 +7842,8 @@
         const amount = Number(fd.get('amount') || 0);
         const method = fd.get('method').toString();
         const date = fd.get('date').toString() || todayISO();
+        const existingRp = rentPaymentId ? state.rentPayments.find(p => p.id === rentPaymentId) : null;
+        if (isDateInClosedMonth(date) || (existingRp && isDateInClosedMonth(existingRp.date))) { toast('Closed month ka rent payment change/add nahi ho sakta 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const note = fd.get('note').toString().trim();
         const rec = state.rentRecords.find(r => r.id === rentId);
@@ -6419,13 +7871,15 @@
 
       if (f.id === 'modal-tx-form') {
         const fd = new FormData(f);
+        const txDate = fd.get('date').toString() || todayISO();
+        if (isDateInClosedMonth(txDate)) { toast('Closed month me transaction add nahi ho sakta 🔒', 'error'); return; }
         state.transactions.push({
           id: uid('tx'),
           type: fd.get('type').toString(),
           category: fd.get('category').toString(),
           title: fd.get('title').toString().trim(),
           amount: Number(fd.get('amount') || 0),
-          date: fd.get('date').toString() || todayISO(),
+          date: txDate,
           time: nowTime(),
           createdAt: new Date().toISOString()
         });
@@ -6553,6 +8007,8 @@
         const amount = Number(fd.get('amount') || 0);
         const method = fd.get('method').toString();
         const date = fd.get('date').toString() || todayISO();
+        const existingPp = partyPaymentId ? (state.partyPayments || []).find(x => x.id === partyPaymentId) : null;
+        if (isDateInClosedMonth(date) || (existingPp && isDateInClosedMonth(existingPp.date))) { toast('Closed month ki party payment change/add nahi ho sakti 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const note = fd.get('note').toString().trim();
         const supName = state.suppliers.find(s => s.id === supplierId)?.name || 'Party';
@@ -6586,6 +8042,7 @@
         const amount = Number(fd.get('amount') || 0);
         const paid = Number(fd.get('paid') || 0);
         const date = fd.get('date').toString() || todayISO();
+        if (isDateInClosedMonth(date)) { toast('Closed month me party entry add nahi ho sakti 🔒', 'error'); return; }
         const note = fd.get('note').toString().trim();
         const supName = state.suppliers.find(s => s.id === supplierId)?.name || 'Supplier';
 
@@ -6619,6 +8076,8 @@
         const logType = fd.get('logType').toString();
         const amount = Number(fd.get('amount') || 0);
         const date = fd.get('date').toString() || todayISO();
+        const existingLog = logId ? state.staffLogs.find(x => x.id === logId) : null;
+        if (isDateInClosedMonth(date) || (existingLog && isDateInClosedMonth(existingLog.date))) { toast('Closed month ki staff entry change/add nahi ho sakti 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
         const note = fd.get('note').toString().trim();
         const forMonth = fd.get('forMonth') ? fd.get('forMonth').toString().trim() : formatMonthLabel(date.slice(0, 7));
@@ -6645,6 +8104,31 @@
           toast('Staff payment recorded ✓', 'success');
         }
         saveState(); closeModal(); render(); return;
+      }
+
+      if (f.id === 'modal-staff-salary-form') {
+        const fd = new FormData(f);
+        const staffId = fd.get('staffId').toString();
+        const newSalary = Number(fd.get('newSalary') || 0);
+        const effectiveDate = fd.get('effectiveDate').toString() || todayISO();
+        const note = (fd.get('note') || '').toString().trim();
+        const st = state.staff.find(x => x.id === staffId);
+        if (!st) return;
+        const previousSalary = Number(st.salary || 0);
+        if (newSalary !== previousSalary) {
+          state.salaryHistory = Array.isArray(state.salaryHistory) ? state.salaryHistory : [];
+          state.salaryHistory.push({
+            id: uid('shist'),
+            staffId,
+            previousSalary,
+            newSalary,
+            effectiveDate,
+            note,
+            updatedAt: new Date().toISOString()
+          });
+          st.salary = newSalary;
+        }
+        saveState(); closeModal(); render(); toast('Staff salary updated ✓ (Past history safe)', 'success'); return;
       }
 
       if (f.id === 'modal-committee-form') {
@@ -6692,9 +8176,29 @@
       }
 
       if (f.id === 'kyc-form') {
-        const cnic = (document.getElementById('kyc-cnic')?.value || '').trim();
-        if (!/^\d{5}-\d{7}-\d{1}$/.test(cnic)) {
-          toast('13 digit CNIC darj karein (e.g. 35202-1234567-1).', 'error');
+        if (state.blocked || state.kyc?.status === 'approved' || state.kyc?.status === 'duplicate') return;
+        const rawMobile = (document.getElementById('kyc-mobile')?.value || '').trim();
+        const rawCnic = (document.getElementById('kyc-cnic')?.value || '').trim();
+        const cloud = getCloud();
+        let digits13 = '';
+        let formattedCnic = rawCnic;
+        try {
+          if (cloud) {
+            digits13 = cloud.normalizeCnic13(rawCnic);
+            formattedCnic = cloud.formatCnicDashed(digits13);
+          } else {
+            const cleaned = rawCnic.replace(/[\s-]/g, '');
+            if (!/^\d{13}$/.test(cleaned)) throw new Error('CNIC 13 digits ka hona chahiye (e.g. 35202-1234567-1 ya 3520212345671).');
+            digits13 = cleaned;
+            formattedCnic = `${cleaned.slice(0, 5)}-${cleaned.slice(5, 12)}-${cleaned.slice(12)}`;
+          }
+        } catch (cnicErr) {
+          toast(cnicErr?.message || '13 digit CNIC darj karein.', 'error');
+          return;
+        }
+        const mobDigits = cloud ? cloud.normalizeMobileDigits(rawMobile) : rawMobile.replace(/\D/g, '');
+        if (!mobDigits || mobDigits.length < 8 || mobDigits.length > 15) {
+          toast('Valid Mobile Number likhein (1 Mobile = 1 Account).', 'error');
           return;
         }
         if (!state.kyc.frontPhoto || !state.kyc.backPhoto) {
@@ -6705,16 +8209,34 @@
           toast('Pehle Take Live Selfie ya Gallery Upload se apni Selfie photo lagayein.', 'error');
           return;
         }
+        const activeUid = cloud?.auth?.currentUser?.uid || state.session?.uid || '';
+        if (!cloud || !activeUid || !cloud?.auth?.currentUser) {
+          toast('Security verification ke liye Internet aur Cloud Session zaroori hai. Dobara Sign in karke try karein.', 'error');
+          return;
+        }
+        if (!navigator.onLine) {
+          toast('Internet ON karein — 1 ID Card / 1 Mobile check online hota hai.', 'error');
+          return;
+        }
+        try {
+          await cloud.claimCnicForUser(digits13, activeUid);
+          await cloud.claimMobileForUser(rawMobile, activeUid);
+        } catch (claimErr) {
+          toast(claimErr?.message || 'Ye CNIC ya Mobile Number pehle se kisi aur account par registered hai.', 'error');
+          return;
+        }
         state.kyc = {
           ...state.kyc,
           status: 'verifying',
           fullName: state.kyc.fullName || state.session?.name || '',
-          cnic,
+          cnic: formattedCnic,
           shopName: state.kyc.shopName || state.settings?.shopName || '',
-          mobile: state.kyc.mobile || state.session?.mobile || '',
+          mobile: rawMobile,
           submittedAt: Date.now()
         };
+        if (state.session && !state.session.mobile) state.session.mobile = rawMobile;
         saveState();
+        await flushCloudSync();
         startKycCountdownTimer();
         render();
         toast('KYC Submitted - Verification me hai, 5 Minute Wait Karein', 'info');
@@ -6834,13 +8356,18 @@
         if (vEl) vEl.textContent = fmtRs(q * c);
         return;
       }
+      if (t.id === 'admin-user-search') {
+        ui.adminSearch = t.value;
+        const pos = t.selectionStart;
+        render();
+        const el = document.getElementById('admin-user-search');
+        if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+        return;
+      }
       if (t.id === 'kyc-cnic') {
-        const digits = t.value.replace(/\D/g, '').slice(0, 13);
-        let out = digits;
-        if (digits.length > 5) out = digits.slice(0, 5) + '-' + digits.slice(5);
-        if (digits.length > 12) out = digits.slice(0, 5) + '-' + digits.slice(5, 12) + '-' + digits.slice(12);
-        t.value = out;
-        if (state.kyc) state.kyc.cnic = out;
+        t.value = String(t.value || '').replace(/[^\d-]/g, '').slice(0, 15);
+        if (state.kyc) state.kyc.cnic = t.value;
+        return;
       }
     });
 
@@ -6936,6 +8463,9 @@
     }
 
     window.addEventListener('dk-cloud-ready', initCloudBridge);
+    window.addEventListener('dk-drive-state', () => {
+      if (ui.view === 'profile' || ui.view === 'settings') render();
+    });
     window.addEventListener('online', () => {
       ui.syncStatus = 'pending';
       updateSyncStatusBadgeDom();
@@ -6947,6 +8477,9 @@
       updateSyncStatusBadgeDom();
       toast('Offline mode — data local save ho raha hai ⏳', 'info');
     });
+
+    window.addEventListener('resize', positionPillSlider);
+    setInterval(() => checkAutoArchive(true), 30000);
 
     // Startup
     migrateLegacyData();

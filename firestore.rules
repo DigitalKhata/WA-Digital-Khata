@@ -7,6 +7,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated()
+        && request.auth.token.email == 'haroonirfan086@gmail.com';
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -31,8 +36,10 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'name', 'updatedAt'])
         && data.keys().hasOnly([
           'uid', 'name', 'identifier', 'email', 'mobile', 'authType',
-          'pinEnabled', 'pinHash', 'lastSyncAt', 'lastBackupAt',
-          'createdAt', 'updatedAt'
+          'pinEnabled', 'pinHash', 'cnicHash', 'cnicLast4', 'mobileHash',
+          'kycStatus', 'kycDuplicateOf', 'blocked',
+          'totalKhataAmount', 'totalPendingAmount', 'customerCount',
+          'lastSyncAt', 'lastBackupAt', 'createdAt', 'updatedAt'
         ])
         && data.uid == userId
         && isNonEmptyString(data.name, 120)
@@ -43,9 +50,40 @@ service cloud.firestore {
         && (!( 'authType' in data ) || data.authType in ['email', 'mobile'])
         && isOptionalBool(data, 'pinEnabled')
         && isOptionalString(data, 'pinHash', 128)
+        && isOptionalString(data, 'cnicHash', 64)
+        && isOptionalString(data, 'cnicLast4', 8)
+        && isOptionalString(data, 'mobileHash', 64)
+        && (!( 'kycStatus' in data ) || data.kycStatus in ['none', 'verifying', 'approved', 'duplicate'])
+        && isOptionalString(data, 'kycDuplicateOf', 128)
+        && isOptionalBool(data, 'blocked')
+        && isOptionalNumber(data, 'totalKhataAmount')
+        && isOptionalNumber(data, 'totalPendingAmount')
+        && isOptionalNumber(data, 'customerCount')
         && isOptionalNumber(data, 'lastSyncAt')
         && isOptionalNumber(data, 'lastBackupAt')
         && isOptionalNumber(data, 'createdAt');
+    }
+
+    function isOwnerSafeProfileCreate(data) {
+      return (!('blocked' in data) || data.blocked == false)
+        && (!('kycStatus' in data) || data.kycStatus in ['none', 'verifying', 'duplicate']);
+    }
+
+    function isOwnerSafeProfileUpdate(incoming, existing) {
+      return (!('blocked' in existing) || existing.blocked == false)
+        && (!('blocked' in incoming) || incoming.blocked == false)
+        && (
+          !('kycStatus' in existing)
+          || existing.kycStatus != 'duplicate'
+          || (incoming.kycStatus == 'duplicate')
+        )
+        && (
+          !('kycStatus' in existing)
+          || existing.kycStatus != 'approved'
+          || !('cnicHash' in existing)
+          || existing.cnicHash == ''
+          || incoming.cnicHash == existing.cnicHash
+        );
     }
 
     function isValidVaultDoc(data, userId, docId) {
@@ -85,46 +123,74 @@ service cloud.firestore {
         && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
     }
 
+    function isValidMobileClaim(data, mobileHash) {
+      return mobileHash.matches('^[a-f0-9]{64}$')
+        && data.keys().hasAll(['mobileHash', 'uid', 'createdAt'])
+        && data.keys().hasOnly(['mobileHash', 'uid', 'createdAt'])
+        && data.mobileHash == mobileHash
+        && data.uid == request.auth.uid
+        && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
+    }
+
     match /cnicRegistry/{cnicHash} {
       allow get: if isAuthenticated() && cnicHash.matches('^[a-f0-9]{64}$');
-      allow list: if false;
+      allow list: if isAdmin();
       allow create: if isAuthenticated()
         && !exists(/databases/$(database)/documents/cnicRegistry/$(cnicHash))
         && isValidCnicClaim(request.resource.data, cnicHash);
+      allow update: if isAdmin()
+        && cnicHash.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasAll(['cnicHash', 'uid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['cnicHash', 'uid', 'createdAt'])
+        && request.resource.data.cnicHash == cnicHash;
+      allow delete: if (isOwner(resource.data.uid) || isAdmin()) && cnicHash.matches('^[a-f0-9]{64}$');
+    }
+
+    match /mobileRegistry/{mobileHash} {
+      allow get: if isAuthenticated() && mobileHash.matches('^[a-f0-9]{64}$');
+      allow list: if isAdmin();
+      allow create: if isAuthenticated()
+        && !exists(/databases/$(database)/documents/mobileRegistry/$(mobileHash))
+        && isValidMobileClaim(request.resource.data, mobileHash);
       allow update: if false;
-      allow delete: if isOwner(resource.data.uid) && cnicHash.matches('^[a-f0-9]{64}$');
+      allow delete: if (isOwner(resource.data.uid) || isAdmin()) && mobileHash.matches('^[a-f0-9]{64}$');
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(userId)
-        && isValidUserProfile(request.resource.data, userId);
-      allow update: if isOwner(userId)
         && isValidUserProfile(request.resource.data, userId)
+        && (isAdmin() || isOwnerSafeProfileCreate(request.resource.data));
+      allow update: if isValidUserProfile(request.resource.data, userId)
         && request.resource.data.uid == resource.data.uid
-        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
-      allow delete: if isOwner(userId);
+        && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (
+          isAdmin()
+          || (isOwner(userId) && isOwnerSafeProfileUpdate(request.resource.data, resource.data))
+        );
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /vault/{docId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin())
           && isValidVaultDoc(request.resource.data, userId, docId);
-        allow update: if isOwner(userId)
+        allow update: if (isOwner(userId) || isAdmin())
           && isValidVaultDoc(request.resource.data, userId, docId)
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.docType == resource.data.docType;
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
       }
 
       match /backups/{backupId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId)
           && isValidBackupDoc(request.resource.data, userId, backupId);
         allow update: if isOwner(userId)
           && isValidBackupDoc(request.resource.data, userId, backupId)
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.id == resource.data.id;
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
       }
     }
 

@@ -29,6 +29,12 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
+export const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
+
+export function isAdminEmail(email: string | null | undefined): boolean {
+  return String(email || '').trim().toLowerCase() === ADMIN_EMAIL;
+}
+
 export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
@@ -118,11 +124,22 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
+export function normalizeMobileDigits(rawMobile: string): string {
+  let digits = String(rawMobile || '').replace(/\D/g, '');
+  if (digits.startsWith('0092') && digits.length === 14) {
+    digits = digits.slice(2);
+  } else if (digits.startsWith('0') && digits.length === 11) {
+    digits = '92' + digits.slice(1);
+  }
+  return digits;
+}
+
 export function normalizeIdentifier(rawInput: string): {
   authType: 'email' | 'mobile';
   authEmail: string;
   email: string;
   mobile: string;
+  normalizedMobile: string;
   identifier: string;
 } {
   const clean = String(rawInput || '').trim();
@@ -139,21 +156,20 @@ export function normalizeIdentifier(rawInput: string): {
       authEmail: email,
       email,
       mobile: '',
+      normalizedMobile: '',
       identifier: email
     };
   }
-  let digits = clean.replace(/\D/g, '');
+  const digits = normalizeMobileDigits(clean);
   if (digits.length < 8 || digits.length > 15) {
     throw new Error('Enter a valid Email or Mobile Number (e.g. 03001234567).');
-  }
-  if (digits.startsWith('0') && digits.length === 11) {
-    digits = '92' + digits.slice(1);
   }
   return {
     authType: 'mobile',
     authEmail: `m_${digits}@mobile.digitalkhata.app`,
     email: '',
     mobile: clean,
+    normalizedMobile: digits,
     identifier: clean
   };
 }
@@ -163,10 +179,9 @@ const VAULT_MAX_BYTES = 880000;
 function safeStringifyBounded(obj: Record<string, unknown>): string {
   const s = JSON.stringify(obj);
   if (s.length <= VAULT_MAX_BYTES) return s;
-  // Clone shallowly and compact heavy optional arrays/blobs cleanly instead of corrupting JSON
   const clone: Record<string, unknown> = { ...obj };
-  if (Array.isArray(clone.archivedReports) && clone.archivedReports.length > 24) {
-    clone.archivedReports = clone.archivedReports.slice(-24);
+  if (Array.isArray(clone.archivedReports) && clone.archivedReports.length > 36) {
+    clone.archivedReports = clone.archivedReports.slice(-36);
   }
   const s2 = JSON.stringify(clone);
   if (s2.length <= VAULT_MAX_BYTES) return s2;
@@ -178,24 +193,54 @@ function safeStringifyBounded(obj: Record<string, unknown>): string {
 }
 
 export function normalizeCnic13(rawCnic: string): string {
-  const clean = String(rawCnic || '').trim();
-  if (!/^\d{13}$/.test(clean)) {
-    throw new Error('CNIC sirf 13 digits ka hona chahiye (bina dash ke, e.g. 3520212345671).');
+  const trimmed = String(rawCnic || '').trim();
+  if (!trimmed) {
+    throw new Error('CNIC 13 digits ka hona chahiye (e.g. 35202-1234567-1 ya 3520212345671).');
   }
-  return clean;
+  // Allow only digits, dashes, or spaces; must normalize to exact 13 digits
+  if (!/^[\d\s-]+$/.test(trimmed)) {
+    throw new Error('CNIC me sirf 13 digits (dashes ke sath ya bagair) likhein.');
+  }
+  const digits = trimmed.replace(/[\s-]/g, '');
+  if (!/^\d{13}$/.test(digits)) {
+    throw new Error('CNIC sirf 13 digits ka hona chahiye (e.g. 35202-1234567-1 ya 3520212345671).');
+  }
+  // If dashes were used, validate standard 5-7-1 format or clean strips cleanly
+  if (trimmed.includes('-') && !/^\d{5}-\d{7}-\d$/.test(trimmed)) {
+    throw new Error('CNIC dash format 35202-1234567-1 jaisa rakhein ya bina dash ke 13 digits likhein.');
+  }
+  return digits;
 }
 
-export async function hashCnic(cnic13: string): Promise<string> {
-  const clean = normalizeCnic13(cnic13);
+export function formatCnicDashed(rawCnic: string): string {
+  try {
+    const d = normalizeCnic13(rawCnic);
+    return `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}`;
+  } catch {
+    return String(rawCnic || '');
+  }
+}
+
+export async function hashCnic(rawCnic: string): Promise<string> {
+  const clean = normalizeCnic13(rawCnic);
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`dk_cnic_v1:${clean}`));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function claimCnicForUser(cnic13: string, uid: string): Promise<string> {
+export async function hashMobile(rawMobile: string): Promise<string> {
+  const digits = normalizeMobileDigits(rawMobile);
+  if (digits.length < 8 || digits.length > 15) {
+    throw new Error('Valid Mobile Number enter karein.');
+  }
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`dk_mobile_v1:${digits}`));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function claimCnicForUser(rawCnic: string, uid: string): Promise<string> {
   if (!auth.currentUser || auth.currentUser.uid !== uid) {
     throw new Error('Please sign in first.');
   }
-  const cnicHash = await hashCnic(cnic13);
+  const cnicHash = await hashCnic(rawCnic);
   const ref = doc(db, 'cnicRegistry', cnicHash);
   let snap;
   try {
@@ -206,7 +251,7 @@ export async function claimCnicForUser(cnic13: string, uid: string): Promise<str
   if (snap.exists()) {
     const existingUid = String(snap.data()?.uid || '');
     if (existingUid === uid) return cnicHash;
-    throw new Error('Is CNIC par pehle se account bana hua hai');
+    throw new Error('Ye ID Card pehle se ek Account se linked hai. 1 ID Card se sirf 1 Account ban sakta hai.');
   }
   try {
     await setDoc(ref, {
@@ -216,12 +261,87 @@ export async function claimCnicForUser(cnic13: string, uid: string): Promise<str
     });
     return cnicHash;
   } catch {
-    // Re-check whether concurrent claim succeeded by another user
     const check = await getDoc(ref).catch(() => null);
     if (check && check.exists() && String(check.data()?.uid || '') === uid) {
       return cnicHash;
     }
-    throw new Error('Is CNIC par pehle se account bana hua hai');
+    throw new Error('Ye ID Card pehle se ek Account se linked hai. 1 ID Card se sirf 1 Account ban sakta hai.');
+  }
+}
+
+export async function checkOrClaimLegacyCnic(
+  rawCnic: string,
+  uid: string
+): Promise<{ isDuplicate: boolean; ownerUid: string; cnicHash: string }> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error('Please sign in first.');
+  }
+  const cnicHash = await hashCnic(rawCnic);
+  const ref = doc(db, 'cnicRegistry', cnicHash);
+  let snap;
+  try {
+    snap = await getDocFromServer(ref);
+  } catch {
+    snap = await getDoc(ref);
+  }
+  if (snap.exists()) {
+    const ownerUid = String(snap.data()?.uid || '');
+    return {
+      isDuplicate: Boolean(ownerUid && ownerUid !== uid),
+      ownerUid: ownerUid || uid,
+      cnicHash
+    };
+  }
+  try {
+    await setDoc(ref, {
+      cnicHash,
+      uid,
+      createdAt: Date.now()
+    });
+    return { isDuplicate: false, ownerUid: uid, cnicHash };
+  } catch {
+    const check = await getDoc(ref).catch(() => null);
+    const ownerUid = check && check.exists() ? String(check.data()?.uid || '') : '';
+    return {
+      isDuplicate: Boolean(ownerUid && ownerUid !== uid),
+      ownerUid: ownerUid || uid,
+      cnicHash
+    };
+  }
+}
+
+export async function claimMobileForUser(rawMobile: string, uid: string): Promise<string> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error('Please sign in first.');
+  }
+  const digits = normalizeMobileDigits(rawMobile);
+  if (digits.length < 8) return '';
+  const mobileHash = await hashMobile(digits);
+  const ref = doc(db, 'mobileRegistry', mobileHash);
+  let snap;
+  try {
+    snap = await getDocFromServer(ref);
+  } catch {
+    snap = await getDoc(ref);
+  }
+  if (snap.exists()) {
+    const existingUid = String(snap.data()?.uid || '');
+    if (existingUid === uid) return mobileHash;
+    throw new Error('Ye Mobile Number pehle se ek Account me registered hai. 1 Mobile = 1 Account.');
+  }
+  try {
+    await setDoc(ref, {
+      mobileHash,
+      uid,
+      createdAt: Date.now()
+    });
+    return mobileHash;
+  } catch {
+    const check = await getDoc(ref).catch(() => null);
+    if (check && check.exists() && String(check.data()?.uid || '') === uid) {
+      return mobileHash;
+    }
+    throw new Error('Ye Mobile Number pehle se ek Account me registered hai. 1 Mobile = 1 Account.');
   }
 }
 
@@ -232,37 +352,136 @@ export interface CloudUserBundle {
   latestBackup: Record<string, unknown> | null;
 }
 
+export interface AdminUserInspection {
+  profile: Record<string, unknown> | null;
+  vaultData: Record<string, unknown>;
+  backups: Array<Record<string, unknown>>;
+}
+
+function computeSummaryStats(appState: Record<string, unknown>): {
+  totalKhataAmount: number;
+  totalPendingAmount: number;
+  customerCount: number;
+  cnicLast4: string;
+  kycStatus: 'none' | 'verifying' | 'approved' | 'duplicate';
+} {
+  const customers = Array.isArray(appState.customers) ? appState.customers : [];
+  const orders = Array.isArray(appState.orders) ? appState.orders : [];
+  const custPayments = Array.isArray(appState.customerPayments) ? appState.customerPayments : [];
+  const suppliers = Array.isArray(appState.suppliers) ? appState.suppliers : [];
+  const supplierEntries = Array.isArray(appState.supplierEntries) ? appState.supplierEntries : [];
+  const partyPayments = Array.isArray(appState.partyPayments) ? appState.partyPayments : [];
+
+  let totalKhataAmount = 0;
+  let customerPending = 0;
+
+  for (const c of customers) {
+    if (!c || typeof c !== 'object') continue;
+    const cid = String((c as Record<string, unknown>).id || '');
+    const opening = Number((c as Record<string, unknown>).openingBalance || 0);
+    let bill = opening;
+    for (const o of orders) {
+      if (o && typeof o === 'object' && String((o as Record<string, unknown>).customerId || '') === cid) {
+        const rec = o as Record<string, unknown>;
+        bill += Number(rec.totalAmount ?? Number(rec.sqft || 0) * Number(rec.rate || 0));
+      }
+    }
+    let paid = 0;
+    for (const o of orders) {
+      if (o && typeof o === 'object' && String((o as Record<string, unknown>).customerId || '') === cid) {
+        paid += Number((o as Record<string, unknown>).advance || 0);
+      }
+    }
+    for (const p of custPayments) {
+      if (p && typeof p === 'object' && String((p as Record<string, unknown>).customerId || '') === cid) {
+        paid += Number((p as Record<string, unknown>).amount || 0);
+      }
+    }
+    totalKhataAmount += Math.max(0, bill);
+    customerPending += Math.max(0, bill - paid);
+  }
+
+  let partyPending = 0;
+  for (const s of suppliers) {
+    if (!s || typeof s !== 'object') continue;
+    const sid = String((s as Record<string, unknown>).id || '');
+    let total = 0;
+    for (const e of supplierEntries) {
+      if (e && typeof e === 'object' && String((e as Record<string, unknown>).supplierId || '') === sid) {
+        total += Number((e as Record<string, unknown>).amount || 0);
+      }
+    }
+    let paid = 0;
+    for (const p of partyPayments) {
+      if (p && typeof p === 'object' && String((p as Record<string, unknown>).supplierId || '') === sid) {
+        paid += Number((p as Record<string, unknown>).amount || 0);
+      }
+    }
+    partyPending += Math.max(0, total - paid);
+  }
+
+  const kyc = (appState.kyc && typeof appState.kyc === 'object' ? appState.kyc : {}) as Record<string, unknown>;
+  const rawCnic = String(kyc.cnic || '').replace(/\D/g, '');
+  const kycStatusRaw = String(kyc.status || 'none');
+  const kycStatus: 'none' | 'verifying' | 'approved' | 'duplicate' =
+    kycStatusRaw === 'approved' || kycStatusRaw === 'verifying' || kycStatusRaw === 'duplicate'
+      ? kycStatusRaw
+      : 'none';
+
+  return {
+    totalKhataAmount: Math.round(totalKhataAmount),
+    totalPendingAmount: Math.round(customerPending + partyPending),
+    customerCount: customers.length,
+    cnicLast4: rawCnic.length >= 4 ? rawCnic.slice(-4) : '',
+    kycStatus
+  };
+}
+
 export const dkCloud = {
   auth,
   db,
+  ADMIN_EMAIL,
+  isAdminEmail,
   testConnection,
   normalizeIdentifier,
+  normalizeMobileDigits,
   normalizeCnic13,
+  formatCnicDashed,
   hashCnic,
+  hashMobile,
   claimCnicForUser,
+  checkOrClaimLegacyCnic,
+  claimMobileForUser,
 
   onAuthChange(cb: (user: User | null) => void) {
     return onAuthStateChanged(auth, cb);
   },
 
-  async signUp(name: string, identifier: string, password: string, cnic13?: string) {
+  async signUp(name: string, identifier: string, password: string, cnic?: string, extraMobile?: string) {
     const cleanName = String(name || '').trim().slice(0, 120);
     if (!cleanName) throw new Error('Full Name is required.');
-    const validCnic = cnic13 !== undefined && cnic13 !== '' ? normalizeCnic13(cnic13) : '';
+    const validCnic = cnic !== undefined && cnic !== '' ? normalizeCnic13(cnic) : '';
     const norm = normalizeIdentifier(identifier);
+    const mobileCandidate = extraMobile ? String(extraMobile).trim() : norm.mobile;
+
     const cred = await createUserWithEmailAndPassword(auth, norm.authEmail, password);
 
-    if (validCnic) {
-      try {
-        await claimCnicForUser(validCnic, cred.user.uid);
-      } catch (cnicErr) {
-        try {
-          await deleteUser(cred.user);
-        } catch {
-          try { await signOut(auth); } catch { /* ignore */ }
-        }
-        throw cnicErr;
+    let cnicHash = '';
+    let mobileHash = '';
+    try {
+      if (validCnic) {
+        cnicHash = await claimCnicForUser(validCnic, cred.user.uid);
       }
+      if (mobileCandidate && normalizeMobileDigits(mobileCandidate).length >= 8) {
+        mobileHash = await claimMobileForUser(mobileCandidate, cred.user.uid);
+      }
+    } catch (claimErr) {
+      try {
+        await deleteUser(cred.user);
+      } catch {
+        try { await signOut(auth); } catch { /* ignore */ }
+      }
+      throw claimErr;
     }
 
     await updateProfile(cred.user, { displayName: cleanName });
@@ -272,10 +491,19 @@ export const dkCloud = {
       name: cleanName,
       identifier: norm.identifier.slice(0, 160),
       email: norm.email.slice(0, 160),
-      mobile: norm.mobile.slice(0, 40),
+      mobile: mobileCandidate.slice(0, 40),
       authType: norm.authType,
       pinEnabled: false,
       pinHash: '',
+      cnicHash,
+      cnicLast4: validCnic ? validCnic.slice(-4) : '',
+      mobileHash,
+      kycStatus: 'none' as const,
+      kycDuplicateOf: '',
+      blocked: false,
+      totalKhataAmount: 0,
+      totalPendingAmount: 0,
+      customerCount: 0,
       lastSyncAt: now,
       lastBackupAt: 0,
       createdAt: now,
@@ -384,6 +612,9 @@ export const dkCloud = {
       authType?: 'email' | 'mobile';
       pinEnabled?: boolean;
       pinHash?: string;
+      cnicHash?: string;
+      mobileHash?: string;
+      kycDuplicateOf?: string;
       lastBackupAt?: number;
       createdAt?: number;
     },
@@ -397,15 +628,53 @@ export const dkCloud = {
     const existingSnap = await getDoc(doc(db, 'users', uid)).catch(() => null);
     const existingData = existingSnap && existingSnap.exists() ? existingSnap.data() : null;
 
+    if (existingData?.blocked === true && !isAdminEmail(auth.currentUser?.email)) {
+      throw new Error('ACCOUNT_BLOCKED');
+    }
+
+    const summary = computeSummaryStats(appState);
+    // Preserve duplicate lock unless Admin resolved it
+    const effectiveKycStatus =
+      existingData?.kycStatus === 'duplicate' && !isAdminEmail(auth.currentUser?.email)
+        ? 'duplicate'
+        : existingData?.kycStatus === 'approved' && summary.kycStatus !== 'approved'
+          ? 'approved'
+          : summary.kycStatus;
+
+    let cnicHashToSave = String(meta.cnicHash ?? existingData?.cnicHash ?? '').slice(0, 64);
+    const rawKyc = (appState.kyc as Record<string, unknown>) || {};
+    if (!cnicHashToSave && typeof rawKyc.cnic === 'string' && rawKyc.cnic.trim()) {
+      try {
+        cnicHashToSave = await hashCnic(rawKyc.cnic);
+      } catch { /* ignore invalid draft CNIC */ }
+    }
+
+    const mobileStr = String(meta.mobile ?? existingData?.mobile ?? '').slice(0, 40);
+    let mobileHashToSave = String(meta.mobileHash ?? existingData?.mobileHash ?? '').slice(0, 64);
+    if (!mobileHashToSave && mobileStr && normalizeMobileDigits(mobileStr).length >= 8) {
+      try {
+        mobileHashToSave = await hashMobile(mobileStr);
+      } catch { /* ignore */ }
+    }
+
     const profileDoc = {
       uid,
       name: String(meta.name || existingData?.name || 'Workshop Owner').slice(0, 120),
       identifier: String(meta.identifier ?? existingData?.identifier ?? '').slice(0, 160),
       email: String(meta.email ?? existingData?.email ?? '').slice(0, 160),
-      mobile: String(meta.mobile ?? existingData?.mobile ?? '').slice(0, 40),
+      mobile: mobileStr,
       authType: meta.authType === 'mobile' || existingData?.authType === 'mobile' ? 'mobile' : 'email',
       pinEnabled: Boolean(meta.pinEnabled ?? existingData?.pinEnabled ?? false),
       pinHash: String(meta.pinHash ?? existingData?.pinHash ?? '').slice(0, 128),
+      cnicHash: cnicHashToSave,
+      cnicLast4: summary.cnicLast4 || String(existingData?.cnicLast4 || '').slice(0, 8),
+      mobileHash: mobileHashToSave,
+      kycStatus: effectiveKycStatus,
+      kycDuplicateOf: String(meta.kycDuplicateOf ?? existingData?.kycDuplicateOf ?? '').slice(0, 128),
+      blocked: Boolean(existingData?.blocked ?? false),
+      totalKhataAmount: summary.totalKhataAmount,
+      totalPendingAmount: summary.totalPendingAmount,
+      customerCount: summary.customerCount,
       lastSyncAt: now,
       lastBackupAt: Number(meta.lastBackupAt ?? existingData?.lastBackupAt ?? 0),
       createdAt: Number(existingData?.createdAt ?? meta.createdAt ?? now),
@@ -435,6 +704,7 @@ export const dkCloud = {
       stock: appState.stock || [],
       staff: appState.staff || [],
       staffLogs: appState.staffLogs || [],
+      salaryHistory: appState.salaryHistory || [],
       messEntries: appState.messEntries || [],
       rentRecords: appState.rentRecords || [],
       rentPayments: appState.rentPayments || [],
@@ -443,10 +713,8 @@ export const dkCloud = {
       lastActiveMonth: appState.lastActiveMonth || ''
     };
 
-    const rawKyc = (appState.kyc as Record<string, unknown>) || {};
     let kycJson = JSON.stringify({ kyc: rawKyc });
     if (kycJson.length > VAULT_MAX_BYTES) {
-      // Keep KYC status/metadata safely under Firestore 1MB cap if photos were huge
       kycJson = JSON.stringify({
         kyc: {
           ...rawKyc,
@@ -561,6 +829,145 @@ export const dkCloud = {
     } catch (err) {
       if (!auth.currentUser || auth.currentUser.uid !== uid) return null;
       handleFirestoreError(err, OperationType.LIST, backupsPath);
+    }
+  },
+
+  // ---------------- ADMIN PANEL OPERATIONS ----------------
+  async adminListAllUsers(): Promise<Array<Record<string, unknown>>> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    try {
+      const snaps = await getDocs(collection(db, 'users'));
+      const list = snaps.docs.map((d) => d.data());
+      list.sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
+      return list;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, 'users');
+    }
+  },
+
+  async adminLoadUserInspection(uid: string): Promise<AdminUserInspection> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    let profile: Record<string, unknown> | null = null;
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (snap.exists()) profile = snap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `users/${uid}`);
+    }
+
+    const vaultData: Record<string, unknown> = {};
+    for (const shardId of ['core', 'ledger', 'operations', 'kyc'] as const) {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid, 'vault', shardId));
+        if (snap.exists()) {
+          const d = snap.data();
+          if (typeof d.payloadJson === 'string' && d.payloadJson.length >= 2) {
+            Object.assign(vaultData, JSON.parse(d.payloadJson));
+          }
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `users/${uid}/vault/${shardId}`);
+      }
+    }
+
+    const backups: Array<Record<string, unknown>> = [];
+    try {
+      const q = query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(10));
+      const snaps = await getDocs(q);
+      snaps.docs.forEach((d) => backups.push(d.data()));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `users/${uid}/backups`);
+    }
+
+    return { profile, vaultData, backups };
+  },
+
+  async adminUpdateUserStatus(
+    uid: string,
+    updates: {
+      blocked?: boolean;
+      kycStatus?: 'none' | 'verifying' | 'approved' | 'duplicate';
+      kycDuplicateOf?: string;
+    }
+  ): Promise<void> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const now = Date.now();
+    const userPath = `users/${uid}`;
+    let existingData: Record<string, unknown> | null = null;
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (!snap.exists()) throw new Error('User not found.');
+      existingData = snap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, userPath);
+    }
+
+    const nextBlocked = updates.blocked !== undefined ? Boolean(updates.blocked) : Boolean(existingData?.blocked ?? false);
+    const nextKycStatus = updates.kycStatus ?? (String(existingData?.kycStatus || 'none') as 'none' | 'verifying' | 'approved' | 'duplicate');
+    const nextDupOf = updates.kycDuplicateOf !== undefined
+      ? String(updates.kycDuplicateOf).slice(0, 128)
+      : (nextKycStatus === 'approved' ? '' : String(existingData?.kycDuplicateOf || '').slice(0, 128));
+
+    const updatedProfile = {
+      ...existingData,
+      uid,
+      blocked: nextBlocked,
+      kycStatus: nextKycStatus,
+      kycDuplicateOf: nextDupOf,
+      updatedAt: now
+    };
+
+    try {
+      await setDoc(doc(db, 'users', uid), updatedProfile);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, userPath);
+    }
+
+    // Keep user's vault/kyc shard aligned
+    if (updates.kycStatus !== undefined) {
+      const kycPath = `users/${uid}/vault/kyc`;
+      try {
+        const kycSnap = await getDoc(doc(db, 'users', uid, 'vault', 'kyc'));
+        const existingKycObj = kycSnap.exists()
+          ? (JSON.parse(String(kycSnap.data()?.payloadJson || '{}')).kyc || {})
+          : {};
+        const mergedKyc = {
+          ...existingKycObj,
+          status: nextKycStatus,
+          verifiedAt: nextKycStatus === 'approved' ? (existingKycObj.verifiedAt || now) : 0,
+          duplicateOf: nextDupOf
+        };
+        await setDoc(doc(db, 'users', uid, 'vault', 'kyc'), {
+          uid,
+          docType: 'kyc',
+          payloadJson: JSON.stringify({ kyc: mergedKyc }),
+          updatedAt: now
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, kycPath);
+      }
+
+      // Claim cnicRegistry if Admin manually approves an unclaimed or reassigned CNIC
+      if (nextKycStatus === 'approved' && typeof existingData?.cnicHash === 'string' && existingData.cnicHash.length === 64) {
+        const cHash = existingData.cnicHash;
+        try {
+          const cRef = doc(db, 'cnicRegistry', cHash);
+          const cSnap = await getDoc(cRef);
+          if (!cSnap.exists()) {
+            await setDoc(cRef, { cnicHash: cHash, uid, createdAt: now });
+          } else if (String(cSnap.data()?.uid || '') !== uid) {
+            await setDoc(cRef, { cnicHash: cHash, uid, createdAt: Number(cSnap.data()?.createdAt || now) });
+          }
+        } catch {
+          /* ignore non-critical claim sync */
+        }
+      }
     }
   }
 };
