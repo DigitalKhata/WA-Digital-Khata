@@ -46,6 +46,17 @@
         "createdAt": { "type": "number", "description": "Epoch ms when snapshot was recorded." }
       },
       "required": ["uid", "id", "kind", "dateKey", "payloadJson", "createdAt"]
+    },
+    "CnicClaim": {
+      "title": "CnicClaim",
+      "description": "Global SHA-256 hashed 13-digit CNIC uniqueness lock ensuring strictly 1 CNIC = 1 Account without storing raw CNIC PII in shared lookup.",
+      "type": "object",
+      "properties": {
+        "cnicHash": { "type": "string", "pattern": "^[a-f0-9]{64}$", "minLength": 64, "maxLength": 64, "description": "SHA-256 hex digest of normalized 13-digit CNIC without dashes." },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Owner Firebase Auth UID." },
+        "createdAt": { "type": "number", "description": "Epoch ms when CNIC was registered." }
+      },
+      "required": ["cnicHash", "uid", "createdAt"]
     }
   },
   "auth": {
@@ -67,6 +78,11 @@
         "path": "/users/{userId}/backups/{backupId}",
         "schema": { "$ref": "#/entities/UserBackupSnapshot" },
         "description": "Auto daily and manual cloud backup snapshots scoped to userId == request.auth.uid."
+      },
+      {
+        "path": "/cnicRegistry/{cnicHash}",
+        "schema": { "$ref": "#/entities/CnicClaim" },
+        "description": "Immutable single-account CNIC hash claim enforcing 1 CNIC = 1 Account."
       }
     ]
   }

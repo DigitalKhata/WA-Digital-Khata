@@ -4283,26 +4283,30 @@
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-sec mb-1.5">4. Live Selfie Verification * <span class="text-[10px] text-cyan-300">(Only Live Camera)</span></label>
-                <div class="w-full rounded-2xl glass-input p-3.5 space-y-3 border ${k.selfiePhoto && k.selfieConfirmed ? 'border-emerald-400/50' : 'border-cyan-400/30'}">
+                <label class="block text-xs font-semibold text-sec mb-1.5">4. Selfie Photo *</label>
+                <div class="w-full rounded-2xl glass-input p-3 space-y-2.5 border ${k.selfiePhoto && k.selfieConfirmed ? 'border-emerald-400/50' : 'border-cyan-400/30'}">
                   <div class="flex items-center gap-3 min-w-0">
                     ${k.selfiePhoto && k.selfieConfirmed
                       ? `<img src="${esc(k.selfiePhoto)}" class="w-14 h-14 rounded-full object-cover ring-2 ring-emerald-400 shrink-0" />`
                       : `<div class="w-14 h-14 rounded-full bg-cyan-500/15 border border-dashed border-cyan-400/50 flex items-center justify-center text-xl shrink-0">🤳</div>`}
                     <div class="min-w-0">
-                      <div class="text-xs font-extrabold ${k.selfiePhoto && k.selfieConfirmed ? 'text-emerald-300' : 'text-white'}">${k.selfiePhoto && k.selfieConfirmed ? 'Live Selfie Confirmed ✓' : 'Live Selfie Zaroori Hai'}</div>
-                      <div class="text-[11px] text-sec leading-snug mt-0.5">${k.selfiePhoto && k.selfieConfirmed ? 'Chehra live camera se verify aur confirm ho gaya.' : 'Gallery upload band hai. Samne wale camera ke oval me chehra la kar selfie lein.'}</div>
+                      <div class="text-xs font-extrabold ${k.selfiePhoto && k.selfieConfirmed ? 'text-emerald-300' : 'text-white'}">${k.selfiePhoto && k.selfieConfirmed ? 'Selfie Ready ✓' : 'Live Selfie ya Gallery se Photo lein'}</div>
+                      <div class="text-[11px] text-sec leading-snug mt-0.5">${k.selfiePhoto && k.selfieConfirmed ? 'Aapki selfie attach ho chuki hai.' : 'Live Camera (Oval Face Guide) ya Gallery Upload dono available hain.'}</div>
                     </div>
                   </div>
-                  <button type="button" data-action="kyc-open-camera" data-cam-target="selfie" class="w-full h-11 rounded-xl ${k.selfiePhoto && k.selfieConfirmed ? 'glass-card border border-cyan-400/40 text-cyan-200' : 'btn-primary-grad text-white'} font-bold text-xs inline-flex items-center justify-center gap-2 cursor-pointer">
-                    <span>🤳 ${k.selfiePhoto && k.selfieConfirmed ? 'Retake Live Selfie' : 'Take Live Selfie'}</span>
-                  </button>
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="h-10 rounded-xl glass-card border border-cyan-400/40 text-cyan-200 text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-cyan-500/15">
+                      <span>📁 Gallery Upload</span>
+                      <input id="kyc-selfie-file" type="file" accept="image/*" class="hidden" />
+                    </label>
+                    <button type="button" data-action="kyc-open-camera" data-cam-target="selfie" class="h-10 rounded-xl btn-primary-grad text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                      <span>🤳 ${k.selfiePhoto && k.selfieConfirmed ? 'Retake Selfie' : 'Take Live Selfie'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <button type="submit" ${k.selfiePhoto && k.selfieConfirmed ? '' : 'disabled'} class="w-full h-12 rounded-xl ${k.selfiePhoto && k.selfieConfirmed ? 'btn-primary-grad cursor-pointer' : 'bg-white/10 text-white/45 border border-white/15 cursor-not-allowed'} font-bold text-sm transition">
-                ${k.selfiePhoto && k.selfieConfirmed ? 'Submit KYC' : 'Pehle Live Selfie Take & Confirm Karein'}
-              </button>
+              <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">Submit KYC</button>
             </form>
           </div>
         </div>
@@ -5135,7 +5139,10 @@
             <div id="kyc-cam-error" class="hidden space-y-3 text-center py-4">
               <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-300 flex items-center justify-center mx-auto text-xl">📷</div>
               <p id="kyc-cam-error-text" class="text-xs text-rose-200 font-semibold leading-relaxed">Camera open nahi ho saka.</p>
-              <button type="button" data-action="kyc-cam-retake" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Retry Camera</button>
+              <div class="grid grid-cols-2 gap-2.5">
+                <button type="button" data-action="kyc-cam-retake" class="h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Retry Camera</button>
+                <button type="button" data-action="kyc-cam-gallery-fallback" class="h-11 rounded-xl glass-card border border-cyan-400/40 text-cyan-200 text-xs font-bold cursor-pointer">📁 Gallery Upload</button>
+              </div>
             </div>
           </div>`;
       }
@@ -5643,7 +5650,7 @@
         render();
       }
       else if (act === 'kyc-open-camera') {
-        const camT = btn.getAttribute('data-cam-target') || 'selfie';
+        const camT = actEl.getAttribute('data-cam-target') || 'selfie';
         await openKycCamera(camT);
       }
       else if (act === 'kyc-cam-capture') {
@@ -5652,6 +5659,12 @@
       else if (act === 'kyc-cam-retake') {
         const curTarget = kycCamTarget || 'selfie';
         await openKycCamera(curTarget);
+      }
+      else if (act === 'kyc-cam-gallery-fallback') {
+        const curTarget = kycCamTarget || 'selfie';
+        const inputId = curTarget === 'front' ? 'kyc-front-file' : (curTarget === 'back' ? 'kyc-back-file' : 'kyc-selfie-file');
+        closeModal();
+        document.getElementById(inputId)?.click();
       }
       else if (act === 'kyc-cam-confirm') {
         confirmKycCameraPhoto();
@@ -6689,7 +6702,7 @@
           return;
         }
         if (!state.kyc.selfiePhoto || !state.kyc.selfieConfirmed) {
-          toast('Pehle Take Live Selfie se photo le kar Confirm karein.', 'error');
+          toast('Pehle Take Live Selfie ya Gallery Upload se apni Selfie photo lagayein.', 'error');
           return;
         }
         state.kyc = {
@@ -6885,6 +6898,11 @@
       if (t.id === 'kyc-back-file' && t.files[0]) {
         state.kyc.backPhoto = await compressImageFile(t.files[0], 640, 0.72);
         saveState(); render(); return;
+      }
+      if (t.id === 'kyc-selfie-file' && t.files[0]) {
+        state.kyc.selfiePhoto = await compressImageFile(t.files[0], 640, 0.72);
+        state.kyc.selfieConfirmed = true;
+        saveState(); render(); toast('Selfie Gallery se upload ho gayi ✓', 'success'); return;
       }
     });
 
