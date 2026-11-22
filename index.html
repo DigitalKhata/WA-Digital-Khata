@@ -576,6 +576,7 @@
     const PENDING_SYNC_KEY = 'dk_pending_sync_uid';
     const PIN_UNLOCK_SESSION_KEY = 'dk_pin_unlocked_uid';
     const APP_LANGUAGE_KEY = 'app-language';
+    const INVOICE_LANGUAGE_KEY = 'invoice-language';
     const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
     const DEFAULT_LOGO_PATH = '/assets/aistudio/logo_5d9f834e.png';
     const DEFAULT_OWNER1_SIGN_PATH = '/assets/aistudio/owner1_signature.png';
@@ -678,6 +679,51 @@
       } catch (e) {}
       document.documentElement.lang = currentLang;
       document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+    }
+
+    function loadSavedInvoiceLanguage() {
+      try {
+        const saved = localStorage.getItem(INVOICE_LANGUAGE_KEY);
+        if (saved === 'ar' || saved === 'en') return saved;
+        const appSaved = localStorage.getItem(APP_LANGUAGE_KEY);
+        if (appSaved === 'ar' || appSaved === 'en') return appSaved;
+      } catch (e) {}
+      return 'en';
+    }
+
+    let currentInvoiceLang = loadSavedInvoiceLanguage();
+
+    function getInvoiceLanguage(overrides = {}) {
+      const ov = overrides && overrides.invoiceLanguage;
+      if (ov === 'ar' || ov === 'en') return ov;
+      try {
+        const saved = localStorage.getItem(INVOICE_LANGUAGE_KEY);
+        if (saved === 'ar' || saved === 'en') return saved;
+        const appSaved = localStorage.getItem(APP_LANGUAGE_KEY);
+        if (appSaved === 'ar' || appSaved === 'en') return appSaved;
+      } catch (e) {}
+      return currentInvoiceLang === 'ar' ? 'ar' : 'en';
+    }
+
+    function setInvoiceLanguage(lang) {
+      currentInvoiceLang = lang === 'ar' ? 'ar' : 'en';
+      try {
+        localStorage.setItem(INVOICE_LANGUAGE_KEY, currentInvoiceLang);
+      } catch (e) {}
+      if (typeof state !== 'undefined' && state && state.settings) {
+        state.settings.invoiceLanguage = currentInvoiceLang;
+      }
+      if (typeof ui !== 'undefined' && ui && ui.invoiceDraft) {
+        ui.invoiceDraft.invoiceLanguage = currentInvoiceLang;
+      }
+    }
+
+    function invL(lang, en, ar) {
+      return lang === 'ar' ? ar : en;
+    }
+
+    function trWorkForLang(w, lang) {
+      return lang === 'ar' ? (AR_WORK_MAP[w] || w) : w;
     }
 
     const AR_WORK_MAP = {
@@ -811,13 +857,17 @@
           customLogo: '',
           hideBalance: false,
           shopName: 'Warsha Aluminium Workshop',
+          shopNameAr: '',
           shopTagline: 'Aluminium & Glass Fabrication Experts',
+          shopTaglineAr: '',
           shopAddress: '',
+          shopAddressAr: '',
           shopMobile: '',
           shopEmail: '',
           ownerName: '',
           ownerMobile: '',
           ownerEmail: '',
+          invoiceLanguage: loadSavedInvoiceLanguage(),
           invoiceTerms: '1. Work starts after advance payment confirmation.\n2. Custom fabricated aluminium/glass items cannot be returned.\n3. Remaining balance is due upon delivery/installation.',
           vatEnabledDefault: true,
           defaultBank: 'Al Rajhi',
@@ -3241,14 +3291,15 @@
       };
     }
 
-    function formatBankLineText(b) {
+    function formatBankLineText(b, lang = 'en') {
       if (!b) return '';
       if (b.bankName === 'Cash') {
-        return `Cash Payment${b.accountName ? ' - ' + b.accountName : ''}`;
+        const cashLbl = lang === 'ar' ? 'الدفع نقداً' : 'Cash Payment';
+        return `${cashLbl}${b.accountName ? ' - ' + b.accountName : ''}`;
       }
       const parts = [b.bankName];
       if (b.accountName) parts.push(b.accountName);
-      if (b.iban) parts.push((b.bankName === 'STC Pay' ? '' : 'IBAN: ') + b.iban);
+      if (b.iban) parts.push((b.bankName === 'STC Pay' ? '' : (lang === 'ar' ? 'الآيبان: ' : 'IBAN: ')) + b.iban);
       if (b.branchName) parts.push(b.branchName);
       return parts.join(' - ');
     }
@@ -3329,7 +3380,9 @@
     function getInvoiceQrText(inv) {
       const target = getActiveInvoiceQrTarget(inv);
       if (!target) return '';
-      const msg = 'Assalam-o-Alaikum, maine aapka Invoice dekha hai.';
+      const msg = inv?.lang === 'ar'
+        ? 'السلام عليكم، لقد اطلعت على فاتورتكم.'
+        : 'Assalam-o-Alaikum, I checked your Invoice.';
       return `https://wa.me/${target.digits}?text=${encodeURIComponent(msg)}`;
     }
 
@@ -3523,7 +3576,11 @@
       const st = getCustomerStats(c.id);
       const orders = state.orders.filter(o => o.customerId === c.id);
       const s = state.settings || {};
-      const customerWorkItems = getCustomerWorkItems(c);
+      const invLang = getInvoiceLanguage(overrides);
+      const isInvAr = invLang === 'ar';
+      const rawWorkItems = getCustomerWorkItems(c);
+      const customerWorkItems = rawWorkItems.map(w => trWorkForLang(w, invLang));
+      const joinSep = isInvAr ? '، ' : ', ';
 
       const items = orders.length
         ? orders.map(o => {
@@ -3532,8 +3589,8 @@
             const lineTotal = Number(ost.total || 0);
             const unitPrice = Math.round((lineTotal / qty) * 100) / 100;
             const workList = (Array.isArray(o.workItems) && o.workItems.length)
-              ? o.workItems.join(', ')
-              : (o.itemName || 'Aluminium Work');
+              ? o.workItems.map(w => trWorkForLang(w, invLang)).join(joinSep)
+              : (o.itemName ? trWorkForLang(o.itemName, invLang) : invL(invLang, 'Aluminium Work', 'أعمال ألمنيوم'));
             const desc = o.description ? `${workList} (${o.description})` : workList;
             return {
               workType: workList,
@@ -3544,8 +3601,8 @@
             };
           })
         : [{
-            workType: customerWorkItems.join(', ') || 'Aluminium Work',
-            description: customerWorkItems.length ? customerWorkItems.join(', ') : 'Workshop Bill / Balance',
+            workType: customerWorkItems.join(joinSep) || invL(invLang, 'Aluminium Work', 'أعمال ألمنيوم'),
+            description: customerWorkItems.length ? customerWorkItems.join(joinSep) : invL(invLang, 'Workshop Bill / Balance', 'فاتورة الورشة / الرصيد'),
             qty: 1,
             unitPrice: st.billed,
             total: st.billed
@@ -3557,6 +3614,7 @@
       const grandTotal = Math.round((subTotal + vatAmount) * 100) / 100;
       const advancePaid = Number(st.received || 0);
       const remainingBalance = Math.max(0, Math.round((grandTotal - advancePaid) * 100) / 100);
+      const totalUdhaar = Math.max(0, Number(st.baqaya || remainingBalance));
 
       const selectedBanks = getInvoiceBanksList(overrides);
       const owner1Cfg = getSignatureConfig('owner1');
@@ -3566,17 +3624,40 @@
       const dueDate = overrides.dueDate || invDate;
 
       const workDescParts = orders.map(o => o.description).filter(Boolean);
-      const shortWorkDesc = workDescParts.join(' · ') || 'Custom Aluminium & Glass Fabrication Work';
+      const shortWorkDesc = workDescParts.join(' · ') || invL(invLang, 'Custom Aluminium & Glass Fabrication Work', 'تفصيل وتركيب أعمال الألمنيوم والزجاج');
+
+      const rawShopName = (overrides.shopName ?? s.shopName ?? 'Warsha Aluminium Workshop').trim() || 'Warsha Aluminium Workshop';
+      const rawShopTagline = (overrides.shopTagline ?? s.shopTagline ?? 'Aluminium & Glass Fabrication Experts').trim();
+      const rawShopAddress = (overrides.shopAddress ?? s.shopAddress ?? '').trim();
+
+      const resolvedShopName = isInvAr
+        ? ((s.shopNameAr || '').trim() || (rawShopName === 'Warsha Aluminium Workshop' ? 'ورشة ألمنيوم وزجاج' : rawShopName))
+        : rawShopName;
+      const resolvedShopTagline = isInvAr
+        ? ((s.shopTaglineAr || '').trim() || (rawShopTagline === 'Aluminium & Glass Fabrication Experts' ? 'خبراء تفصيل وتركيب الألمنيوم والزجاج' : rawShopTagline))
+        : rawShopTagline;
+      const resolvedShopAddress = isInvAr
+        ? ((s.shopAddressAr || '').trim() || rawShopAddress)
+        : rawShopAddress;
+
+      const defaultEnTerms = '1. Work starts after advance payment confirmation.\n2. Custom fabricated aluminium/glass items cannot be returned.\n3. Remaining balance is due upon delivery/installation.';
+      const rawTerms = (overrides.terms ?? s.invoiceTerms ?? '').trim();
+      const resolvedTerms = isInvAr
+        ? ((!rawTerms || rawTerms === defaultEnTerms)
+            ? '1. يبدأ العمل بعد تأكيد الدفعة المقدمة.\n2. الطلبات المفصلة حسب المقاس لا ترد ولا تستبدل.\n3. يُستحق الرصيد المتبقي عند التسليم والتركيب.'
+            : rawTerms)
+        : (rawTerms || '1. Work starts after advance payment confirmation.\n2. Remaining balance is due upon completion/delivery.');
 
       const model = {
+        lang: invLang,
         customerId: c.id,
         invoiceNo: invNo,
         invoiceDate: invDate,
         dueDate,
         logoSrc: (s.customLogo || '').trim() || DEFAULT_LOGO_PATH,
-        shopName: (overrides.shopName ?? s.shopName ?? 'Warsha Aluminium Workshop').trim() || 'Warsha Aluminium Workshop',
-        shopTagline: (overrides.shopTagline ?? s.shopTagline ?? 'Aluminium & Glass Fabrication Experts').trim(),
-        shopAddress: (overrides.shopAddress ?? s.shopAddress ?? '').trim(),
+        shopName: resolvedShopName,
+        shopTagline: resolvedShopTagline,
+        shopAddress: resolvedShopAddress,
         shopMobile: (overrides.shopMobile ?? s.shopMobile ?? '').trim(),
         shopEmail: (overrides.shopEmail ?? s.shopEmail ?? '').trim(),
         ownerName: (overrides.ownerName ?? s.ownerName ?? state.session?.name ?? '').trim(),
@@ -3595,6 +3676,7 @@
         grandTotal,
         advancePaid,
         remainingBalance,
+        totalUdhaar,
         selectedBanks,
         useOwner1Sign: Boolean(overrides.useOwner1Sign),
         useOwner2Sign: Boolean(overrides.useOwner2Sign),
@@ -3604,7 +3686,7 @@
         owner1Sign: owner1Cfg,
         owner2Sign: owner2Cfg,
         qrDataUrl: '',
-        terms: (overrides.terms ?? s.invoiceTerms ?? '').trim() || '1. Work starts after advance payment confirmation.\n2. Remaining balance is due upon completion/delivery.'
+        terms: resolvedTerms
       };
       const qrText = getInvoiceQrText(model);
       model.qrDataUrl = qrText ? (ui.qrCache[qrText] || '') : '';
@@ -3613,6 +3695,14 @@
 
     function renderProfessionalInvoiceHtml(inv, compact = false) {
       if (!inv) return '';
+      const invLang = inv.lang === 'ar' ? 'ar' : 'en';
+      const isInvAr = invLang === 'ar';
+      const alignStart = isInvAr ? 'right' : 'left';
+      const alignEnd = isInvAr ? 'left' : 'right';
+      const dir = isInvAr ? 'rtl' : 'ltr';
+      const fontStack = isInvAr
+        ? "'Cairo','Plus Jakarta Sans',system-ui,sans-serif"
+        : "'Plus Jakarta Sans',system-ui,sans-serif";
       const pad = compact ? '16px 14px' : '24px 28px';
       const baseFs = compact ? '10px' : '11.5px';
       const dueTxt = formatInvoiceDateDDMMYYYY(inv.dueDate || inv.invoiceDate);
@@ -3620,8 +3710,8 @@
       const contactEmail = inv.shopEmail || inv.ownerEmail || '';
       const contactPhone = inv.shopMobile || inv.ownerMobile || '';
       const banksHtml = inv.selectedBanks && inv.selectedBanks.length
-        ? inv.selectedBanks.map(b => `<div style="margin-top:2px;">${esc(formatBankLineText(b))}</div>`).join('')
-        : '<div style="margin-top:2px;">Cash Payment / Direct Transfer</div>';
+        ? inv.selectedBanks.map(b => `<div style="margin-top:2px;">${esc(formatBankLineText(b, invLang))}</div>`).join('')
+        : `<div style="margin-top:2px;">${esc(invL(invLang, 'Cash Payment / Direct Transfer', 'الدفع نقداً / تحويل بنكي مباشر'))}</div>`;
 
       const termsLines = esc(inv.terms).replace(/\n/g, '<br/>');
       const sig1ImgH = Math.round((compact ? 28 : 42) * ((inv.owner1Sign?.size || 100) / 100));
@@ -3629,39 +3719,41 @@
       const showAnySign = (inv.useOwner1Sign && inv.owner1Sign?.src) || (inv.useOwner2Sign && inv.owner2Sign?.src);
 
       return `
-        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#ffffff;color:#000000;padding:${pad};font-size:${baseFs};line-height:1.45;border:none;">
-          <!-- TOP ROW: DUE DATE (LEFT) + INVOICE & NO (RIGHT) -->
+        <div dir="${dir}" lang="${invLang}" style="font-family:${fontStack};background:#ffffff;color:#000000;padding:${pad};font-size:${baseFs};line-height:1.5;border:none;text-align:${alignStart};">
+          <!-- TOP ROW: DUE DATE (START) + INVOICE & BILL NO (END) -->
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;">
-              DUE DATE: ${esc(dueTxt)}
+            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;text-align:${alignStart};">
+              ${esc(invL(invLang, 'DUE DATE:', 'تاريخ الاستحقاق:'))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(dueTxt)}</span>
             </div>
-            <div style="text-align:right;">
-              <div style="font-size:${compact ? '22px' : '30px'};font-weight:900;letter-spacing:1px;color:#000000;line-height:1;">INVOICE</div>
-              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;margin-top:4px;">Invoice No: ${esc(inv.invoiceNo)}</div>
-              <div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">Date: ${esc(dateTxt)}</div>
+            <div style="text-align:${alignEnd};">
+              <div style="font-size:${compact ? '22px' : '30px'};font-weight:900;letter-spacing:${isInvAr ? '0' : '1px'};color:#000000;line-height:1.05;">${esc(invL(invLang, 'INVOICE', 'فاتورة'))}</div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;margin-top:4px;">${esc(invL(invLang, 'Bill No:', 'رقم الفاتورة:'))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(inv.invoiceNo)}</span></div>
+              <div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">${esc(invL(invLang, 'Date:', 'التاريخ:'))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(dateTxt)}</span></div>
             </div>
           </div>
 
-          <!-- SHOP (LEFT) + BILL TO (RIGHT) -->
+          <!-- SHOP (START) + BILL TO (END) -->
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:${compact ? '16px' : '24px'};">
-            <div style="display:flex;align-items:flex-start;gap:${compact ? '8px' : '12px'};max-width:56%;">
+            <div style="display:flex;align-items:flex-start;gap:${compact ? '8px' : '12px'};max-width:56%;text-align:${alignStart};">
               <img src="${esc(inv.logoSrc)}" alt="Shop Logo" style="width:${compact ? '40px' : '54px'};height:${compact ? '40px' : '54px'};border-radius:9999px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'"/>
               <div>
-                <div style="font-size:${compact ? '13px' : '17px'};font-weight:800;color:#000000;line-height:1.15;">${esc(inv.shopName)}</div>
+                <div style="font-size:${compact ? '13px' : '17px'};font-weight:800;color:#000000;line-height:1.2;">${esc(inv.shopName)}</div>
                 ${inv.shopTagline ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;">${esc(inv.shopTagline)}</div>` : ''}
+                ${contactPhone ? `<div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:2px;">${esc(invL(invLang, 'Phone:', 'رقم الهاتف:'))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(contactPhone)}</span></div>` : ''}
+                ${inv.shopAddress ? `<div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:1px;">${esc(invL(invLang, 'Address:', 'العنوان:'))} ${esc(inv.shopAddress)}</div>` : ''}
               </div>
             </div>
-            <div style="text-align:right;max-width:42%;">
-              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;letter-spacing:0.4px;">BILL TO:</div>
-              <div style="font-size:${compact ? '11.5px' : '13.5px'};font-weight:800;color:#000000;margin-top:2px;">${esc(inv.custName)}</div>
-              ${inv.custAddress ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:1px;">${esc(inv.custAddress)}</div>` : ''}
-              ${inv.custPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:1px;">${esc(inv.custPhone)}</div>` : ''}
+            <div style="text-align:${alignEnd};max-width:42%;">
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;letter-spacing:${isInvAr ? '0' : '0.4px'};">${esc(invL(invLang, 'BILL TO:', 'بيانات العميل:'))}</div>
+              <div style="font-size:${compact ? '11.5px' : '13.5px'};font-weight:800;color:#000000;margin-top:2px;">${esc(invL(invLang, 'Customer Name:', 'اسم العميل:'))} ${esc(inv.custName)}</div>
+              ${inv.custPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;">${esc(invL(invLang, 'Phone Number:', 'رقم الهاتف:'))} <span dir="ltr" style="unicode-bidi:isolate;">${esc(inv.custPhone)}</span></div>` : ''}
+              ${inv.custAddress ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:1px;">${esc(invL(invLang, 'Address:', 'العنوان:'))} ${esc(inv.custAddress)}</div>` : ''}
             </div>
           </div>
 
           <!-- MIDDLE: SHORT WORK DESCRIPTION + SELECTED WORK ITEMS -->
-          <div style="margin-top:${compact ? '14px' : '22px'};">
-            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;">Work Details</div>
+          <div style="margin-top:${compact ? '14px' : '22px'};text-align:${alignStart};">
+            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;">${esc(invL(invLang, 'Work Details', 'تفاصيل العمل'))}</div>
             <div style="font-size:${compact ? '9.5px' : '11px'};color:#111827;margin-top:2px;">${esc(inv.shortWorkDesc)}</div>
             ${inv.workItems && inv.workItems.length ? `<div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;margin-top:2px;">${esc(inv.workItems.join('  •  '))}</div>` : ''}
           </div>
@@ -3670,73 +3762,75 @@
           <table style="width:100%;border-collapse:collapse;border:none;margin-top:${compact ? '12px' : '18px'};font-size:${compact ? '9.5px' : '11px'};">
             <thead>
               <tr>
-                <th style="text-align:left;font-weight:800;color:#000000;padding:3px 6px 4px 0;border:none;">Item Description</th>
-                <th style="text-align:right;font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">Price</th>
-                <th style="text-align:center;font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">Qty</th>
-                <th style="text-align:right;font-weight:800;color:#000000;padding:3px 0 4px 6px;border:none;">Total</th>
+                <th style="text-align:${alignStart};font-weight:800;color:#000000;padding:3px 6px 4px 0;border:none;">${esc(invL(invLang, 'Item / Description', 'الصنف / الوصف'))}</th>
+                <th style="text-align:${alignEnd};font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">${esc(invL(invLang, 'Price', 'السعر'))}</th>
+                <th style="text-align:center;font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">${esc(invL(invLang, 'Quantity', 'الكمية'))}</th>
+                <th style="text-align:${alignEnd};font-weight:800;color:#000000;padding:3px 0 4px 6px;border:none;">${esc(invL(invLang, 'Amount', 'المبلغ'))}</th>
               </tr>
             </thead>
             <tbody>
               ${inv.items.map(it => `
                 <tr>
-                  <td style="text-align:left;color:#000000;padding:3px 6px 3px 0;border:none;">${esc(it.description)}</td>
-                  <td style="text-align:right;color:#111827;padding:3px 6px;border:none;">${esc(fmtInvoiceMoney(it.unitPrice))}</td>
-                  <td style="text-align:center;color:#111827;padding:3px 6px;border:none;">${esc(it.qty)}</td>
-                  <td style="text-align:right;font-weight:700;color:#000000;padding:3px 0 3px 6px;border:none;">${esc(fmtInvoiceMoney(it.total))}</td>
+                  <td style="text-align:${alignStart};color:#000000;padding:3px 6px 3px 0;border:none;">${esc(it.description)}</td>
+                  <td style="text-align:${alignEnd};color:#111827;padding:3px 6px;border:none;"><span dir="ltr" style="unicode-bidi:isolate;">${esc(fmtInvoiceMoney(it.unitPrice))}</span></td>
+                  <td style="text-align:center;color:#111827;padding:3px 6px;border:none;"><span dir="ltr" style="unicode-bidi:isolate;">${esc(it.qty)}</span></td>
+                  <td style="text-align:${alignEnd};font-weight:700;color:#000000;padding:3px 0 3px 6px;border:none;"><span dir="ltr" style="unicode-bidi:isolate;">${esc(fmtInvoiceMoney(it.total))}</span></td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
 
-          <!-- QUESTIONS + QR CODE (LEFT) & TOTALS (RIGHT) -->
+          <!-- QUESTIONS + QR CODE (START) & TOTALS (END) -->
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:${compact ? '16px' : '24px'};">
-            <div style="max-width:52%;">
-              <div style="font-size:${compact ? '10px' : '11.5px'};font-weight:800;color:#000000;">Questions?</div>
-              ${contactEmail ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;">${esc(contactEmail)}</div>` : ''}
-              ${contactPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">${esc(contactPhone)}</div>` : ''}
+            <div style="max-width:52%;text-align:${alignStart};">
+              <div style="font-size:${compact ? '10px' : '11.5px'};font-weight:800;color:#000000;">${esc(invL(invLang, 'Questions?', 'للاستفسار والتواصل:'))}</div>
+              ${contactEmail ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;"><span dir="ltr" style="unicode-bidi:isolate;">${esc(contactEmail)}</span></div>` : ''}
+              ${contactPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;"><span dir="ltr" style="unicode-bidi:isolate;">${esc(contactPhone)}</span></div>` : ''}
               ${inv.qrDataUrl ? `
                 <div style="margin-top:${compact ? '8px' : '12px'};">
                   <img src="${inv.qrDataUrl}" alt="WhatsApp QR" style="width:${compact ? '68px' : '90px'};height:${compact ? '68px' : '90px'};display:block;border:none;" />
-                  <div style="font-size:${compact ? '8px' : '9.5px'};font-weight:700;color:#111827;margin-top:3px;">Scan to Chat on WhatsApp</div>
+                  <div style="font-size:${compact ? '8px' : '9.5px'};font-weight:700;color:#111827;margin-top:3px;">${esc(invL(invLang, 'Scan to Chat on WhatsApp', 'امسح الرمز للمراسلة على واتساب'))}</div>
                 </div>
               ` : ''}
             </div>
-            <div style="text-align:right;min-width:${compact ? '145px' : '210px'};">
+            <div style="text-align:${alignEnd};min-width:${compact ? '155px' : '220px'};">
               <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;">
-                <span style="font-weight:800;color:#000000;">SUBTOTAL</span>
-                <span style="font-weight:700;color:#000000;">${esc(fmtInvoiceMoney(inv.subTotal))}</span>
+                <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'SUBTOTAL', 'المجموع الفرعي'))}</span>
+                <span dir="ltr" style="font-weight:700;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.subTotal))}</span>
               </div>
               <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;">
-                <span style="font-weight:800;color:#000000;">TAX</span>
-                <span style="font-weight:700;color:#000000;">${esc(fmtInvoiceMoney(inv.vatAmount))}</span>
+                <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'TAX', 'الضريبة'))}</span>
+                <span dir="ltr" style="font-weight:700;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.vatAmount))}</span>
               </div>
               <div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0 2px;font-size:${compact ? '11.5px' : '13.5px'};">
-                <span style="font-weight:900;color:#000000;">GRAND TOTAL</span>
-                <span style="font-weight:900;color:#000000;">${esc(fmtInvoiceMoney(inv.grandTotal))}</span>
+                <span style="font-weight:900;color:#000000;">${esc(invL(invLang, 'Total', 'الإجمالي'))}</span>
+                <span dir="ltr" style="font-weight:900;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.grandTotal))}</span>
               </div>
-              ${inv.advancePaid > 0 ? `
-                <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9px' : '10.5px'};">
-                  <span style="font-weight:700;color:#111827;">ADVANCE PAID</span>
-                  <span style="font-weight:700;color:#111827;">${esc(fmtInvoiceMoney(inv.advancePaid))}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
-                  <span style="font-weight:800;color:#000000;">REMAINING</span>
-                  <span style="font-weight:800;color:#000000;">${esc(fmtInvoiceMoney(inv.remainingBalance))}</span>
-                </div>
-              ` : ''}
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9px' : '10.5px'};">
+                <span style="font-weight:700;color:#111827;">${esc(invL(invLang, 'Paid', 'المدفوع'))}</span>
+                <span dir="ltr" style="font-weight:700;color:#111827;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.advancePaid))}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
+                <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'Remaining', 'المتبقي'))}</span>
+                <span dir="ltr" style="font-weight:800;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.remainingBalance))}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
+                <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'Total Udhaar', 'إجمالي الدين'))}</span>
+                <span dir="ltr" style="font-weight:800;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance))}</span>
+              </div>
             </div>
           </div>
 
           <!-- PAYMENT INFO & TERMS & CONDITION -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:${compact ? '16px' : '24px'};">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:${compact ? '16px' : '24px'};text-align:${alignStart};">
             <div>
-              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">PAYMENT INFO:</div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">${esc(invL(invLang, 'PAYMENT INFO:', 'بيانات الدفع:'))}</div>
               <div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:3px;line-height:1.5;">
                 ${banksHtml}
               </div>
             </div>
             <div>
-              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">TERMS &amp; CONDITION</div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">${esc(invL(invLang, 'TERMS & CONDITION', 'الشروط والأحكام'))}</div>
               <div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:3px;line-height:1.45;">
                 ${termsLines}
               </div>
@@ -3746,7 +3840,7 @@
           <!-- SIGNATURES + THANKS + BOTTOM SHOP ADDRESS -->
           ${showAnySign ? `
             <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:${compact ? '20px' : '30px'};">
-              <div style="min-width:110px;text-align:left;">
+              <div style="min-width:110px;text-align:${alignStart};">
                 ${inv.useOwner1Sign && inv.owner1Sign?.src ? `
                   <div style="height:${sig1ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-start;">
                     <img src="${esc(inv.owner1Sign.src)}" alt="Owner 1 Sign" style="max-height:${sig1ImgH}px;width:auto;transform:rotate(${Number(inv.owner1Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
@@ -3754,7 +3848,7 @@
                   <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.owner1Sign.name)}</div>
                 ` : ''}
               </div>
-              <div style="min-width:110px;text-align:right;">
+              <div style="min-width:110px;text-align:${alignEnd};">
                 ${inv.useOwner2Sign && inv.owner2Sign?.src ? `
                   <div style="height:${sig2ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-end;">
                     <img src="${esc(inv.owner2Sign.src)}" alt="Owner 2 Sign" style="max-height:${sig2ImgH}px;width:auto;transform:rotate(${Number(inv.owner2Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
@@ -3766,11 +3860,11 @@
           ` : ''}
 
           <div style="text-align:center;margin-top:${compact ? '16px' : '24px'};font-size:${compact ? '10.5px' : '12.5px'};font-weight:800;color:#000000;">
-            Thanks For Your Business!
+            ${esc(invL(invLang, 'Thank You!', 'شكراً لك!'))}
           </div>
-          ${inv.shopAddress ? `
+          ${(inv.shopAddress || contactPhone) ? `
             <div style="text-align:center;margin-top:${compact ? '6px' : '8px'};font-size:${compact ? '8.5px' : '10px'};color:#111827;">
-              ${esc(inv.shopAddress)}
+              ${inv.shopAddress ? `<span>${esc(inv.shopAddress)}</span>` : ''}${(inv.shopAddress && contactPhone) ? ' &nbsp;·&nbsp; ' : ''}${contactPhone ? `<span dir="ltr" style="unicode-bidi:isolate;">${esc(contactPhone)}</span>` : ''}
             </div>
           ` : ''}
         </div>
@@ -3788,12 +3882,342 @@
       });
     }
 
+    function wrapCanvasLines(ctx, text, maxW) {
+      const str = String(text || '').trim();
+      if (!str) return [];
+      const words = str.split(/\s+/);
+      const lines = [];
+      let cur = '';
+      for (const word of words) {
+        const test = cur ? `${cur} ${word}` : word;
+        if (ctx.measureText(test).width <= maxW || !cur) {
+          cur = test;
+        } else {
+          lines.push(cur);
+          cur = word;
+        }
+      }
+      if (cur) lines.push(cur);
+      return lines;
+    }
+
+    async function generateCanvasBackedPdfBlob(inv) {
+      const libs = window.__DK_INVOICE_LIBS__;
+      const { jsPDF } = libs;
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) {}
+      }
+      const W = 1240;
+      const H = 1754;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+
+      const invLang = inv.lang === 'ar' ? 'ar' : 'en';
+      const isInvAr = invLang === 'ar';
+      const padX = 94;
+      const startX = isInvAr ? W - padX : padX;
+      const endX = isInvAr ? padX : W - padX;
+      const startAlign = isInvAr ? 'right' : 'left';
+      const endAlign = isInvAr ? 'left' : 'right';
+      const baseFont = isInvAr ? "'Cairo', 'Plus Jakarta Sans', sans-serif" : "'Plus Jakarta Sans', 'Cairo', sans-serif";
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#000000';
+      ctx.textBaseline = 'top';
+      ctx.direction = isInvAr ? 'rtl' : 'ltr';
+
+      let y = 96;
+      const dueStr = formatInvoiceDateDDMMYYYY(inv.dueDate || inv.invoiceDate);
+      const dateStr = formatInvoiceDateDDMMYYYY(inv.invoiceDate);
+
+      // Top Start: Due Date
+      ctx.font = `700 23px ${baseFont}`;
+      ctx.textAlign = startAlign;
+      ctx.fillText(`${invL(invLang, 'DUE DATE:', 'تاريخ الاستحقاق:')} ${dueStr}`, startX, y + 6);
+
+      // Top End: INVOICE / فاتورة + Bill No + Date
+      ctx.font = `800 58px ${baseFont}`;
+      ctx.textAlign = endAlign;
+      ctx.fillText(invL(invLang, 'INVOICE', 'فاتورة'), endX, y);
+      ctx.font = `700 23px ${baseFont}`;
+      ctx.fillText(`${invL(invLang, 'Bill No:', 'رقم الفاتورة:')} ${inv.invoiceNo}`, endX, y + 68);
+      ctx.font = `400 22px ${baseFont}`;
+      ctx.fillText(`${invL(invLang, 'Date:', 'التاريخ:')} ${dateStr}`, endX, y + 100);
+
+      y += 165;
+
+      // Shop Logo + Name + Phone + Address (Start) & Customer Info (End)
+      let shopTextX = startX;
+      try {
+        const logoDataUrl = await renderCircularLogoDataUrl(inv.logoSrc);
+        if (logoDataUrl) {
+          const logoImg = await loadImgForCanvas(logoDataUrl);
+          if (logoImg) {
+            const logoSize = 104;
+            const logoDrawX = isInvAr ? (startX - logoSize) : startX;
+            ctx.drawImage(logoImg, logoDrawX, y - 6, logoSize, logoSize);
+            shopTextX = isInvAr ? (startX - logoSize - 22) : (startX + logoSize + 22);
+          }
+        }
+      } catch (e) {}
+
+      let leftEndY = y;
+      ctx.textAlign = startAlign;
+      ctx.font = `800 32px ${baseFont}`;
+      const shopLines = wrapCanvasLines(ctx, inv.shopName || '', 440);
+      shopLines.forEach(ln => { ctx.fillText(ln, shopTextX, leftEndY); leftEndY += 40; });
+      if (inv.shopTagline) {
+        ctx.font = `400 21px ${baseFont}`;
+        ctx.fillStyle = '#111827';
+        wrapCanvasLines(ctx, inv.shopTagline, 440).forEach(ln => { ctx.fillText(ln, shopTextX, leftEndY); leftEndY += 28; });
+      }
+      const contactPhone = inv.shopMobile || inv.ownerMobile || '';
+      if (contactPhone) {
+        ctx.font = `600 20px ${baseFont}`;
+        ctx.fillText(`${invL(invLang, 'Phone:', 'رقم الهاتف:')} ${contactPhone}`, shopTextX, leftEndY + 2);
+        leftEndY += 28;
+      }
+      if (inv.shopAddress) {
+        ctx.font = `400 20px ${baseFont}`;
+        wrapCanvasLines(ctx, `${invL(invLang, 'Address:', 'العنوان:')} ${inv.shopAddress}`, 440).forEach(ln => { ctx.fillText(ln, shopTextX, leftEndY); leftEndY += 27; });
+      }
+
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = endAlign;
+      let rightEndY = y;
+      ctx.font = `800 22px ${baseFont}`;
+      ctx.fillText(invL(invLang, 'BILL TO:', 'بيانات العميل:'), endX, rightEndY);
+      rightEndY += 32;
+      ctx.font = `800 25px ${baseFont}`;
+      wrapCanvasLines(ctx, `${invL(invLang, 'Customer Name:', 'اسم العميل:')} ${inv.custName || ''}`, 430).forEach(ln => {
+        ctx.fillText(ln, endX, rightEndY);
+        rightEndY += 32;
+      });
+      ctx.font = `400 21px ${baseFont}`;
+      ctx.fillStyle = '#111827';
+      if (inv.custPhone) {
+        ctx.fillText(`${invL(invLang, 'Phone Number:', 'رقم الهاتف:')} ${inv.custPhone}`, endX, rightEndY);
+        rightEndY += 28;
+      }
+      if (inv.custAddress) {
+        wrapCanvasLines(ctx, `${invL(invLang, 'Address:', 'العنوان:')} ${inv.custAddress}`, 430).forEach(ln => {
+          ctx.fillText(ln, endX, rightEndY);
+          rightEndY += 27;
+        });
+      }
+
+      y = Math.max(leftEndY, rightEndY, y + 120) + 46;
+
+      // Work Details
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = startAlign;
+      ctx.font = `800 23px ${baseFont}`;
+      ctx.fillText(invL(invLang, 'Work Details', 'تفاصيل العمل'), startX, y);
+      y += 32;
+      ctx.font = `400 21px ${baseFont}`;
+      ctx.fillStyle = '#111827';
+      wrapCanvasLines(ctx, inv.shortWorkDesc || '', W - padX * 2).forEach(ln => { ctx.fillText(ln, startX, y); y += 28; });
+      if (inv.workItems && inv.workItems.length) {
+        ctx.fillStyle = '#000000';
+        ctx.font = `700 21px ${baseFont}`;
+        wrapCanvasLines(ctx, inv.workItems.join('  •  '), W - padX * 2).forEach(ln => { ctx.fillText(ln, startX, y + 4); y += 30; });
+      }
+
+      y += 42;
+
+      // Borderless Table
+      const colDesc = startX;
+      const colPrice = isInvAr ? (padX + 370) : (W - padX - 370);
+      const colQty = isInvAr ? (padX + 205) : (W - padX - 205);
+      const colAmt = endX;
+
+      ctx.fillStyle = '#000000';
+      ctx.font = `800 23px ${baseFont}`;
+      ctx.textAlign = startAlign;
+      ctx.fillText(invL(invLang, 'Item / Description', 'الصنف / الوصف'), colDesc, y);
+      ctx.textAlign = endAlign;
+      ctx.fillText(invL(invLang, 'Price', 'السعر'), colPrice, y);
+      ctx.textAlign = 'center';
+      ctx.fillText(invL(invLang, 'Quantity', 'الكمية'), colQty, y);
+      ctx.textAlign = endAlign;
+      ctx.fillText(invL(invLang, 'Amount', 'المبلغ'), colAmt, y);
+      y += 42;
+
+      inv.items.slice(0, 10).forEach(it => {
+        ctx.font = `400 21px ${baseFont}`;
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = startAlign;
+        const dLines = wrapCanvasLines(ctx, String(it.description || ''), 520);
+        let ly = y;
+        dLines.forEach(ln => { ctx.fillText(ln, colDesc, ly); ly += 28; });
+
+        ctx.fillStyle = '#111827';
+        ctx.textAlign = endAlign;
+        ctx.fillText(fmtInvoiceMoney(it.unitPrice), colPrice, y);
+        ctx.textAlign = 'center';
+        ctx.fillText(String(it.qty || 1), colQty, y);
+        ctx.fillStyle = '#000000';
+        ctx.font = `700 21px ${baseFont}`;
+        ctx.textAlign = endAlign;
+        ctx.fillText(fmtInvoiceMoney(it.total), colAmt, y);
+        y = Math.max(y + 38, ly + 10);
+      });
+
+      y += 46;
+
+      // Questions + QR (Start) & Totals (End)
+      const blockTopY = y;
+      let qy = blockTopY;
+      ctx.fillStyle = '#000000';
+      ctx.font = `800 23px ${baseFont}`;
+      ctx.textAlign = startAlign;
+      ctx.fillText(invL(invLang, 'Questions?', 'للاستفسار والتواصل:'), startX, qy);
+      qy += 32;
+      ctx.font = `400 21px ${baseFont}`;
+      ctx.fillStyle = '#111827';
+      const qEmail = inv.shopEmail || inv.ownerEmail || '';
+      if (qEmail) { ctx.fillText(qEmail, startX, qy); qy += 28; }
+      if (contactPhone) { ctx.fillText(contactPhone, startX, qy); qy += 28; }
+      if (inv.qrDataUrl) {
+        const qrImg = await loadImgForCanvas(inv.qrDataUrl);
+        if (qrImg) {
+          const qrSize = 158;
+          const qrX = isInvAr ? (startX - qrSize) : startX;
+          ctx.drawImage(qrImg, qrX, qy + 12, qrSize, qrSize);
+          qy += qrSize + 24;
+          ctx.fillStyle = '#000000';
+          ctx.font = `700 19px ${baseFont}`;
+          ctx.fillText(invL(invLang, 'Scan to Chat on WhatsApp', 'امسح الرمز للمراسلة على واتساب'), startX, qy);
+          qy += 28;
+        }
+      }
+
+      // Totals Block
+      let ty = blockTopY;
+      const totLabelX = isInvAr ? (endX + 260) : (endX - 260);
+      const drawTotalRow = (label, val, bold = true, fs = 22) => {
+        ctx.fillStyle = '#000000';
+        ctx.font = `${bold ? 800 : 600} ${fs}px ${baseFont}`;
+        ctx.textAlign = endAlign;
+        ctx.fillText(label, totLabelX, ty);
+        ctx.fillText(val, endX, ty);
+        ty += fs + 16;
+      };
+      drawTotalRow(invL(invLang, 'SUBTOTAL', 'المجموع الفرعي'), fmtInvoiceMoney(inv.subTotal), true, 22);
+      drawTotalRow(invL(invLang, 'TAX', 'الضريبة'), fmtInvoiceMoney(inv.vatAmount), true, 22);
+      drawTotalRow(invL(invLang, 'Total', 'الإجمالي'), fmtInvoiceMoney(inv.grandTotal), true, 26);
+      drawTotalRow(invL(invLang, 'Paid', 'المدفوع'), fmtInvoiceMoney(inv.advancePaid), false, 21);
+      drawTotalRow(invL(invLang, 'Remaining', 'المتبقي'), fmtInvoiceMoney(inv.remainingBalance), true, 22);
+      drawTotalRow(invL(invLang, 'Total Udhaar', 'إجمالي الدين'), fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance), true, 22);
+
+      y = Math.max(qy, ty) + 52;
+
+      // Payment Info & Terms
+      const infoTopY = y;
+      let py = infoTopY;
+      ctx.fillStyle = '#000000';
+      ctx.font = `800 22px ${baseFont}`;
+      ctx.textAlign = startAlign;
+      ctx.fillText(invL(invLang, 'PAYMENT INFO:', 'بيانات الدفع:'), startX, py);
+      py += 32;
+      ctx.font = `400 20px ${baseFont}`;
+      ctx.fillStyle = '#111827';
+      const banksList = inv.selectedBanks && inv.selectedBanks.length ? inv.selectedBanks : [];
+      if (banksList.length) {
+        banksList.forEach(b => {
+          wrapCanvasLines(ctx, formatBankLineText(b, invLang), 480).forEach(ln => { ctx.fillText(ln, startX, py); py += 27; });
+        });
+      } else {
+        ctx.fillText(invL(invLang, 'Cash Payment / Direct Transfer', 'الدفع نقداً / تحويل بنكي مباشر'), startX, py);
+        py += 28;
+      }
+
+      const termsColX = isInvAr ? (startX - 540) : (startX + 540);
+      let trY = infoTopY;
+      ctx.fillStyle = '#000000';
+      ctx.font = `800 22px ${baseFont}`;
+      ctx.fillText(invL(invLang, 'TERMS & CONDITION', 'الشروط والأحكام'), termsColX, trY);
+      trY += 32;
+      ctx.font = `400 20px ${baseFont}`;
+      ctx.fillStyle = '#111827';
+      String(inv.terms || '').split('\n').slice(0, 5).forEach(line => {
+        wrapCanvasLines(ctx, line, 490).forEach(ln => { ctx.fillText(ln, termsColX, trY); trY += 27; });
+      });
+
+      y = Math.max(py, trY) + 56;
+
+      // Bottom Signatures
+      const sigBaseY = Math.min(1505, Math.max(y, 1365));
+      const drawSig = async (sigCfg, isEndSide) => {
+        const transformedUrl = await renderTransformedSignatureDataUrl(sigCfg.src, sigCfg.rotation || 0);
+        if (!transformedUrl) return;
+        const sImg = await loadImgForCanvas(transformedUrl);
+        if (!sImg) return;
+        const scaleFactor = (sigCfg.size || 100) / 100;
+        const maxW = 220 * scaleFactor;
+        const maxH = 92 * scaleFactor;
+        const fit = Math.min(maxW / (sImg.width || 240), maxH / (sImg.height || 100));
+        const dw = Math.max(40, Math.round((sImg.width || 240) * fit));
+        const dh = Math.max(30, Math.round((sImg.height || 100) * fit));
+        let drawX;
+        if (isInvAr) {
+          drawX = isEndSide ? endX : (startX - dw);
+        } else {
+          drawX = isEndSide ? (endX - dw) : startX;
+        }
+        ctx.drawImage(sImg, drawX, sigBaseY - dh, dw, dh);
+      };
+
+      ctx.fillStyle = '#000000';
+      ctx.font = `700 21px ${baseFont}`;
+      if (inv.useOwner1Sign && inv.owner1Sign?.src) {
+        await drawSig(inv.owner1Sign, false);
+        ctx.textAlign = startAlign;
+        ctx.fillText(String(inv.owner1Sign.name || invL(invLang, 'Owner 1', 'المالك 1')), startX, sigBaseY + 12);
+      }
+      if (inv.useOwner2Sign && inv.owner2Sign?.src) {
+        await drawSig(inv.owner2Sign, true);
+        ctx.textAlign = endAlign;
+        ctx.fillText(String(inv.owner2Sign.name || invL(invLang, 'Owner 2', 'المالك 2')), endX, sigBaseY + 12);
+      }
+
+      // Thank You & Bottom Contact Line
+      ctx.fillStyle = '#000000';
+      ctx.font = `800 27px ${baseFont}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(invL(invLang, 'Thank You!', 'شكراً لك!'), W / 2, 1605);
+      const footerLine = [inv.shopAddress, contactPhone].filter(Boolean).join('  ·  ');
+      if (footerLine) {
+        ctx.fillStyle = '#111827';
+        ctx.font = `400 20px ${baseFont}`;
+        ctx.fillText(footerLine.slice(0, 100), W / 2, 1656);
+      }
+
+      const imgDataUrl = canvas.toDataURL('image/jpeg', 0.94);
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      doc.addImage(imgDataUrl, 'JPEG', 0, 0, 210, 297);
+      return doc.output('blob');
+    }
+
     async function generateInvoicePdfBlob(inv) {
       const libs = window.__DK_INVOICE_LIBS__;
       if (!libs || !libs.jsPDF) {
-        throw new Error('PDF library abhi load ho rahi hai, 1 second baad try karein.');
+        throw new Error(L('PDF library is still loading, please try again in 1 second.', 'مكتبة PDF لا تزال قيد التحميل، حاول بعد ثانية.'));
       }
       await ensureInvoiceQrDataUrl(inv);
+      const hasArabicChars = /[\u0600-\u06FF\u0750-\u077F]/.test(
+        [
+          inv.shopName, inv.shopTagline, inv.shopAddress, inv.custName, inv.custAddress,
+          inv.shortWorkDesc, inv.terms, ...(inv.workItems || []), ...(inv.items || []).map(x => x.description)
+        ].join(' ')
+      );
+      if (inv.lang === 'ar' || hasArabicChars) {
+        return await generateCanvasBackedPdfBlob(inv);
+      }
+
       const { jsPDF } = libs;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = 210;
@@ -3815,19 +4239,19 @@
       doc.setFontSize(10);
       doc.text(`DUE DATE: ${formatInvoiceDateDDMMYYYY(inv.dueDate || inv.invoiceDate)}`, ml, y);
 
-      // Top Right: Big INVOICE + Invoice No + Date
+      // Top Right: Big INVOICE + Bill No + Date
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(26);
       doc.text('INVOICE', rightX, y + 2, { align: 'right' });
       doc.setFontSize(10);
-      doc.text(`Invoice No: ${inv.invoiceNo}`, rightX, y + 9, { align: 'right' });
+      doc.text(`Bill No: ${inv.invoiceNo}`, rightX, y + 9, { align: 'right' });
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       doc.text(`Date: ${formatInvoiceDateDDMMYYYY(inv.invoiceDate)}`, rightX, y + 14.5, { align: 'right' });
 
       y += 28;
 
-      // Shop Logo + Shop Name + Slogan (Left)
+      // Shop Logo + Shop Name + Slogan + Phone + Address (Left)
       let shopTextX = ml;
       try {
         const logoDataUrl = await renderCircularLogoDataUrl(inv.logoSrc);
@@ -3849,24 +4273,38 @@
         doc.text(sloganLines, shopTextX, leftEndY);
         leftEndY += sloganLines.length * 4.5;
       }
+      const qPhoneTop = inv.shopMobile || inv.ownerMobile || '';
+      if (qPhoneTop) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Phone: ${qPhoneTop}`, shopTextX, leftEndY);
+        leftEndY += 4.3;
+      }
+      if (inv.shopAddress) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const saLines = doc.splitTextToSize(`Address: ${inv.shopAddress}`, 82);
+        doc.text(saLines, shopTextX, leftEndY);
+        leftEndY += saLines.length * 4.3;
+      }
 
       // BILL TO (Right)
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text('BILL TO:', rightX, y + 1, { align: 'right' });
-      doc.setFontSize(12);
-      doc.text(String(inv.custName || ''), rightX, y + 7, { align: 'right' });
+      doc.setFontSize(11.5);
+      doc.text(`Customer Name: ${inv.custName || ''}`, rightX, y + 7, { align: 'right' });
       let rightEndY = y + 12;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
+      if (inv.custPhone) {
+        doc.text(`Phone Number: ${inv.custPhone}`, rightX, rightEndY, { align: 'right' });
+        rightEndY += 4.5;
+      }
       if (inv.custAddress) {
-        const addrLines = doc.splitTextToSize(inv.custAddress, 74);
+        const addrLines = doc.splitTextToSize(`Address: ${inv.custAddress}`, 74);
         doc.text(addrLines, rightX, rightEndY, { align: 'right' });
         rightEndY += addrLines.length * 4.5;
-      }
-      if (inv.custPhone) {
-        doc.text(String(inv.custPhone), rightX, rightEndY, { align: 'right' });
-        rightEndY += 4.5;
       }
 
       y = Math.max(leftEndY, rightEndY, y + 18) + 12;
@@ -3893,23 +4331,23 @@
 
       // Compact Borderless Table Header
       const colDesc = ml;
-      const colPrice = ml + 116;
-      const colQty = ml + 140;
+      const colPrice = ml + 114;
+      const colQty = ml + 139;
       const colTotal = rightX;
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.text('Item Description', colDesc, y);
+      doc.text('Item / Description', colDesc, y);
       doc.text('Price', colPrice, y, { align: 'right' });
-      doc.text('Qty', colQty, y, { align: 'center' });
-      doc.text('Total', colTotal, y, { align: 'right' });
+      doc.text('Quantity', colQty, y, { align: 'center' });
+      doc.text('Amount', colTotal, y, { align: 'right' });
       y += 6.5;
 
       doc.setFontSize(9.5);
       const tableItems = inv.items.slice(0, 10);
       tableItems.forEach((it) => {
         doc.setFont('helvetica', 'normal');
-        const dLines = doc.splitTextToSize(String(it.description || ''), 88);
+        const dLines = doc.splitTextToSize(String(it.description || ''), 86);
         doc.text(dLines, colDesc, y);
         doc.text(fmtInvoiceMoney(it.unitPrice), colPrice, y, { align: 'right' });
         doc.text(String(it.qty || 1), colQty, y, { align: 'center' });
@@ -3920,7 +4358,7 @@
 
       y += 10;
 
-      // Left: Questions + Email + Phone + Scannable QR Code | Right: SUBTOTAL, TAX, GRAND TOTAL
+      // Left: Questions + Email + Phone + Scannable QR Code | Right: SUBTOTAL, TAX, Total, Paid, Remaining, Total Udhaar
       const blockTopY = y;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
@@ -3953,20 +4391,21 @@
       doc.text(fmtInvoiceMoney(inv.vatAmount), rightX, ty, { align: 'right' });
       ty += 7;
       doc.setFontSize(12);
-      doc.text('GRAND TOTAL', totLabelX, ty, { align: 'right' });
+      doc.text('Total', totLabelX, ty, { align: 'right' });
       doc.text(fmtInvoiceMoney(inv.grandTotal), rightX, ty, { align: 'right' });
       ty += 6.5;
-      if (inv.advancePaid > 0) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        doc.text('ADVANCE PAID', totLabelX, ty, { align: 'right' });
-        doc.text(fmtInvoiceMoney(inv.advancePaid), rightX, ty, { align: 'right' });
-        ty += 5.5;
-        doc.setFont('helvetica', 'bold');
-        doc.text('REMAINING', totLabelX, ty, { align: 'right' });
-        doc.text(fmtInvoiceMoney(inv.remainingBalance), rightX, ty, { align: 'right' });
-        ty += 5.5;
-      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('Paid', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.advancePaid), rightX, ty, { align: 'right' });
+      ty += 5.5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Remaining', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.remainingBalance), rightX, ty, { align: 'right' });
+      ty += 5.5;
+      doc.text('Total Udhaar', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance), rightX, ty, { align: 'right' });
+      ty += 5.5;
 
       y = Math.max(qy, ty) + 12;
 
@@ -3981,7 +4420,7 @@
       const banksList = inv.selectedBanks && inv.selectedBanks.length ? inv.selectedBanks : [];
       if (banksList.length) {
         banksList.forEach(b => {
-          const bLines = doc.splitTextToSize(formatBankLineText(b), 86);
+          const bLines = doc.splitTextToSize(formatBankLineText(b, 'en'), 86);
           doc.text(bLines, ml, py);
           py += bLines.length * 4.3 + 1;
         });
@@ -4035,15 +4474,16 @@
         doc.text(String(inv.owner2Sign.name || 'Owner 2'), rightX, sigBaseY + 5, { align: 'right' });
       }
 
-      // Bottom Center: Thanks For Your Business! + Shop Address in one clean line
+      // Bottom Center: Thank You! + Shop Address & Phone
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('Thanks For Your Business!', pageW / 2, 276, { align: 'center' });
+      doc.text('Thank You!', pageW / 2, 276, { align: 'center' });
 
-      if (inv.shopAddress) {
+      const footerContact = [inv.shopAddress, qPhone].filter(Boolean).join(' · ');
+      if (footerContact) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text(String(inv.shopAddress).slice(0, 95), pageW / 2, 284, { align: 'center' });
+        doc.text(String(footerContact).slice(0, 95), pageW / 2, 284, { align: 'center' });
       }
 
       return doc.output('blob');
@@ -4056,7 +4496,8 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${inv.invoiceNo || 'Invoice'}_${inv.custName.replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`;
+        const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, '_') || 'Customer';
+        a.download = `${inv.invoiceNo || 'Invoice'}_${safeCust}.pdf`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -4069,8 +4510,11 @@
 
     async function shareInvoiceOnWhatsApp(inv) {
       if (!inv) return;
-      const shortMessage = `Assalam-o-Alaikum ${inv.custName}, Warsha Abdullah Workshop se aapka Invoice aa gaya hai. Shukriya!`;
-      const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9]+/g, '_');
+      const isInvAr = inv.lang === 'ar';
+      const shortMessage = isInvAr
+        ? `السلام عليكم ${inv.custName}، إليكم الفاتورة رقم ${inv.invoiceNo} من ${inv.shopName}. شكراً لتعاملكم معنا!`
+        : `Assalam-o-Alaikum ${inv.custName}, your Invoice (${inv.invoiceNo}) from ${inv.shopName} is ready. Thank you!`;
+      const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, '_');
       const fileName = `${inv.invoiceNo || 'Invoice'}_${safeCust}.pdf`;
 
       try {
@@ -4080,7 +4524,7 @@
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
           await navigator.share({
             files: [pdfFile],
-            title: `Invoice ${inv.invoiceNo}`,
+            title: `${invL(inv.lang || 'en', 'Invoice', 'فاتورة')} ${inv.invoiceNo}`,
             text: shortMessage
           });
           toast(L('Invoice PDF shared via WhatsApp ✓', 'تم إرسال الفاتورة PDF عبر واتساب ✓'), 'success');
@@ -6575,12 +7019,41 @@
             </div>
           </div>
 
-          <!-- Shop Logo & Invoice Shop Settings -->
+          <!-- Shop Logo & Invoice / Bill Settings -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
             <div>
-              <h2 class="text-sm font-bold">${L('Shop Settings (Bill / Invoice Header)', 'إعدادات الورشة (رأس الفاتورة)')}</h2>
+              <h2 class="text-sm font-bold">${L('Invoice Settings / Bill Settings (Shop Header)', 'إعدادات الفاتورة / رأس الفاتورة')}</h2>
               <p class="text-[11px] text-sec mt-0.5">${L('Save once — appears automatically on every invoice & saved in Cloud.', 'احفظها مرة واحدة وستظهر تلقائياً في كل فاتورة.')}</p>
             </div>
+
+            <!-- Invoice Language / انوائس کی زبان -->
+            ${(() => {
+              const curInvLang = getInvoiceLanguage();
+              return `
+                <div class="rounded-2xl bg-white/5 border border-cyan-400/25 p-3 space-y-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <div>
+                      <h3 class="text-xs font-extrabold">Invoice Language / انوائس کی زبان</h3>
+                      <p class="text-[11px] text-sec mt-0.5">${L('Separate from App Language — used for customer bills, PDF & print.', 'منفصلة عن لغة التطبيق — تُستخدم لفواتير العملاء وملفات PDF والطباعة.')}</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 shrink-0">
+                      ${curInvLang === 'ar' ? 'العربية (RTL)' : 'English (LTR)'}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Invoice Language / انوائس کی زبان">
+                    <label data-set-inv-setting-lang="en" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer transition-colors ${curInvLang !== 'ar' ? 'border-cyan-400 bg-cyan-500/15 text-white' : 'border-white/10 glass-card text-sec'}">
+                      <input type="radio" name="invoice-language" value="en" ${curInvLang !== 'ar' ? 'checked' : ''} class="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0" />
+                      <span class="truncate">English</span>
+                    </label>
+                    <label data-set-inv-setting-lang="ar" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer transition-colors ${curInvLang === 'ar' ? 'border-cyan-400 bg-cyan-500/15 text-white' : 'border-white/10 glass-card text-sec'}">
+                      <input type="radio" name="invoice-language" value="ar" ${curInvLang === 'ar' ? 'checked' : ''} class="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0" />
+                      <span class="truncate">Arabic (العربية)</span>
+                    </label>
+                  </div>
+                </div>
+              `;
+            })()}
+
             <div class="flex items-center gap-4">
               ${renderLogoAvatar('w-16 h-16', 'ring-2 ring-amber-400')}
               <div class="flex flex-wrap gap-2">
@@ -6597,17 +7070,27 @@
             <div class="space-y-2.5 pt-2 border-t border-white/10">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label class="block text-xs text-sec mb-1">${L('Shop Name', 'اسم المحل / الورشة')} *</label>
-                  <input id="shop-name-input" type="text" value="${esc(state.settings.shopName)}" placeholder="${L('e.g. Warsha Aluminium Workshop', 'مثال: ورشة ألمنيوم')}" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
+                  <label class="block text-xs text-sec mb-1">${L('Shop Name (English)', 'اسم المحل / الورشة (إنجليزي)')} *</label>
+                  <input id="shop-name-input" type="text" value="${esc(state.settings.shopName)}" placeholder="e.g. Warsha Aluminium Workshop" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
                 </div>
+                <div>
+                  <label class="block text-xs text-sec mb-1">${L('Shop Name (Arabic)', 'اسم المحل / الورشة (عربي)')}</label>
+                  <input id="shop-name-ar-input" type="text" dir="rtl" value="${esc(state.settings.shopNameAr || '')}" placeholder="مثال: ورشة ألمنيوم وزجاج" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label class="block text-xs text-sec mb-1">${L('Tagline', 'الوصف المختصر')}</label>
                   <input id="shop-tagline-input" type="text" value="${esc(state.settings.shopTagline || '')}" placeholder="${L('e.g. Aluminium & Glass Fabrication', 'مثال: أعمال الألمنيوم والزجاج')}" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
                 </div>
+                <div>
+                  <label class="block text-xs text-sec mb-1">${L('Shop Address (English)', 'عنوان الورشة (إنجليزي)')}</label>
+                  <input id="shop-address-input" type="text" value="${esc(state.settings.shopAddress || '')}" placeholder="Shop Address / City" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
+                </div>
               </div>
               <div>
-                <label class="block text-xs text-sec mb-1">${L('Shop Address', 'عنوان الورشة')}</label>
-                <input id="shop-address-input" type="text" value="${esc(state.settings.shopAddress || '')}" placeholder="${L('Shop Address / City', 'العنوان / المدينة')}" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
+                <label class="block text-xs text-sec mb-1">${L('Shop Address (Arabic)', 'عنوان الورشة (عربي)')}</label>
+                <input id="shop-address-ar-input" type="text" dir="rtl" value="${esc(state.settings.shopAddressAr || '')}" placeholder="مثال: الرياض - الصناعية" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
               </div>
               <div class="grid grid-cols-2 gap-2">
                 <div>
@@ -7389,6 +7872,7 @@
           custEmail: c.email || '',
           bankName: initBank,
           vatEnabled: initVat,
+          invoiceLanguage: getInvoiceLanguage(),
           useOwner1Sign: false,
           useOwner2Sign: false,
           useOwner1Qr: false,
@@ -7404,6 +7888,7 @@
           <form id="modal-print-bill-form" class="space-y-3">
             <input type="hidden" name="customerId" value="${esc(custId)}" />
             <input type="hidden" id="inv-qr-order" name="qrOrder" value="${esc(JSON.stringify(ui.invoiceDraft.qrOrder))}" />
+            <input type="hidden" id="inv-lang-hidden" name="invoiceLanguage" value="${esc(inv.lang)}" />
             <div class="grid grid-cols-3 gap-2">
               <div><label class="block text-[11px] text-sec mb-1">${esc(L('Invoice No', 'رقم الفاتورة'))}</label><input id="inv-no-input" name="invoiceNo" type="text" dir="ltr" value="${esc(inv.invoiceNo)}" class="w-full h-10 px-2 rounded-xl glass-input text-xs font-bold" /></div>
               <div><label class="block text-[11px] text-sec mb-1">${esc(L('Invoice Date', 'تاريخ الفاتورة'))}</label><input id="inv-date-input" name="invoiceDate" type="date" value="${esc(inv.invoiceDate)}" class="w-full h-10 px-2 rounded-xl glass-input text-[11px] tabular-nums" /></div>
@@ -7448,7 +7933,15 @@
                 </div>
               </label>
             </div>
-            <div id="inv-live-preview" dir="ltr" class="rounded-xl overflow-hidden bg-white shadow-lg">
+            <!-- Invoice Preview Top Language Toggle -->
+            <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-2xl glass-card border border-cyan-400/25">
+              <span class="text-[11px] font-bold text-sec">${esc(L('Invoice Language', 'لغة الفاتورة'))}</span>
+              <div class="inline-flex items-center rounded-xl bg-slate-900/60 p-0.5 border border-white/10" dir="ltr">
+                <button type="button" data-set-inv-lang="en" class="px-3 py-1 rounded-lg text-[11px] font-extrabold transition-colors cursor-pointer ${inv.lang !== 'ar' ? 'bg-cyan-500 text-slate-950' : 'text-sec hover:text-white'}">English</button>
+                <button type="button" data-set-inv-lang="ar" class="px-3 py-1 rounded-lg text-[11px] font-extrabold transition-colors cursor-pointer ${inv.lang === 'ar' ? 'bg-cyan-500 text-slate-950' : 'text-sec hover:text-white'}">العربية</button>
+              </div>
+            </div>
+            <div id="inv-live-preview" dir="${inv.lang === 'ar' ? 'rtl' : 'ltr'}" class="rounded-xl overflow-hidden bg-white shadow-lg">
               ${renderProfessionalInvoiceHtml(inv, true)}
             </div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
@@ -8058,15 +8551,27 @@
       if (!ui.invoiceDraft) return;
       const d = ui.invoiceDraft;
       const inv = buildCustomerInvoiceModel(d.customerId, d);
+      const hiddenLang = document.getElementById('inv-lang-hidden');
+      if (hiddenLang && inv) hiddenLang.value = inv.lang;
+      document.querySelectorAll('[data-set-inv-lang]').forEach(btn => {
+        const active = btn.getAttribute('data-set-inv-lang') === (inv ? inv.lang : getInvoiceLanguage());
+        btn.classList.toggle('bg-cyan-500', active);
+        btn.classList.toggle('text-slate-950', active);
+        btn.classList.toggle('text-sec', !active);
+      });
       const box = document.getElementById('inv-live-preview');
       if (inv && box) {
+        box.setAttribute('dir', inv.lang === 'ar' ? 'rtl' : 'ltr');
         box.innerHTML = renderProfessionalInvoiceHtml(inv, true);
         if (!inv.qrDataUrl) {
           ensureInvoiceQrDataUrl(inv).then((url) => {
             if (url && ui.invoiceDraft && ui.invoiceDraft.customerId === inv.customerId) {
               const latest = buildCustomerInvoiceModel(d.customerId, ui.invoiceDraft);
               const targetBox = document.getElementById('inv-live-preview');
-              if (latest && targetBox) targetBox.innerHTML = renderProfessionalInvoiceHtml(latest, true);
+              if (latest && targetBox) {
+                targetBox.setAttribute('dir', latest.lang === 'ar' ? 'rtl' : 'ltr');
+                targetBox.innerHTML = renderProfessionalInvoiceHtml(latest, true);
+              }
             }
           });
         }
@@ -8501,6 +9006,30 @@
         return;
       }
 
+      const invSettingLangBtn = t.closest('[data-set-inv-setting-lang]');
+      if (invSettingLangBtn) {
+        const nextInvLang = invSettingLangBtn.getAttribute('data-set-inv-setting-lang') === 'ar' ? 'ar' : 'en';
+        if (getInvoiceLanguage() !== nextInvLang) {
+          setInvoiceLanguage(nextInvLang);
+          saveState();
+          render();
+          toast(nextInvLang === 'ar' ? L('Invoice language set to Arabic ✓', 'تم ضبط لغة الفاتورة على العربية ✓') : L('Invoice language set to English ✓', 'تم ضبط لغة الفاتورة على الإنجليزية ✓'), 'success');
+        }
+        return;
+      }
+
+      const invPreviewLangBtn = t.closest('[data-set-inv-lang]');
+      if (invPreviewLangBtn) {
+        const nextInvLang = invPreviewLangBtn.getAttribute('data-set-inv-lang') === 'ar' ? 'ar' : 'en';
+        setInvoiceLanguage(nextInvLang);
+        if (ui.invoiceDraft) ui.invoiceDraft.invoiceLanguage = nextInvLang;
+        saveState();
+        refreshInvoiceDraftPreview();
+        render();
+        toast(nextInvLang === 'ar' ? L('Invoice language: Arabic ✓', 'لغة الفاتورة: العربية ✓') : L('Invoice language: English ✓', 'لغة الفاتورة: الإنجليزية ✓'), 'success');
+        return;
+      }
+
       const toggleArch = t.closest('[data-toggle-archive]');
       if (toggleArch) {
         const mk = toggleArch.getAttribute('data-toggle-archive');
@@ -8820,8 +9349,10 @@
       }
       else if (act === 'save-shop-name') {
         const sName = document.getElementById('shop-name-input')?.value.trim();
+        const sNameAr = document.getElementById('shop-name-ar-input')?.value.trim() || '';
         const sTag = document.getElementById('shop-tagline-input')?.value.trim() || '';
         const sAddr = document.getElementById('shop-address-input')?.value.trim() || '';
+        const sAddrAr = document.getElementById('shop-address-ar-input')?.value.trim() || '';
         const sMob = document.getElementById('shop-mobile-input')?.value.trim() || '';
         const sEmail = document.getElementById('shop-email-input')?.value.trim() || '';
         const oName = document.getElementById('owner-name-input')?.value.trim() || '';
@@ -8829,8 +9360,10 @@
         const oEmail = document.getElementById('owner-email-input')?.value.trim() || '';
         const terms = document.getElementById('invoice-terms-input')?.value.trim() || '';
         if (sName) state.settings.shopName = sName;
+        state.settings.shopNameAr = sNameAr;
         state.settings.shopTagline = sTag;
         state.settings.shopAddress = sAddr;
+        state.settings.shopAddressAr = sAddrAr;
         state.settings.shopMobile = sMob;
         state.settings.shopEmail = sEmail;
         state.settings.ownerName = oName;
@@ -9655,6 +10188,7 @@
           invoiceDate: (fd.get('invoiceDate') || '').toString() || todayISO(),
           dueDate: (fd.get('dueDate') || '').toString() || (fd.get('invoiceDate') || '').toString() || todayISO(),
           custEmail,
+          invoiceLanguage: (fd.get('invoiceLanguage') || getInvoiceLanguage()).toString(),
           vatEnabled: Boolean(fd.get('vatEnabled')),
           useOwner1Sign: Boolean(fd.get('useOwner1Sign')),
           useOwner2Sign: Boolean(fd.get('useOwner2Sign')),
@@ -10350,6 +10884,16 @@
           applyLanguage(nextLang);
           render();
           toast(L('Language changed to English ✓', 'تم تغيير اللغة إلى العربية ✓'), 'success');
+        }
+        return;
+      }
+      if (t.name === 'invoice-language') {
+        const nextInvLang = t.value === 'ar' ? 'ar' : 'en';
+        if (getInvoiceLanguage() !== nextInvLang) {
+          setInvoiceLanguage(nextInvLang);
+          saveState();
+          render();
+          toast(nextInvLang === 'ar' ? L('Invoice language set to Arabic ✓', 'تم ضبط لغة الفاتورة على العربية ✓') : L('Invoice language set to English ✓', 'تم ضبط لغة الفاتورة على الإنجليزية ✓'), 'success');
         }
         return;
       }
