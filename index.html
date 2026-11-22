@@ -500,9 +500,13 @@
         print-color-adjust: exact !important;
         color-adjust: exact !important;
       }
-      body { background: #ffffff !important; color: #0f172a !important; }
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
+      body { background: #ffffff !important; color: #000000 !important; }
       #app, #modal-root, #toast-root { display: none !important; }
-      #print-root { display: block !important; color: #0f172a !important; padding: 12px !important; }
+      #print-root { display: block !important; color: #000000 !important; background: #ffffff !important; padding: 0 !important; margin: 0 auto !important; max-width: 100% !important; }
     }
   </style>
 </head>
@@ -537,10 +541,13 @@
     const THEME_PREF_KEY = 'dk_theme_pref_v2';
     const BIO_META_KEY = 'dk_bio_meta_v2';
     const AUTH_LOCK_KEY = 'dk_auth_lock_v1';
+    const AUTH_PIN_LOCK_KEY = 'dk_pin_lock_v1';
+    const EXPLICIT_SIGNOUT_KEY = 'dk_explicit_signout_v1';
     const PENDING_SYNC_KEY = 'dk_pending_sync_uid';
     const PIN_UNLOCK_SESSION_KEY = 'dk_pin_unlocked_uid';
     const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
     const DEFAULT_LOGO_PATH = '/assets/aistudio/logo_5d9f834e.png';
+    const DEFAULT_OWNER1_SIGN_PATH = '/assets/aistudio/owner1_signature.png';
     const KYC_VERIFY_DURATION_MS = 5 * 60 * 1000;
     const EMAILJS_PUBLIC_KEY = 'WyRcd-PQ5UkXjB_Sk';
     const EMAILJS_SERVICE_ID = 'service_lvdb54j';
@@ -557,29 +564,38 @@
     const EXPENSE_CATEGORIES = ['Mess', 'Diesel', 'Rent', 'Committee', 'Salary', 'Supplier', 'Other'];
     const ALUMINIUM_WORK_ITEMS = [
       'Aluminium Window',
-      'Sliding Window',
       'Aluminium Door',
-      'Glass Door',
-      'Aluminium Partition',
-      'Aluminium Cabinet / Almari',
-      'Shop Front / Glass Front',
-      'Railing',
-      'Other Aluminium Work'
+      'Glass Work',
+      'Kitchen',
+      'Sliding Door',
+      'Partition',
+      'Cladding',
+      'Repair Work',
+      'Other'
     ];
     const SAUDI_BANKS = [
-      'Al Rajhi Bank',
-      'Saudi National Bank (SNB)',
+      'Al Rajhi',
+      'SNB',
       'Riyad Bank',
-      'Saudi Awwal Bank (SAB)',
-      'Alinma Bank',
+      'SAB',
+      'Alinma',
       'Banque Saudi Fransi',
-      'Arab National Bank (ANB)',
-      'Bank AlJazira',
-      'Bank Albilad',
-      'Gulf International Bank (GIB)',
+      'ANB',
+      'AlJazira',
+      'Albilad',
+      'GIB',
       'STC Pay',
       'Cash'
     ];
+    const LEGACY_BANK_NAME_MAP = {
+      'Al Rajhi Bank': 'Al Rajhi',
+      'Saudi National Bank (SNB)': 'SNB',
+      'Saudi Awwal Bank (SAB)': 'SAB',
+      'Arab National Bank (ANB)': 'ANB',
+      'Bank AlJazira': 'AlJazira',
+      'Bank Albilad': 'Albilad',
+      'Gulf International Bank (GIB)': 'GIB'
+    };
 
     function defaultLowStockLimit(category) {
       const c = (category || '').toLowerCase();
@@ -675,8 +691,22 @@
           ownerEmail: '',
           invoiceTerms: '1. Work starts after advance payment confirmation.\n2. Custom fabricated aluminium/glass items cannot be returned.\n3. Remaining balance is due upon delivery/installation.',
           vatEnabledDefault: true,
-          defaultBank: 'Al Rajhi Bank',
+          defaultBank: 'Al Rajhi',
           bankAccounts: {},
+          signatures: {
+            owner1: {
+              name: 'Imran Ullah',
+              dataUrl: '',
+              rotation: 0,
+              size: 100
+            },
+            owner2: {
+              name: 'Haroon',
+              dataUrl: '',
+              rotation: 0,
+              size: 100
+            }
+          },
           invoiceSeq: 100
         },
         customers: [],
@@ -776,9 +806,28 @@
       } catch (e) {}
     }
 
+    function normalizeBankAccountsMap(rawMap) {
+      const out = {};
+      if (!rawMap || typeof rawMap !== 'object') return out;
+      Object.keys(rawMap).forEach((key) => {
+        const mappedKey = LEGACY_BANK_NAME_MAP[key] || key;
+        const val = rawMap[key] || {};
+        out[mappedKey] = {
+          accountName: String(val.accountName || ''),
+          iban: String(val.iban || ''),
+          branchName: String(val.branchName || ''),
+          showOnInvoice: Boolean(val.showOnInvoice)
+        };
+      });
+      return out;
+    }
+
     function mergeWithDefaults(parsed) {
       const def = defaultData();
       if (!parsed || typeof parsed !== 'object') return def;
+      const rawSettings = parsed.settings || {};
+      const mappedDefBank = LEGACY_BANK_NAME_MAP[rawSettings.defaultBank] || rawSettings.defaultBank || def.settings.defaultBank;
+      const rawSigs = rawSettings.signatures || {};
       return {
         ...def,
         ...parsed,
@@ -787,8 +836,13 @@
         pinSecurity: { ...def.pinSecurity, ...(parsed.pinSecurity || {}) },
         settings: {
           ...def.settings,
-          ...(parsed.settings || {}),
-          bankAccounts: { ...(def.settings.bankAccounts || {}), ...(parsed.settings?.bankAccounts || {}) }
+          ...rawSettings,
+          defaultBank: mappedDefBank,
+          bankAccounts: normalizeBankAccountsMap({ ...(def.settings.bankAccounts || {}), ...(rawSettings.bankAccounts || {}) }),
+          signatures: {
+            owner1: { ...def.settings.signatures.owner1, ...(rawSigs.owner1 || {}) },
+            owner2: { ...def.settings.signatures.owner2, ...(rawSigs.owner2 || {}) }
+          }
         },
         rememberMe: { ...def.rememberMe, ...(parsed.rememberMe || {}) },
         kyc: { ...def.kyc, ...(parsed.kyc || {}) }
@@ -882,6 +936,10 @@
       signupData: newSignupData(),
       showPass: false,
       authLoading: false,
+      loginPending: false,
+      loginStageText: 'Signing in...',
+      loginRetry: null,
+      startupCheckingAuth: !state.session && localStorage.getItem(EXPLICIT_SIGNOUT_KEY) !== '1',
       cloudHydrating: false,
       cloudNotice: '',
       kycWelcomeBanner: false,
@@ -912,6 +970,8 @@
       kycTimer: null,
       cameraStream: null,
       invoiceDraft: null,
+      modalWorkItems: ['Aluminium Window'],
+      qrCache: {},
       lastRenderedView: ''
     };
 
@@ -2100,6 +2160,42 @@
       return Math.ceil((lock.lockedUntil - Date.now()) / 1000);
     }
 
+    function getPinLockState() {
+      try {
+        return JSON.parse(localStorage.getItem(AUTH_PIN_LOCK_KEY) || '{}') || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function recordFailedPinAttempt() {
+      const lock = getPinLockState();
+      const count = Number(lock.count || 0) + 1;
+      const next = { count, lockedUntil: count >= 3 ? Date.now() + 5 * 60 * 1000 : 0 };
+      localStorage.setItem(AUTH_PIN_LOCK_KEY, JSON.stringify(next));
+      return next;
+    }
+
+    function clearFailedPinAttempts() {
+      localStorage.removeItem(AUTH_PIN_LOCK_KEY);
+    }
+
+    function getPinLockoutRemainingSec() {
+      const lock = getPinLockState();
+      if (!lock.lockedUntil || lock.lockedUntil <= Date.now()) return 0;
+      return Math.ceil((lock.lockedUntil - Date.now()) / 1000);
+    }
+
+    function withTimeout(promise, ms = 25000, label = 'NETWORK_TIMEOUT') {
+      let tid = null;
+      const timeoutP = new Promise((_, reject) => {
+        tid = setTimeout(() => reject(new Error(label)), ms);
+      });
+      return Promise.race([promise, timeoutP]).finally(() => {
+        if (tid) clearTimeout(tid);
+      });
+    }
+
     // ========================
     // CLOUD SYNC, AUTO DAILY BACKUP & RESTORE (FIREBASE)
     // ========================
@@ -2525,27 +2621,22 @@
 
     async function hydrateFromFirebaseUser(fbUser, overrideInfo = {}, opts = {}) {
       const cloud = getCloud();
-      if (!cloud || !fbUser) return;
-      if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) return;
+      if (!cloud || !fbUser) return { ok: false, reason: 'NO_USER' };
+      if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) return { ok: false, reason: 'AUTH_MISMATCH' };
       const myGen = ++hydrateGeneration;
       const isBg = Boolean(opts.background);
+      const strictNetwork = Boolean(opts.strictNetwork);
       if (!isBg && (!state.session || state.session.uid !== fbUser.uid)) {
         ui.cloudHydrating = true;
       }
       try {
         try {
-          await fbUser.getIdToken();
+          await withTimeout(fbUser.getIdToken(), 12000, 'TOKEN_TIMEOUT');
         } catch (tokErr) {
-          const code = tokErr?.code || '';
-          if (navigator.onLine && (code === 'auth/user-token-expired' || code === 'auth/user-disabled' || code === 'auth/user-not-found')) {
-            if (myGen === hydrateGeneration) {
-              try { await cloud.signOutUser(); } catch (e) {}
-            }
-            return;
-          }
+          // Never auto-logout user on transient or offline token errors
         }
         if (myGen !== hydrateGeneration || !cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) {
-          return;
+          return { ok: false, reason: 'SUPERSEDED' };
         }
 
         const prevUid = state.session?.uid || state.cloudMeta?.uid || '';
@@ -2606,14 +2697,15 @@
           state.kyc.fullName = displayName;
           ui.pinLocked = false;
           ui.view = 'kyc';
+          localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
           saveState(true);
           await flushCloudSync();
           return;
         }
 
-        const bundle = await cloud.loadUserBundle(fbUser.uid);
+        const bundle = await withTimeout(cloud.loadUserBundle(fbUser.uid), 22000, 'BUNDLE_TIMEOUT');
         if (myGen !== hydrateGeneration || !cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) {
-          return;
+          return { ok: false, reason: 'SUPERSEDED' };
         }
         const prof = bundle.profile || {};
         const uidCache = loadUserCache(fbUser.uid);
@@ -2653,6 +2745,7 @@
           provider: 'firebase',
           loginAt: Date.now()
         };
+        localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
         state.blocked = Boolean(prof.blocked);
         if (prof.pinEnabled && prof.pinHash) {
           state.pinSecurity = { enabled: true, hash: String(prof.pinHash) };
@@ -2698,23 +2791,31 @@
         flushCloudSync().then(() => {
           if (myGen === hydrateGeneration) maybeRunAutoDailyBackup();
         });
+        return { ok: true };
       } catch (err) {
-        if (myGen !== hydrateGeneration) return;
+        if (myGen !== hydrateGeneration) return { ok: false, reason: 'SUPERSEDED' };
+        if (strictNetwork && (!state.session || state.session.uid !== fbUser.uid)) {
+          throw err;
+        }
         if (!err || err.message !== 'AUTH_SESSION_CHANGED') {
           ui.syncStatus = 'pending';
         }
+        return { ok: false, error: err };
       } finally {
         if (myGen !== hydrateGeneration) return;
         ui.cloudHydrating = false;
-        if (!state.session) {
+        ui.startupCheckingAuth = false;
+        if (state.session) {
+          if (isAdminSession()) {
+            ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
+          } else if (state.blocked || !isKycVerified()) {
+            ui.view = 'kyc';
+            if (state.kyc?.status === 'verifying') startKycCountdownTimer();
+          } else {
+            ui.view = (ui.view === 'login' || ui.view === 'kyc') ? 'home' : ui.view;
+          }
+        } else if (!ui.loginPending) {
           ui.view = 'login';
-        } else if (isAdminSession()) {
-          ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
-        } else if (state.blocked || !isKycVerified()) {
-          ui.view = 'kyc';
-          if (state.kyc?.status === 'verifying') startKycCountdownTimer();
-        } else {
-          ui.view = (ui.view === 'login' || ui.view === 'kyc') ? 'home' : ui.view;
         }
         render();
       }
@@ -2767,10 +2868,17 @@
         state.biometric = keepBio;
       }
       if (d.settings) {
+        const mappedBank = LEGACY_BANK_NAME_MAP[d.settings.defaultBank] || d.settings.defaultBank || def.settings.defaultBank;
+        const dSigs = d.settings.signatures || {};
         state.settings = {
           ...def.settings,
           ...d.settings,
-          bankAccounts: { ...(def.settings.bankAccounts || {}), ...(d.settings.bankAccounts || {}) }
+          defaultBank: mappedBank,
+          bankAccounts: normalizeBankAccountsMap({ ...(def.settings.bankAccounts || {}), ...(d.settings.bankAccounts || {}) }),
+          signatures: {
+            owner1: { ...def.settings.signatures.owner1, ...(dSigs.owner1 || {}) },
+            owner2: { ...def.settings.signatures.owner2, ...(dSigs.owner2 || {}) }
+          }
         };
       }
       if (Array.isArray(d.customers)) state.customers = d.customers;
@@ -2884,12 +2992,307 @@
       return 'SAR ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function formatInvoiceDateDDMMYYYY(dateStr) {
+      if (!dateStr) return formatInvoiceDateDDMMYYYY(todayISO());
+      const parts = String(dateStr).slice(0, 10).split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return String(dateStr);
+    }
+
+    function getCustomerWorkItems(c) {
+      if (!c) return [];
+      const set = new Set();
+      if (Array.isArray(c.workItems)) {
+        c.workItems.forEach(w => { const clean = String(w || '').trim(); if (clean) set.add(clean); });
+      }
+      const orders = state.orders.filter(o => o.customerId === c.id);
+      orders.forEach(o => {
+        if (Array.isArray(o.workItems) && o.workItems.length) {
+          o.workItems.forEach(w => { const clean = String(w || '').trim(); if (clean) set.add(clean); });
+        } else if (o.itemName) {
+          String(o.itemName).split(',').map(x => x.trim()).filter(Boolean).forEach(x => set.add(x));
+        }
+      });
+      return Array.from(set);
+    }
+
+    function renderWorkMultiSelect(selectedList = []) {
+      const selected = Array.isArray(selectedList) ? selectedList : [];
+      const allOpts = Array.from(new Set([...ALUMINIUM_WORK_ITEMS, ...selected]));
+      return `
+        <div id="work-multiselect-root" class="space-y-2">
+          <div class="flex flex-wrap gap-1.5 min-h-[34px] p-2 rounded-xl glass-input">
+            ${selected.length === 0 ? `<span class="text-xs text-mut px-1 py-0.5">Neeche se 1 ya zyada Work select karein...</span>` : selected.map(w => `
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/50 text-cyan-200 text-xs font-bold">
+                <span>${esc(w)}</span>
+                <button type="button" data-work-chip-remove="${esc(w)}" class="w-4 h-4 rounded-full bg-white/15 hover:bg-rose-500/60 text-[10px] flex items-center justify-center cursor-pointer" aria-label="Remove ${esc(w)}">✕</button>
+              </span>
+            `).join('')}
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            ${allOpts.map(w => {
+              const active = selected.includes(w);
+              return `
+                <button type="button" data-work-toggle="${esc(w)}" class="h-9 px-2.5 rounded-xl border text-left text-[11px] font-bold flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                  active
+                    ? 'bg-cyan-500/25 border-cyan-400 text-cyan-100 shadow-sm'
+                    : 'glass-card border-white/10 text-sec hover:border-cyan-400/40'
+                }">
+                  <span class="truncate">${esc(w)}</span>
+                  <span class="shrink-0 text-xs">${active ? '✓' : '+'}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+          <input type="hidden" id="work-items-hidden" name="workItemsJson" value="${esc(JSON.stringify(selected))}" />
+        </div>
+      `;
+    }
+
+    function getInvoiceBanksList(overrides = {}) {
+      const s = state.settings || {};
+      const accounts = s.bankAccounts || {};
+      const ticked = [];
+      SAUDI_BANKS.forEach(bankName => {
+        const rec = accounts[bankName];
+        if (rec && rec.showOnInvoice) {
+          ticked.push({
+            bankName,
+            accountName: rec.accountName || '',
+            iban: rec.iban || '',
+            branchName: rec.branchName || ''
+          });
+        }
+      });
+      if (ticked.length > 0) return ticked.slice(0, 3);
+      const fallbackBank = LEGACY_BANK_NAME_MAP[overrides.bankName || s.defaultBank] || overrides.bankName || s.defaultBank || 'Al Rajhi';
+      const fbRec = accounts[fallbackBank] || {};
+      if (fbRec.accountName || fbRec.iban || fbRec.branchName || fallbackBank === 'Cash') {
+        return [{
+          bankName: fallbackBank,
+          accountName: fbRec.accountName || '',
+          iban: fbRec.iban || '',
+          branchName: fbRec.branchName || ''
+        }];
+      }
+      return [];
+    }
+
+    function getSignatureConfig(slot) {
+      const sigs = (state.settings && state.settings.signatures) || {};
+      const defName = slot === 'owner1' ? 'Imran Ullah' : 'Haroon';
+      const raw = sigs[slot] || {};
+      const src = (raw.dataUrl || '').trim() || (slot === 'owner1' ? DEFAULT_OWNER1_SIGN_PATH : '');
+      return {
+        name: String(raw.name !== undefined ? raw.name : defName).trim() || defName,
+        src,
+        rotation: Number(raw.rotation || 0),
+        size: Math.min(160, Math.max(50, Number(raw.size || 100)))
+      };
+    }
+
+    function formatBankLineText(b) {
+      if (!b) return '';
+      if (b.bankName === 'Cash') {
+        return `Cash Payment${b.accountName ? ' - ' + b.accountName : ''}`;
+      }
+      const parts = [b.bankName];
+      if (b.accountName) parts.push(b.accountName);
+      if (b.iban) parts.push((b.bankName === 'STC Pay' ? '' : 'IBAN: ') + b.iban);
+      if (b.branchName) parts.push(b.branchName);
+      return parts.join(' - ');
+    }
+
+    function getInvoiceQrText(inv) {
+      return `Invoice: ${inv.invoiceNo}\nDate: ${formatInvoiceDateDDMMYYYY(inv.invoiceDate)}\nCustomer: ${inv.custName}\nTotal: SAR ${Number(inv.grandTotal || 0).toFixed(2)}`;
+    }
+
+    async function ensureInvoiceQrDataUrl(inv) {
+      if (!inv) return '';
+      const qrText = getInvoiceQrText(inv);
+      if (ui.qrCache[qrText]) {
+        inv.qrDataUrl = ui.qrCache[qrText];
+        return ui.qrCache[qrText];
+      }
+      const libs = window.__DK_INVOICE_LIBS__;
+      if (!libs || !libs.QRCode) return '';
+      try {
+        const url = await libs.QRCode.toDataURL(qrText, {
+          width: 140,
+          margin: 1,
+          color: { dark: '#000000', light: '#ffffff' }
+        });
+        ui.qrCache[qrText] = url;
+        inv.qrDataUrl = url;
+        return url;
+      } catch {
+        return '';
+      }
+    }
+
+    async function processUploadedSignatureFile(file) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const img = await loadImgForCanvas(dataUrl);
+      if (!img) throw new Error('Image load failed');
+      const maxDim = 560;
+      const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1));
+      const w = Math.max(1, Math.round((img.width || 1) * scale));
+      const h = Math.max(1, Math.round((img.height || 1) * scale));
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+
+      // Check whether image contains blue ink strokes vs neutral black pen strokes
+      let blueCount = 0;
+      let darkCount = 0;
+      let lumSum = 0;
+      const totalPx = w * h;
+      for (let i = 0; i < totalPx; i++) {
+        const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        lumSum += lum;
+        if (!(g > 135 && g - r > 35 && g - b > 15)) {
+          if (b - r >= 26 && b - g >= 20 && lum < 135) blueCount++;
+          if (lum < 110) darkCount++;
+        }
+      }
+      const avgLum = lumSum / Math.max(1, totalPx);
+      const useBlueInkIsolation = blueCount > 35;
+
+      const mask = new Uint8Array(totalPx);
+      const lumArr = new Float32Array(totalPx);
+      for (let i = 0; i < totalPx; i++) {
+        const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        lumArr[i] = lum;
+        // Drop green highlights/circles
+        if (g > 130 && (g - r) > 32 && (g - b) > 12) continue;
+        if (useBlueInkIsolation) {
+          const br = b - r;
+          const bg = b - g;
+          if ((r < 85 && g < 85 && lum < 105 && br >= 24 && bg >= 20) || (r < 110 && g < 110 && lum < 125 && br >= 40 && bg >= 36)) {
+            mask[i] = 1;
+          }
+        } else {
+          const darkThreshold = Math.min(135, Math.max(65, avgLum * 0.62));
+          if (lum < darkThreshold) {
+            mask[i] = 1;
+          }
+        }
+      }
+
+      // Despeckle isolated 1px noise and find tight bounding box
+      const out = new Uint8ClampedArray(totalPx * 4);
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const i = y * w + x;
+          if (!mask[i]) continue;
+          let neighbors = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (mask[(y + dy) * w + (x + dx)]) neighbors++;
+            }
+          }
+          if (neighbors < 2) continue;
+          const alpha = Math.round(Math.min(255, Math.max(120, ((140 - lumArr[i]) / 85) * 255)));
+          out[i * 4] = 12;
+          out[i * 4 + 1] = 44;
+          out[i * 4 + 2] = 148;
+          out[i * 4 + 3] = alpha;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+
+      if (maxX < minX || maxY < minY) {
+        // Fallback: preserve dark strokes simply
+        for (let i = 0; i < totalPx; i++) {
+          const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (lum < 150 && !(g > 135 && g - r > 35)) {
+            out[i * 4] = 12; out[i * 4 + 1] = 44; out[i * 4 + 2] = 148; out[i * 4 + 3] = 220;
+            const x = i % w, y = (i - x) / w;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      if (maxX < minX || maxY < minY) return dataUrl;
+
+      const pad = 8;
+      const sx = Math.max(0, minX - pad);
+      const sy = Math.max(0, minY - pad);
+      const sw = Math.min(w - sx, maxX - minX + 1 + pad * 2);
+      const sh = Math.min(h - sy, maxY - minY + 1 + pad * 2);
+
+      const tempC = document.createElement('canvas');
+      tempC.width = w; tempC.height = h;
+      tempC.getContext('2d').putImageData(new ImageData(out, w, h), 0, 0);
+
+      const finalScale = Math.min(1, 360 / Math.max(sw, 1), 160 / Math.max(sh, 1));
+      const fw = Math.max(1, Math.round(sw * finalScale));
+      const fh = Math.max(1, Math.round(sh * finalScale));
+      const outC = document.createElement('canvas');
+      outC.width = fw; outC.height = fh;
+      outC.getContext('2d').drawImage(tempC, sx, sy, sw, sh, 0, 0, fw, fh);
+      return outC.toDataURL('image/png');
+    }
+
+    async function renderTransformedSignatureDataUrl(src, rotationDeg = 0) {
+      const img = await loadImgForCanvas(src);
+      if (!img) return '';
+      const rad = (Number(rotationDeg || 0) * Math.PI) / 180;
+      const cos = Math.abs(Math.cos(rad));
+      const sin = Math.abs(Math.sin(rad));
+      const w = img.width || 240;
+      const h = img.height || 100;
+      const rw = Math.max(1, Math.ceil(w * cos + h * sin));
+      const rh = Math.max(1, Math.ceil(w * sin + h * cos));
+      const canvas = document.createElement('canvas');
+      canvas.width = rw;
+      canvas.height = rh;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(rw / 2, rh / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+      return canvas.toDataURL('image/png');
+    }
+
+    async function renderCircularLogoDataUrl(src) {
+      const img = await loadImgForCanvas(src);
+      if (!img) return '';
+      const size = 180;
+      const c = document.createElement('canvas');
+      c.width = size; c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, size, size);
+      return c.toDataURL('image/png');
+    }
+
     function buildCustomerInvoiceModel(customerId, overrides = {}) {
       const c = state.customers.find(x => x.id === customerId);
       if (!c) return null;
       const st = getCustomerStats(c.id);
       const orders = state.orders.filter(o => o.customerId === c.id);
       const s = state.settings || {};
+      const customerWorkItems = getCustomerWorkItems(c);
 
       const items = orders.length
         ? orders.map(o => {
@@ -2897,11 +3300,12 @@
             const qty = Math.max(1, Number(o.qty || 1));
             const lineTotal = Number(ost.total || 0);
             const unitPrice = Math.round((lineTotal / qty) * 100) / 100;
-            const desc = o.description
-              ? `${o.itemName} (${o.description})`
+            const workList = (Array.isArray(o.workItems) && o.workItems.length)
+              ? o.workItems.join(', ')
               : (o.itemName || 'Aluminium Work');
+            const desc = o.description ? `${workList} (${o.description})` : workList;
             return {
-              workType: o.itemName || 'Aluminium Work',
+              workType: workList,
               description: desc,
               qty,
               unitPrice,
@@ -2909,8 +3313,8 @@
             };
           })
         : [{
-            workType: 'Aluminium Work',
-            description: 'Workshop Bill / Balance',
+            workType: customerWorkItems.join(', ') || 'Aluminium Work',
+            description: customerWorkItems.length ? customerWorkItems.join(', ') : 'Workshop Bill / Balance',
             qty: 1,
             unitPrice: st.billed,
             total: st.billed
@@ -2923,13 +3327,21 @@
       const advancePaid = Number(st.received || 0);
       const remainingBalance = Math.max(0, Math.round((grandTotal - advancePaid) * 100) / 100);
 
-      const bankName = overrides.bankName || s.defaultBank || 'Al Rajhi Bank';
-      const savedBank = (s.bankAccounts && s.bankAccounts[bankName]) || {};
+      const selectedBanks = getInvoiceBanksList(overrides);
+      const owner1Cfg = getSignatureConfig('owner1');
+      const owner2Cfg = getSignatureConfig('owner2');
+      const invNo = (overrides.invoiceNo || c.lastInvoiceNo || getNextInvoiceNumber(c)).trim();
+      const invDate = overrides.invoiceDate || todayISO();
+      const dueDate = overrides.dueDate || invDate;
 
-      return {
+      const workDescParts = orders.map(o => o.description).filter(Boolean);
+      const shortWorkDesc = workDescParts.join(' · ') || 'Custom Aluminium & Glass Fabrication Work';
+
+      const model = {
         customerId: c.id,
-        invoiceNo: (overrides.invoiceNo || c.lastInvoiceNo || getNextInvoiceNumber(c)).trim(),
-        invoiceDate: overrides.invoiceDate || todayISO(),
+        invoiceNo: invNo,
+        invoiceDate: invDate,
+        dueDate,
         logoSrc: (s.customLogo || '').trim() || DEFAULT_LOGO_PATH,
         shopName: (overrides.shopName ?? s.shopName ?? 'Warsha Aluminium Workshop').trim() || 'Warsha Aluminium Workshop',
         shopTagline: (overrides.shopTagline ?? s.shopTagline ?? 'Aluminium & Glass Fabrication Experts').trim(),
@@ -2943,6 +3355,8 @@
         custPhone: c.mobile || '',
         custEmail: (overrides.custEmail ?? c.email ?? '').trim(),
         custAddress: c.address || '',
+        workItems: customerWorkItems,
+        shortWorkDesc,
         items,
         subTotal,
         vatEnabled,
@@ -2950,141 +3364,179 @@
         grandTotal,
         advancePaid,
         remainingBalance,
-        bankName,
-        bankAccountName: savedBank.accountName || '',
-        bankIban: savedBank.iban || '',
-        bankBranch: savedBank.branchName || '',
+        selectedBanks,
+        useOwner1Sign: Boolean(overrides.useOwner1Sign),
+        useOwner2Sign: Boolean(overrides.useOwner2Sign),
+        owner1Sign: owner1Cfg,
+        owner2Sign: owner2Cfg,
+        qrDataUrl: '',
         terms: (overrides.terms ?? s.invoiceTerms ?? '').trim() || '1. Work starts after advance payment confirmation.\n2. Remaining balance is due upon completion/delivery.'
       };
+      model.qrDataUrl = ui.qrCache[getInvoiceQrText(model)] || '';
+      return model;
     }
 
     function renderProfessionalInvoiceHtml(inv, compact = false) {
       if (!inv) return '';
-      const pad = compact ? '12px' : '22px';
-      const fontSizeBase = compact ? '10px' : '12px';
+      const pad = compact ? '16px 14px' : '24px 28px';
+      const baseFs = compact ? '10px' : '11.5px';
+      const dueTxt = formatInvoiceDateDDMMYYYY(inv.dueDate || inv.invoiceDate);
+      const dateTxt = formatInvoiceDateDDMMYYYY(inv.invoiceDate);
+      const contactEmail = inv.shopEmail || inv.ownerEmail || '';
+      const contactPhone = inv.shopMobile || inv.ownerMobile || '';
+      const banksHtml = inv.selectedBanks && inv.selectedBanks.length
+        ? inv.selectedBanks.map(b => `<div style="margin-top:2px;">${esc(formatBankLineText(b))}</div>`).join('')
+        : '<div style="margin-top:2px;">Cash Payment / Direct Transfer</div>';
+
       const termsLines = esc(inv.terms).replace(/\n/g, '<br/>');
-      const bankDetailHtml = inv.bankName === 'Cash'
-        ? `<div style="font-size:${compact ? '10px' : '11.5px'};color:#334155;">Payment Method: <strong style="color:#0a1d42;">Cash Payment</strong>${inv.bankAccountName ? ` · Receiver: ${esc(inv.bankAccountName)}` : ''}</div>`
-        : `
-          <div style="font-size:${compact ? '10px' : '11.5px'};color:#1e293b;line-height:1.5;">
-            <div><strong style="color:#0a1d42;">Bank:</strong> ${esc(inv.bankName)}</div>
-            <div><strong style="color:#0a1d42;">Account Name:</strong> ${esc(inv.bankAccountName || 'Not set in Settings')}</div>
-            <div><strong style="color:#0a1d42;">IBAN / Acc No:</strong> <span style="font-family:monospace;font-weight:700;">${esc(inv.bankIban || 'Not set in Settings')}</span></div>
-            ${inv.bankBranch ? `<div><strong style="color:#0a1d42;">Branch:</strong> ${esc(inv.bankBranch)}</div>` : ''}
-          </div>
-        `;
+      const sig1ImgH = Math.round((compact ? 28 : 42) * ((inv.owner1Sign?.size || 100) / 100));
+      const sig2ImgH = Math.round((compact ? 28 : 42) * ((inv.owner2Sign?.size || 100) / 100));
+      const showAnySign = (inv.useOwner1Sign && inv.owner1Sign?.src) || (inv.useOwner2Sign && inv.owner2Sign?.src);
 
       return `
-        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#ffffff;color:#0f172a;border:2px solid #0a1d42;border-radius:12px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:${fontSizeBase};">
-          <!-- TOP DARK NAVY BLUE + ORANGE/YELLOW CONTRAST HEADER -->
-          <div style="background:linear-gradient(135deg,#071636 0%,#0b2559 72%,#103378 100%);color:#ffffff;padding:${compact ? '14px' : '24px'};border-bottom:5px solid #f59e0b;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-            <div style="display:flex;align-items:flex-start;gap:${compact ? '10px' : '14px'};min-width:0;flex:1;">
-              <img src="${esc(inv.logoSrc)}" alt="Shop Logo" style="width:${compact ? '46px' : '64px'};height:${compact ? '46px' : '64px'};border-radius:9999px;object-fit:cover;border:2.5px solid #f59e0b;background:#071330;flex-shrink:0;" onerror="this.style.display='none'"/>
-              <div style="min-width:0;">
-                <div style="font-size:${compact ? '15px' : '21px'};font-weight:800;letter-spacing:0.3px;color:#ffffff;line-height:1.15;text-transform:uppercase;">${esc(inv.shopName)}</div>
-                ${inv.shopTagline ? `<div style="font-size:${compact ? '9.5px' : '11px'};color:#fbbf24;font-weight:700;margin-top:2px;">${esc(inv.shopTagline)}</div>` : ''}
-                <div style="margin-top:5px;font-size:${compact ? '9px' : '11px'};color:#dbeafe;line-height:1.45;">
-                  ${inv.shopAddress ? `<div>📍 ${esc(inv.shopAddress)}</div>` : ''}
-                  ${inv.shopMobile ? `<div>📞 ${esc(inv.shopMobile)}</div>` : ''}
-                  ${inv.shopEmail ? `<div>✉️ ${esc(inv.shopEmail)}</div>` : ''}
-                </div>
-              </div>
+        <div style="font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#ffffff;color:#000000;padding:${pad};font-size:${baseFs};line-height:1.45;border:none;">
+          <!-- TOP ROW: DUE DATE (LEFT) + INVOICE & NO (RIGHT) -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;">
+              DUE DATE: ${esc(dueTxt)}
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <div style="font-size:${compact ? '20px' : '30px'};font-weight:900;letter-spacing:1.5px;color:#f59e0b;line-height:1;">INVOICE</div>
-              <div style="margin-top:6px;background:rgba(245,158,11,0.16);border:1px solid rgba(245,158,11,0.55);border-radius:6px;padding:${compact ? '4px 7px' : '6px 10px'};font-size:${compact ? '9px' : '11px'};color:#fef3c7;">
-                <div><strong>No:</strong> ${esc(inv.invoiceNo)}</div>
-                <div><strong>Date:</strong> ${esc(formatShortDate(inv.invoiceDate))}</div>
-              </div>
+            <div style="text-align:right;">
+              <div style="font-size:${compact ? '22px' : '30px'};font-weight:900;letter-spacing:1px;color:#000000;line-height:1;">INVOICE</div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;margin-top:4px;">Invoice No: ${esc(inv.invoiceNo)}</div>
+              <div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">Date: ${esc(dateTxt)}</div>
             </div>
           </div>
 
-          <div style="padding:${pad};">
-            <!-- INVOICE TO + SAUDI PAYMENT DETAIL -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:${compact ? '8px' : '14px'};margin-bottom:${compact ? '12px' : '18px'};">
-              <div style="background:#f8fafc;border:1px solid #cbd5e1;border-left:4px solid #0a1d42;border-radius:8px;padding:${compact ? '8px' : '12px'};">
-                <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#ea580c;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px;">Invoice To</div>
-                <div style="font-size:${compact ? '12px' : '14px'};font-weight:800;color:#0a1d42;">${esc(inv.custName)}</div>
-                <div style="font-size:${compact ? '9.5px' : '11.5px'};color:#334155;margin-top:3px;line-height:1.45;">
-                  ${inv.custPhone ? `<div>📞 ${esc(inv.custPhone)}</div>` : ''}
-                  ${inv.custEmail ? `<div>✉️ ${esc(inv.custEmail)}</div>` : ''}
-                  ${inv.custAddress ? `<div>📍 ${esc(inv.custAddress)}</div>` : ''}
-                </div>
-              </div>
-              <div style="background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:8px;padding:${compact ? '8px' : '12px'};">
-                <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#0a1d42;text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px;">Payment Detail</div>
-                ${bankDetailHtml}
-              </div>
-            </div>
-
-            <!-- WORK TABLE -->
-            <table style="width:100%;border-collapse:collapse;margin-bottom:${compact ? '10px' : '16px'};font-size:${compact ? '9.5px' : '11.5px'};">
-              <thead>
-                <tr style="background:#0a1d42;color:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-                  <th style="padding:${compact ? '6px' : '9px 10px'};text-align:left;border:1px solid #0a1d42;">Product Description</th>
-                  <th style="padding:${compact ? '6px' : '9px 10px'};text-align:right;border:1px solid #0a1d42;">Price</th>
-                  <th style="padding:${compact ? '6px' : '9px 10px'};text-align:center;border:1px solid #0a1d42;">QTY</th>
-                  <th style="padding:${compact ? '6px' : '9px 10px'};text-align:right;border:1px solid #0a1d42;color:#fbbf24;">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${inv.items.map((it, i) => `
-                  <tr style="background:${i % 2 === 0 ? '#ffffff' : '#f1f5f9'};">
-                    <td style="padding:${compact ? '6px' : '9px 10px'};border:1px solid #cbd5e1;font-weight:700;color:#0f172a;">${esc(it.description)}</td>
-                    <td style="padding:${compact ? '6px' : '9px 10px'};border:1px solid #cbd5e1;text-align:right;color:#334155;">${esc(fmtRs(it.unitPrice))}</td>
-                    <td style="padding:${compact ? '6px' : '9px 10px'};border:1px solid #cbd5e1;text-align:center;font-weight:700;">${esc(it.qty)}</td>
-                    <td style="padding:${compact ? '6px' : '9px 10px'};border:1px solid #cbd5e1;text-align:right;font-weight:800;color:#0a1d42;">${esc(fmtRs(it.total))}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-
-            <!-- TOTALS + TERMS -->
-            <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:${compact ? '8px' : '16px'};align-items:start;">
-              <div style="border:1px solid #cbd5e1;border-radius:8px;padding:${compact ? '8px' : '12px'};background:#f8fafc;">
-                <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#0a1d42;text-transform:uppercase;margin-bottom:4px;">Terms And Conditions</div>
-                <div style="font-size:${compact ? '9px' : '10.5px'};color:#475569;line-height:1.45;">${termsLines}</div>
-              </div>
-              <div style="border:1.5px solid #0a1d42;border-radius:8px;overflow:hidden;">
-                <div style="display:flex;justify-content:space-between;padding:${compact ? '5px 8px' : '7px 12px'};border-bottom:1px solid #e2e8f0;">
-                  <span style="color:#475569;font-weight:600;">Sub Total</span>
-                  <span style="font-weight:700;color:#0f172a;">${esc(fmtRs(inv.subTotal))}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:${compact ? '5px 8px' : '7px 12px'};border-bottom:1px solid #e2e8f0;background:#fff7ed;">
-                  <span style="color:#9a3412;font-weight:700;">VAT 15% (KSA)</span>
-                  <span style="font-weight:800;color:#ea580c;">${inv.vatEnabled ? esc(fmtRs(inv.vatAmount)) : 'Excluded'}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:${compact ? '6px 8px' : '9px 12px'};background:#0a1d42;color:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-                  <span style="font-weight:800;color:#fbbf24;">GRAND TOTAL</span>
-                  <span style="font-weight:900;color:#ffffff;">${esc(fmtRs(inv.grandTotal))}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:${compact ? '5px 8px' : '6px 12px'};border-bottom:1px solid #e2e8f0;background:#ecfdf5;">
-                  <span style="color:#065f46;font-weight:700;">Advance / Paid</span>
-                  <span style="font-weight:800;color:#059669;">${esc(fmtRs(inv.advancePaid))}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:${compact ? '5px 8px' : '7px 12px'};background:${inv.remainingBalance > 0 ? '#fef2f2' : '#ecfdf5'};">
-                  <span style="color:${inv.remainingBalance > 0 ? '#991b1b' : '#065f46'};font-weight:800;">Baqi / Remaining</span>
-                  <span style="font-weight:900;color:${inv.remainingBalance > 0 ? '#dc2626' : '#059669'};">${esc(fmtRs(inv.remainingBalance))}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- FOOTER: THANKS + OWNER + AUTHORIZED SIGNATURE -->
-            <div style="margin-top:${compact ? '12px' : '22px'};padding-top:${compact ? '10px' : '14px'};border-top:2px dashed #cbd5e1;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;">
+          <!-- SHOP (LEFT) + BILL TO (RIGHT) -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:${compact ? '16px' : '24px'};">
+            <div style="display:flex;align-items:flex-start;gap:${compact ? '8px' : '12px'};max-width:56%;">
+              <img src="${esc(inv.logoSrc)}" alt="Shop Logo" style="width:${compact ? '40px' : '54px'};height:${compact ? '40px' : '54px'};border-radius:9999px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'"/>
               <div>
-                <div style="font-size:${compact ? '12px' : '15px'};font-weight:900;color:#ea580c;letter-spacing:0.3px;">Thanks For Your Business!</div>
-                <div style="font-size:${compact ? '9px' : '10.5px'};color:#334155;margin-top:3px;">
-                  ${inv.ownerName ? `<span><strong>Owner:</strong> ${esc(inv.ownerName)}</span>` : ''}
-                  ${inv.ownerMobile ? `<span style="margin-left:8px;"><strong>Tel:</strong> ${esc(inv.ownerMobile)}</span>` : ''}
-                  ${inv.ownerEmail ? `<div><strong>Email:</strong> ${esc(inv.ownerEmail)}</div>` : ''}
-                </div>
+                <div style="font-size:${compact ? '13px' : '17px'};font-weight:800;color:#000000;line-height:1.15;">${esc(inv.shopName)}</div>
+                ${inv.shopTagline ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;">${esc(inv.shopTagline)}</div>` : ''}
               </div>
-              <div style="text-align:center;min-width:${compact ? '115px' : '180px'};">
-                <div style="height:${compact ? '22px' : '32px'};border-bottom:2px solid #0a1d42;margin-bottom:4px;"></div>
-                <div style="font-size:${compact ? '8.5px' : '10px'};font-weight:800;color:#0a1d42;text-transform:uppercase;letter-spacing:0.6px;">Authorized Signature</div>
+            </div>
+            <div style="text-align:right;max-width:42%;">
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;letter-spacing:0.4px;">BILL TO:</div>
+              <div style="font-size:${compact ? '11.5px' : '13.5px'};font-weight:800;color:#000000;margin-top:2px;">${esc(inv.custName)}</div>
+              ${inv.custAddress ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:1px;">${esc(inv.custAddress)}</div>` : ''}
+              ${inv.custPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:1px;">${esc(inv.custPhone)}</div>` : ''}
+            </div>
+          </div>
+
+          <!-- MIDDLE: SHORT WORK DESCRIPTION + SELECTED WORK ITEMS -->
+          <div style="margin-top:${compact ? '14px' : '22px'};">
+            <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;">Work Details</div>
+            <div style="font-size:${compact ? '9.5px' : '11px'};color:#111827;margin-top:2px;">${esc(inv.shortWorkDesc)}</div>
+            ${inv.workItems && inv.workItems.length ? `<div style="font-size:${compact ? '9.5px' : '11px'};font-weight:700;color:#000000;margin-top:2px;">${esc(inv.workItems.join('  •  '))}</div>` : ''}
+          </div>
+
+          <!-- COMPACT BORDERLESS PRODUCT TABLE (NO LINES, NO BOXES) -->
+          <table style="width:100%;border-collapse:collapse;border:none;margin-top:${compact ? '12px' : '18px'};font-size:${compact ? '9.5px' : '11px'};">
+            <thead>
+              <tr>
+                <th style="text-align:left;font-weight:800;color:#000000;padding:3px 6px 4px 0;border:none;">Item Description</th>
+                <th style="text-align:right;font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">Price</th>
+                <th style="text-align:center;font-weight:800;color:#000000;padding:3px 6px 4px;border:none;">Qty</th>
+                <th style="text-align:right;font-weight:800;color:#000000;padding:3px 0 4px 6px;border:none;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inv.items.map(it => `
+                <tr>
+                  <td style="text-align:left;color:#000000;padding:3px 6px 3px 0;border:none;">${esc(it.description)}</td>
+                  <td style="text-align:right;color:#111827;padding:3px 6px;border:none;">${esc(fmtInvoiceMoney(it.unitPrice))}</td>
+                  <td style="text-align:center;color:#111827;padding:3px 6px;border:none;">${esc(it.qty)}</td>
+                  <td style="text-align:right;font-weight:700;color:#000000;padding:3px 0 3px 6px;border:none;">${esc(fmtInvoiceMoney(it.total))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <!-- QUESTIONS + QR CODE (LEFT) & TOTALS (RIGHT) -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-top:${compact ? '16px' : '24px'};">
+            <div style="max-width:52%;">
+              <div style="font-size:${compact ? '10px' : '11.5px'};font-weight:800;color:#000000;">Questions?</div>
+              ${contactEmail ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;margin-top:2px;">${esc(contactEmail)}</div>` : ''}
+              ${contactPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">${esc(contactPhone)}</div>` : ''}
+              ${inv.qrDataUrl ? `
+                <div style="margin-top:${compact ? '8px' : '12px'};">
+                  <img src="${inv.qrDataUrl}" alt="Invoice QR" style="width:${compact ? '60px' : '82px'};height:${compact ? '60px' : '82px'};display:block;border:none;" />
+                </div>
+              ` : ''}
+            </div>
+            <div style="text-align:right;min-width:${compact ? '145px' : '210px'};">
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;">
+                <span style="font-weight:800;color:#000000;">SUBTOTAL</span>
+                <span style="font-weight:700;color:#000000;">${esc(fmtInvoiceMoney(inv.subTotal))}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;">
+                <span style="font-weight:800;color:#000000;">TAX</span>
+                <span style="font-weight:700;color:#000000;">${esc(fmtInvoiceMoney(inv.vatAmount))}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0 2px;font-size:${compact ? '11.5px' : '13.5px'};">
+                <span style="font-weight:900;color:#000000;">GRAND TOTAL</span>
+                <span style="font-weight:900;color:#000000;">${esc(fmtInvoiceMoney(inv.grandTotal))}</span>
+              </div>
+              ${inv.advancePaid > 0 ? `
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9px' : '10.5px'};">
+                  <span style="font-weight:700;color:#111827;">ADVANCE PAID</span>
+                  <span style="font-weight:700;color:#111827;">${esc(fmtInvoiceMoney(inv.advancePaid))}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
+                  <span style="font-weight:800;color:#000000;">REMAINING</span>
+                  <span style="font-weight:800;color:#000000;">${esc(fmtInvoiceMoney(inv.remainingBalance))}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- PAYMENT INFO & TERMS & CONDITION -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:${compact ? '16px' : '24px'};">
+            <div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">PAYMENT INFO:</div>
+              <div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:3px;line-height:1.5;">
+                ${banksHtml}
+              </div>
+            </div>
+            <div>
+              <div style="font-size:${compact ? '9.5px' : '11px'};font-weight:800;color:#000000;">TERMS &amp; CONDITION</div>
+              <div style="font-size:${compact ? '8.5px' : '10px'};color:#111827;margin-top:3px;line-height:1.45;">
+                ${termsLines}
               </div>
             </div>
           </div>
+
+          <!-- SIGNATURES + THANKS + BOTTOM SHOP ADDRESS -->
+          ${showAnySign ? `
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:${compact ? '20px' : '30px'};">
+              <div style="min-width:110px;text-align:left;">
+                ${inv.useOwner1Sign && inv.owner1Sign?.src ? `
+                  <div style="height:${sig1ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-start;">
+                    <img src="${esc(inv.owner1Sign.src)}" alt="Owner 1 Sign" style="max-height:${sig1ImgH}px;width:auto;transform:rotate(${Number(inv.owner1Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
+                  </div>
+                  <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.owner1Sign.name)}</div>
+                ` : ''}
+              </div>
+              <div style="min-width:110px;text-align:right;">
+                ${inv.useOwner2Sign && inv.owner2Sign?.src ? `
+                  <div style="height:${sig2ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-end;">
+                    <img src="${esc(inv.owner2Sign.src)}" alt="Owner 2 Sign" style="max-height:${sig2ImgH}px;width:auto;transform:rotate(${Number(inv.owner2Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
+                  </div>
+                  <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.owner2Sign.name)}</div>
+                ` : ''}
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="text-align:center;margin-top:${compact ? '16px' : '24px'};font-size:${compact ? '10.5px' : '12.5px'};font-weight:800;color:#000000;">
+            Thanks For Your Business!
+          </div>
+          ${inv.shopAddress ? `
+            <div style="text-align:center;margin-top:${compact ? '6px' : '8px'};font-size:${compact ? '8.5px' : '10px'};color:#111827;">
+              ${esc(inv.shopAddress)}
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -3100,357 +3552,320 @@
       });
     }
 
-    function wrapCanvasLines(ctx, text, maxW) {
-      const words = String(text || '').split(/\s+/);
-      const lines = [];
-      let cur = '';
-      for (const w of words) {
-        const next = cur ? cur + ' ' + w : w;
-        if (ctx.measureText(next).width > maxW && cur) {
-          lines.push(cur);
-          cur = w;
-        } else {
-          cur = next;
+    async function generateInvoicePdfBlob(inv) {
+      const libs = window.__DK_INVOICE_LIBS__;
+      if (!libs || !libs.jsPDF) {
+        throw new Error('PDF library abhi load ho rahi hai, 1 second baad try karein.');
+      }
+      await ensureInvoiceQrDataUrl(inv);
+      const { jsPDF } = libs;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = 210;
+      const pageH = 297;
+      const ml = 16;
+      const mr = 16;
+      const rightX = pageW - mr;
+      const contentW = pageW - ml - mr;
+
+      // Pure white page background, ZERO borders/boxes/lines
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageW, pageH, 'F');
+
+      let y = 18;
+      doc.setTextColor(0, 0, 0);
+
+      // Top Left: DUE DATE
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text(`DUE DATE: ${formatInvoiceDateDDMMYYYY(inv.dueDate || inv.invoiceDate)}`, ml, y);
+
+      // Top Right: Big INVOICE + Invoice No + Date
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(26);
+      doc.text('INVOICE', rightX, y + 2, { align: 'right' });
+      doc.setFontSize(10);
+      doc.text(`Invoice No: ${inv.invoiceNo}`, rightX, y + 9, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text(`Date: ${formatInvoiceDateDDMMYYYY(inv.invoiceDate)}`, rightX, y + 14.5, { align: 'right' });
+
+      y += 28;
+
+      // Shop Logo + Shop Name + Slogan (Left)
+      let shopTextX = ml;
+      try {
+        const logoDataUrl = await renderCircularLogoDataUrl(inv.logoSrc);
+        if (logoDataUrl) {
+          doc.addImage(logoDataUrl, 'PNG', ml, y - 3, 17, 17);
+          shopTextX = ml + 21;
         }
-      }
-      if (cur) lines.push(cur);
-      return lines;
-    }
+      } catch (e) {}
 
-    async function generateInvoicePngBlob(inv) {
-      const W = 1200;
-      const H = 1660;
-      const canvas = document.createElement('canvas');
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext('2d');
-
-      // White page background + outer border
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#0a1d42';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(18, 18, W - 36, H - 36);
-
-      // Top Navy Header
-      const hdrH = 260;
-      ctx.fillStyle = '#0a1d42';
-      ctx.fillRect(21, 21, W - 42, hdrH);
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(21, 21 + hdrH, W - 42, 10);
-
-      // Shop Logo circle
-      const logoImg = await loadImgForCanvas(inv.logoSrc);
-      if (logoImg) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(105, 115, 56, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(logoImg, 49, 59, 112, 112);
-        ctx.restore();
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(105, 115, 56, 0, Math.PI * 2);
-        ctx.stroke();
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      const shopTitleLines = doc.splitTextToSize(inv.shopName || 'Warsha Aluminium Workshop', 82);
+      doc.text(shopTitleLines, shopTextX, y + 3);
+      let leftEndY = y + 3 + shopTitleLines.length * 5.5;
+      if (inv.shopTagline) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        const sloganLines = doc.splitTextToSize(inv.shopTagline, 82);
+        doc.text(sloganLines, shopTextX, leftEndY);
+        leftEndY += sloganLines.length * 4.5;
       }
 
-      const textX = logoImg ? 185 : 54;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 36px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText(inv.shopName.toUpperCase().slice(0, 34), textX, 95);
-
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = '700 20px "Plus Jakarta Sans", Arial, sans-serif';
-      if (inv.shopTagline) ctx.fillText(inv.shopTagline.slice(0, 52), textX, 128);
-
-      ctx.fillStyle = '#dbeafe';
-      ctx.font = '500 18px "Plus Jakarta Sans", Arial, sans-serif';
-      let hy = 162;
-      if (inv.shopAddress) { ctx.fillText('Address: ' + inv.shopAddress.slice(0, 58), textX, hy); hy += 26; }
-      if (inv.shopMobile) { ctx.fillText('Phone: ' + inv.shopMobile, textX, hy); hy += 26; }
-      if (inv.shopEmail) { ctx.fillText('Email: ' + inv.shopEmail, textX, hy); }
-
-      // Right INVOICE label + box
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#f59e0b';
-      ctx.font = '900 56px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('INVOICE', W - 55, 105);
-      ctx.fillStyle = 'rgba(245,158,11,0.16)';
-      ctx.fillRect(W - 350, 128, 295, 86);
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(W - 350, 128, 295, 86);
-      ctx.fillStyle = '#fef3c7';
-      ctx.font = '700 19px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('No: ' + inv.invoiceNo, W - 70, 162);
-      ctx.fillText('Date: ' + formatShortDate(inv.invoiceDate), W - 70, 194);
-      ctx.textAlign = 'left';
-
-      // Invoice To & Payment Detail boxes
-      const boxY = 320;
-      const boxW = (W - 120) / 2;
-      const boxH = 195;
-
-      // Left Box: Invoice To
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(48, boxY, boxW, boxH);
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(48, boxY, boxW, boxH);
-      ctx.fillStyle = '#0a1d42';
-      ctx.fillRect(48, boxY, 8, boxH);
-
-      ctx.fillStyle = '#ea580c';
-      ctx.font = '800 18px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('INVOICE TO', 74, boxY + 34);
-      ctx.fillStyle = '#0a1d42';
-      ctx.font = '800 25px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText(inv.custName.slice(0, 30), 74, boxY + 70);
-      ctx.fillStyle = '#334155';
-      ctx.font = '500 18px "Plus Jakarta Sans", Arial, sans-serif';
-      let cy = boxY + 102;
-      if (inv.custPhone) { ctx.fillText('Phone: ' + inv.custPhone, 74, cy); cy += 28; }
-      if (inv.custEmail) { ctx.fillText('Email: ' + inv.custEmail, 74, cy); cy += 28; }
+      // BILL TO (Right)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('BILL TO:', rightX, y + 1, { align: 'right' });
+      doc.setFontSize(12);
+      doc.text(String(inv.custName || ''), rightX, y + 7, { align: 'right' });
+      let rightEndY = y + 12;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
       if (inv.custAddress) {
-        const addrLines = wrapCanvasLines(ctx, 'Address: ' + inv.custAddress, boxW - 44).slice(0, 2);
-        addrLines.forEach(line => { ctx.fillText(line, 74, cy); cy += 24; });
+        const addrLines = doc.splitTextToSize(inv.custAddress, 74);
+        doc.text(addrLines, rightX, rightEndY, { align: 'right' });
+        rightEndY += addrLines.length * 4.5;
+      }
+      if (inv.custPhone) {
+        doc.text(String(inv.custPhone), rightX, rightEndY, { align: 'right' });
+        rightEndY += 4.5;
       }
 
-      // Right Box: Payment Detail
-      const rx = 72 + boxW;
-      ctx.fillStyle = '#fffbeb';
-      ctx.fillRect(rx, boxY, boxW, boxH);
-      ctx.strokeStyle = '#fde68a';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(rx, boxY, boxW, boxH);
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(rx, boxY, 8, boxH);
+      y = Math.max(leftEndY, rightEndY, y + 18) + 12;
 
-      ctx.fillStyle = '#0a1d42';
-      ctx.font = '800 18px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('PAYMENT DETAIL', rx + 26, boxY + 34);
-      ctx.fillStyle = '#1e293b';
-      ctx.font = '700 20px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('Bank: ' + inv.bankName, rx + 26, boxY + 70);
-      ctx.font = '600 17px "Plus Jakarta Sans", Arial, sans-serif';
-      if (inv.bankName !== 'Cash') {
-        ctx.fillText('Account: ' + (inv.bankAccountName || 'Not set'), rx + 26, boxY + 102);
-        ctx.fillText('IBAN/No: ' + (inv.bankIban || 'Not set'), rx + 26, boxY + 132);
-        if (inv.bankBranch) ctx.fillText('Branch: ' + inv.bankBranch, rx + 26, boxY + 162);
-      } else {
-        ctx.fillText('Method: Cash Payment at Workshop', rx + 26, boxY + 104);
+      // Middle: Work Description + Customer's Selected Work Items
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Work Details', ml, y);
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      const descLines = doc.splitTextToSize(inv.shortWorkDesc || '', contentW);
+      doc.text(descLines, ml, y);
+      y += descLines.length * 4.5;
+      if (inv.workItems && inv.workItems.length) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        const wiLines = doc.splitTextToSize(inv.workItems.join('  •  '), contentW);
+        doc.text(wiLines, ml, y + 1);
+        y += wiLines.length * 4.5 + 1;
       }
 
-      // Table Header
-      let ty = 550;
-      const tblW = W - 96;
-      ctx.fillStyle = '#0a1d42';
-      ctx.fillRect(48, ty, tblW, 52);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '800 19px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('PRODUCT DESCRIPTION', 66, ty + 33);
-      ctx.textAlign = 'right';
-      ctx.fillText('PRICE', 775, ty + 33);
-      ctx.textAlign = 'center';
-      ctx.fillText('QTY', 885, ty + 33);
-      ctx.textAlign = 'right';
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillText('TOTAL', W - 66, ty + 33);
-      ctx.textAlign = 'left';
+      y += 9;
 
-      ty += 52;
-      const showItems = inv.items.slice(0, 8);
-      showItems.forEach((it, idx) => {
-        const rowH = 54;
-        ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
-        ctx.fillRect(48, ty, tblW, rowH);
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(48, ty, tblW, rowH);
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '700 18px "Plus Jakarta Sans", Arial, sans-serif';
-        ctx.fillText(String(it.description || '').slice(0, 46), 66, ty + 34);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#334155';
-        ctx.font = '600 18px "Plus Jakarta Sans", Arial, sans-serif';
-        ctx.fillText(fmtRs(it.unitPrice), 775, ty + 34);
-        ctx.textAlign = 'center';
-        ctx.fillText(String(it.qty), 885, ty + 34);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#0a1d42';
-        ctx.font = '800 19px "Plus Jakarta Sans", Arial, sans-serif';
-        ctx.fillText(fmtRs(it.total), W - 66, ty + 34);
-        ctx.textAlign = 'left';
-        ty += rowH;
+      // Compact Borderless Table Header
+      const colDesc = ml;
+      const colPrice = ml + 116;
+      const colQty = ml + 140;
+      const colTotal = rightX;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Item Description', colDesc, y);
+      doc.text('Price', colPrice, y, { align: 'right' });
+      doc.text('Qty', colQty, y, { align: 'center' });
+      doc.text('Total', colTotal, y, { align: 'right' });
+      y += 6.5;
+
+      doc.setFontSize(9.5);
+      const tableItems = inv.items.slice(0, 10);
+      tableItems.forEach((it) => {
+        doc.setFont('helvetica', 'normal');
+        const dLines = doc.splitTextToSize(String(it.description || ''), 88);
+        doc.text(dLines, colDesc, y);
+        doc.text(fmtInvoiceMoney(it.unitPrice), colPrice, y, { align: 'right' });
+        doc.text(String(it.qty || 1), colQty, y, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(fmtInvoiceMoney(it.total), colTotal, y, { align: 'right' });
+        y += Math.max(6, dLines.length * 4.5 + 1.8);
       });
 
-      // Totals Box (right) + Terms (left)
-      const botY = Math.max(ty + 34, 1060);
-      const termsW = 580;
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(48, botY, termsW, 250);
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(48, botY, termsW, 250);
-      ctx.fillStyle = '#0a1d42';
-      ctx.font = '800 19px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('TERMS AND CONDITIONS', 68, botY + 34);
-      ctx.fillStyle = '#475569';
-      ctx.font = '500 16px "Plus Jakarta Sans", Arial, sans-serif';
-      let tty = botY + 66;
-      inv.terms.split('\n').slice(0, 6).forEach(line => {
-        wrapCanvasLines(ctx, line, termsW - 40).slice(0, 2).forEach(wl => {
-          if (tty < botY + 235) { ctx.fillText(wl, 68, tty); tty += 24; }
+      y += 10;
+
+      // Left: Questions + Email + Phone + Scannable QR Code | Right: SUBTOTAL, TAX, GRAND TOTAL
+      const blockTopY = y;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Questions?', ml, y);
+      let qy = y + 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      const qEmail = inv.shopEmail || inv.ownerEmail || '';
+      const qPhone = inv.shopMobile || inv.ownerMobile || '';
+      if (qEmail) { doc.text(qEmail, ml, qy); qy += 4.5; }
+      if (qPhone) { doc.text(qPhone, ml, qy); qy += 4.5; }
+      if (inv.qrDataUrl) {
+        doc.addImage(inv.qrDataUrl, 'PNG', ml, qy + 3, 25, 25);
+        qy += 30;
+      }
+
+      // Totals on Right
+      let ty = blockTopY;
+      const totLabelX = rightX - 42;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('SUBTOTAL', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.subTotal), rightX, ty, { align: 'right' });
+      ty += 6;
+      doc.text('TAX', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.vatAmount), rightX, ty, { align: 'right' });
+      ty += 7;
+      doc.setFontSize(12);
+      doc.text('GRAND TOTAL', totLabelX, ty, { align: 'right' });
+      doc.text(fmtInvoiceMoney(inv.grandTotal), rightX, ty, { align: 'right' });
+      ty += 6.5;
+      if (inv.advancePaid > 0) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text('ADVANCE PAID', totLabelX, ty, { align: 'right' });
+        doc.text(fmtInvoiceMoney(inv.advancePaid), rightX, ty, { align: 'right' });
+        ty += 5.5;
+        doc.setFont('helvetica', 'bold');
+        doc.text('REMAINING', totLabelX, ty, { align: 'right' });
+        doc.text(fmtInvoiceMoney(inv.remainingBalance), rightX, ty, { align: 'right' });
+        ty += 5.5;
+      }
+
+      y = Math.max(qy, ty) + 12;
+
+      // PAYMENT INFO (Left) & TERMS & CONDITION (Right)
+      const infoTopY = y;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('PAYMENT INFO:', ml, y);
+      let py = y + 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const banksList = inv.selectedBanks && inv.selectedBanks.length ? inv.selectedBanks : [];
+      if (banksList.length) {
+        banksList.forEach(b => {
+          const bLines = doc.splitTextToSize(formatBankLineText(b), 86);
+          doc.text(bLines, ml, py);
+          py += bLines.length * 4.3 + 1;
         });
+      } else {
+        doc.text('Cash Payment / Direct Transfer', ml, py);
+        py += 5;
+      }
+
+      const termsColX = ml + 94;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('TERMS & CONDITION', termsColX, infoTopY);
+      let trY = infoTopY + 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      String(inv.terms || '').split('\n').slice(0, 5).forEach(line => {
+        const tl = doc.splitTextToSize(line, contentW - 94);
+        doc.text(tl, termsColX, trY);
+        trY += tl.length * 4.3;
       });
 
-      // Totals card on right
-      const totX = 665;
-      const totW = W - 48 - totX;
-      const rows = [
-        { label: 'Sub Total', val: fmtRs(inv.subTotal), bg: '#ffffff', fg: '#0f172a', valFg: '#0f172a' },
-        { label: 'VAT 15% (KSA)', val: inv.vatEnabled ? fmtRs(inv.vatAmount) : 'Excluded', bg: '#fff7ed', fg: '#9a3412', valFg: '#ea580c' },
-        { label: 'GRAND TOTAL', val: fmtRs(inv.grandTotal), bg: '#0a1d42', fg: '#fbbf24', valFg: '#ffffff', bold: true },
-        { label: 'Advance Paid', val: fmtRs(inv.advancePaid), bg: '#ecfdf5', fg: '#065f46', valFg: '#059669' },
-        { label: 'Baqi / Remaining', val: fmtRs(inv.remainingBalance), bg: inv.remainingBalance > 0 ? '#fef2f2' : '#ecfdf5', fg: inv.remainingBalance > 0 ? '#991b1b' : '#065f46', valFg: inv.remainingBalance > 0 ? '#dc2626' : '#059669', bold: true }
-      ];
-      rows.forEach((r, idx) => {
-        const ry = botY + idx * 50;
-        ctx.fillStyle = r.bg;
-        ctx.fillRect(totX, ry, totW, 50);
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(totX, ry, totW, 50);
-        ctx.fillStyle = r.fg;
-        ctx.font = (r.bold ? '800 ' : '700 ') + '19px "Plus Jakarta Sans", Arial, sans-serif';
-        ctx.fillText(r.label, totX + 18, ry + 32);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = r.valFg;
-        ctx.font = '800 20px "Plus Jakarta Sans", Arial, sans-serif';
-        ctx.fillText(r.val, totX + totW - 18, ry + 32);
-        ctx.textAlign = 'left';
-      });
-      ctx.strokeStyle = '#0a1d42';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(totX, botY, totW, 250);
+      y = Math.max(py, trY) + 14;
 
-      // Footer
-      const fY = 1480;
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(48, fY);
-      ctx.lineTo(W - 48, fY);
-      ctx.stroke();
+      // Bottom Signatures (Left = Owner 1, Right = Owner 2) ONLY if ticked!
+      const sigBaseY = Math.min(256, Math.max(y, 232));
+      const addFittedSig = async (sigCfg, isRight) => {
+        const transformedUrl = await renderTransformedSignatureDataUrl(sigCfg.src, sigCfg.rotation || 0);
+        if (!transformedUrl) return;
+        const tImg = await loadImgForCanvas(transformedUrl);
+        const scaleFactor = (sigCfg.size || 100) / 100;
+        const maxW = 40 * scaleFactor;
+        const maxH = 16 * scaleFactor;
+        const natW = tImg?.width || 240;
+        const natH = tImg?.height || 100;
+        const fitScale = Math.min(maxW / natW, maxH / natH);
+        const imgW = Math.max(8, Math.round(natW * fitScale));
+        const imgH = Math.max(6, Math.round(natH * fitScale));
+        const drawX = isRight ? (rightX - imgW) : ml;
+        doc.addImage(transformedUrl, 'PNG', drawX, sigBaseY - imgH, imgW, imgH);
+      };
+      if (inv.useOwner1Sign && inv.owner1Sign?.src) {
+        await addFittedSig(inv.owner1Sign, false);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.text(String(inv.owner1Sign.name || 'Owner 1'), ml, sigBaseY + 5);
+      }
+      if (inv.useOwner2Sign && inv.owner2Sign?.src) {
+        await addFittedSig(inv.owner2Sign, true);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.text(String(inv.owner2Sign.name || 'Owner 2'), rightX, sigBaseY + 5, { align: 'right' });
+      }
 
-      ctx.fillStyle = '#ea580c';
-      ctx.font = '900 28px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('Thanks For Your Business!', 48, fY + 52);
+      // Bottom Center: Thanks For Your Business! + Shop Address in one clean line
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('Thanks For Your Business!', pageW / 2, 276, { align: 'center' });
 
-      ctx.fillStyle = '#334155';
-      ctx.font = '600 18px "Plus Jakarta Sans", Arial, sans-serif';
-      const ownerLine = [inv.ownerName ? 'Owner: ' + inv.ownerName : '', inv.ownerMobile ? 'Tel: ' + inv.ownerMobile : ''].filter(Boolean).join('   |   ');
-      if (ownerLine) ctx.fillText(ownerLine, 48, fY + 88);
-      if (inv.ownerEmail) ctx.fillText('Email: ' + inv.ownerEmail, 48, fY + 116);
+      if (inv.shopAddress) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(String(inv.shopAddress).slice(0, 95), pageW / 2, 284, { align: 'center' });
+      }
 
-      // Authorized Signature
-      ctx.strokeStyle = '#0a1d42';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(W - 360, fY + 86);
-      ctx.lineTo(W - 56, fY + 86);
-      ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#0a1d42';
-      ctx.font = '800 18px "Plus Jakarta Sans", Arial, sans-serif';
-      ctx.fillText('AUTHORIZED SIGNATURE', W - 208, fY + 116);
-      ctx.textAlign = 'left';
-
-      return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 0.95));
+      return doc.output('blob');
     }
 
-    async function downloadInvoicePng(inv) {
+    async function downloadInvoicePdf(inv) {
       if (!inv) return;
-      const blob = await generateInvoicePngBlob(inv);
-      if (!blob) { toast('Invoice image banate waqt error aya.', 'error'); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${inv.invoiceNo || 'Invoice'}_${inv.custName.replace(/[^a-zA-Z0-9]+/g, '_')}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      toast('Invoice Photo download ho gaya ✓', 'success');
+      try {
+        const blob = await generateInvoicePdfBlob(inv);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${inv.invoiceNo || 'Invoice'}_${inv.custName.replace(/[^a-zA-Z0-9]+/g, '_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        toast('Invoice PDF download ho gaya ✓', 'success');
+      } catch (err) {
+        toast('PDF banate waqt error: ' + (err?.message || err), 'error');
+      }
     }
 
     async function shareInvoiceOnWhatsApp(inv) {
       if (!inv) return;
-      const workSummary = inv.items.map(i => `• ${i.description} (${i.qty}x) = ${fmtRs(i.total)}`).join('\n');
-      const bankSummary = inv.bankName === 'Cash'
-        ? 'Payment: Cash'
-        : `Bank: ${inv.bankName}${inv.bankAccountName ? `\nAccount: ${inv.bankAccountName}` : ''}${inv.bankIban ? `\nIBAN: ${inv.bankIban}` : ''}`;
-
-      const caption = [
-        `*${inv.shopName}*`,
-        inv.shopTagline ? `_${inv.shopTagline}_` : '',
-        `━━━━━━━━━━━━━━━━`,
-        `*INVOICE:* ${inv.invoiceNo}`,
-        `*Date:* ${formatShortDate(inv.invoiceDate)}`,
-        `*Customer:* ${inv.custName}`,
-        inv.custPhone ? `*Phone:* ${inv.custPhone}` : '',
-        ``,
-        `*Work Details:*`,
-        workSummary,
-        ``,
-        `Sub Total: ${fmtRs(inv.subTotal)}`,
-        inv.vatEnabled ? `VAT (15%): ${fmtRs(inv.vatAmount)}` : '',
-        `*Grand Total: ${fmtRs(inv.grandTotal)}*`,
-        `Advance Paid: ${fmtRs(inv.advancePaid)}`,
-        `*Baqi / Remaining: ${fmtRs(inv.remainingBalance)}*`,
-        ``,
-        bankSummary,
-        `━━━━━━━━━━━━━━━━`,
-        `Thanks For Your Business!`
-      ].filter(Boolean).join('\n');
+      const shortMessage = `Assalam-o-Alaikum ${inv.custName}, Warsha Abdullah Workshop se aapka Invoice aa gaya hai. Shukriya!`;
+      const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9]+/g, '_');
+      const fileName = `${inv.invoiceNo || 'Invoice'}_${safeCust}.pdf`;
 
       try {
-        const blob = await generateInvoicePngBlob(inv);
-        if (blob && navigator.share && navigator.canShare) {
-          const fileName = `${inv.invoiceNo || 'Invoice'}.png`;
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: `Invoice ${inv.invoiceNo} - ${inv.custName}`,
-              text: caption
-            });
-            toast('Invoice WhatsApp / Share bhej diya gaya ✓', 'success');
-            return;
-          }
+        toast('Invoice PDF ban raha hai...', 'info');
+        const pdfBlob = await generateInvoicePdfBlob(inv);
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Invoice ${inv.invoiceNo}`,
+            text: shortMessage
+          });
+          toast('Invoice PDF WhatsApp / Share par bhej diya gaya ✓', 'success');
+          return;
         }
-        // Fallback for Desktop browsers: download Invoice PNG photo + open WhatsApp with customer details
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${inv.invoiceNo || 'Invoice'}_${inv.custName.replace(/[^a-zA-Z0-9]+/g, '_')}.png`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1500);
-        }
-      } catch (e) {}
+        // Desktop / browser fallback: download Invoice PDF + open WhatsApp with short message ONLY
+        const url = URL.createObjectURL(pdfBlob);
+        const dl = document.createElement('a');
+        dl.href = url;
+        dl.download = fileName;
+        document.body.appendChild(dl);
+        dl.click();
+        dl.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
 
       const phone = String(inv.custPhone || '').replace(/\D/g, '');
       let waPhone = phone;
       if (waPhone.startsWith('0') && waPhone.length === 11) waPhone = '92' + waPhone.slice(1);
       else if (waPhone.startsWith('05') && waPhone.length === 10) waPhone = '966' + waPhone.slice(1);
       const waUrl = waPhone
-        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(caption)}`
-        : `https://wa.me/?text=${encodeURIComponent(caption)}`;
+        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(shortMessage)}`
+        : `https://wa.me/?text=${encodeURIComponent(shortMessage)}`;
       const link = document.createElement('a');
       link.href = waUrl;
       link.target = '_blank';
@@ -3458,10 +3873,10 @@
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast('Invoice Photo download ho gaya aur WhatsApp khul gaya ✓', 'success');
+      toast('Invoice PDF download ho gaya aur WhatsApp khul gaya ✓', 'success');
     }
 
-    function printWorkshopReport(customerId = null, billOverrides = null) {
+    async function printWorkshopReport(customerId = null, billOverrides = null) {
       const root = document.getElementById('print-root');
       const logoSrc = (state.settings.customLogo || '').trim() || DEFAULT_LOGO_PATH;
       const shopName = (billOverrides?.shopName ?? state.settings.shopName ?? 'Warsha Aluminium Workshop').trim() || 'Warsha Aluminium Workshop';
@@ -3469,6 +3884,7 @@
       if (customerId) {
         const inv = buildCustomerInvoiceModel(customerId, billOverrides || {});
         if (!inv) return;
+        await ensureInvoiceQrDataUrl(inv);
         root.innerHTML = renderProfessionalInvoiceHtml(inv, false);
       } else {
         const m = getMetrics();
@@ -3685,6 +4101,10 @@
       } else if (mode === 'pin') {
         const metaName = pinMeta?.name || pinMeta?.email || 'Workshop Account';
         const metaId = pinMeta?.email || pinMeta?.mobile || pinMeta?.identifier || '';
+        const pinLockRem = getPinLockoutRemainingSec();
+        const pinLockMin = Math.floor(pinLockRem / 60);
+        const pinLockSec = pinLockRem % 60;
+        const pinLockState = getPinLockState();
         cardHtml = `
           <div class="text-center space-y-4">
             <div class="flex items-center justify-between">
@@ -3695,11 +4115,16 @@
               <h2 class="text-base font-extrabold">${esc(metaName)}</h2>
               ${metaId ? `<p class="text-xs text-sec mt-0.5">${esc(metaId)}</p>` : ''}
             </div>
+            ${pinLockRem > 0 ? `
+              <div class="rounded-2xl bg-rose-500/20 border border-rose-400/50 p-3 text-xs text-rose-100 font-semibold">
+                3 baar galat PIN dalne ki wajah se account lock hai. ${pinLockMin}m ${pinLockSec}s baad try karein.
+              </div>
+            ` : ''}
             <div class="py-1">
               ${renderDigitBoxes('auth-pin', 4, ui.pinEntry, 'pin-box-lg')}
             </div>
-            ${ui.pinErrorCount > 0 ? `<div class="text-xs text-rose-400 font-semibold">Wrong PIN (${ui.pinErrorCount}/5)</div>` : ''}
-            <button type="button" data-action="verify-pin-submit" class="w-full h-12 rounded-xl btn-primary-grad text-sm font-bold cursor-pointer">Unlock Account</button>
+            ${pinLockRem === 0 && Number(pinLockState.count || 0) > 0 ? `<div class="text-xs text-rose-400 font-semibold">Wrong PIN (${pinLockState.count}/3)</div>` : ''}
+            <button type="button" data-action="verify-pin-submit" ${pinLockRem > 0 ? 'disabled' : ''} class="w-full h-12 rounded-xl btn-primary-grad text-sm font-bold cursor-pointer disabled:opacity-50">Unlock Account</button>
             <div class="grid grid-cols-3 gap-2.5 w-full max-w-[260px] mx-auto pt-1">
               ${['1','2','3','4','5','6','7','8','9'].map(d => `
                 <button type="button" data-pin-digit="${d}" class="h-12 rounded-2xl glass-card hover:bg-white/15 text-lg font-extrabold tabular-nums cursor-pointer">${d}</button>
@@ -3876,23 +4301,61 @@
       `;
     }
 
+    function renderAuthLoadingScreen() {
+      const retry = ui.loginRetry;
+      return `
+        <div class="min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center">
+          <div class="w-full max-w-[400px] glass-strong rounded-3xl p-7 space-y-5 shadow-2xl">
+            <div class="flex flex-col items-center">
+              <img src="${esc(DEFAULT_LOGO_PATH)}" alt="Digital Khata Logo" class="w-20 h-20 rounded-full object-cover border-2 border-[#C9A227]" />
+              <h1 class="mt-4 text-xl font-extrabold text-white tracking-wide">Digital Khata</h1>
+            </div>
+            ${retry ? `
+              <div class="rounded-2xl bg-amber-500/15 border border-amber-400/40 p-3.5 text-xs text-amber-100 leading-relaxed font-semibold">
+                ${esc(retry.errorText || 'Internet slow hai ya network issue aya. Dobara try karein.')}
+              </div>
+              <div class="space-y-2.5">
+                <button type="button" data-action="retry-login" class="w-full h-12 rounded-xl btn-primary-grad text-sm font-bold cursor-pointer">Retry Login</button>
+                <button type="button" data-action="cancel-login-retry" class="w-full h-10 rounded-xl glass-card text-xs font-semibold text-sec cursor-pointer">Back to Login</button>
+              </div>
+            ` : `
+              <div class="flex flex-col items-center gap-3 py-2">
+                <div class="w-10 h-10 rounded-full border-4 border-cyan-400/30 border-t-cyan-400 animate-spin"></div>
+                <div class="text-sm font-bold text-cyan-200">${esc(ui.loginStageText || 'Account open ho raha hai...')}</div>
+                <p class="text-xs text-sec">Session aur workshop data verify ho raha hai, baraye meharbani wait karein...</p>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
     function renderPinLock() {
       const s = state.session || {};
+      const lockRem = getPinLockoutRemainingSec();
+      const lockMin = Math.floor(lockRem / 60);
+      const lockSec = lockRem % 60;
+      const lockState = getPinLockState();
       return `
         <div class="min-h-screen flex flex-col items-center justify-center px-5 py-8 text-center">
           ${renderLogoAvatar('w-16 h-16 mb-3', 'ring-2 ring-amber-400')}
           <h1 class="text-xl font-extrabold">Enter 4-Digit PIN</h1>
           <p class="text-xs text-sec mt-1 mb-5">${esc(s.name || 'Workshop Owner')} · Security Lock</p>
+          ${lockRem > 0 ? `
+            <div class="w-full max-w-[300px] mb-4 rounded-2xl bg-rose-500/20 border border-rose-400/50 p-3 text-xs text-rose-100 font-semibold">
+              3 baar galat PIN! Account lock hai — ${lockMin}m ${lockSec}s baad dobara try karein.
+            </div>
+          ` : ''}
           <div class="w-full max-w-[270px] mb-4">
             ${renderDigitBoxes('lock-pin', 4, ui.pinEntry, 'pin-box-lg')}
           </div>
-          ${ui.pinErrorCount > 0 ? `<div class="text-xs text-rose-400 font-semibold mb-3">Wrong PIN (${ui.pinErrorCount}/5)</div>` : ''}
+          ${lockRem === 0 && Number(lockState.count || 0) > 0 ? `<div class="text-xs text-rose-400 font-semibold mb-3">Wrong PIN (${lockState.count}/3)</div>` : ''}
           <div class="grid grid-cols-3 gap-3 w-full max-w-[280px]">
             ${['1','2','3','4','5','6','7','8','9'].map(d => `
-              <button type="button" data-pin-digit="${d}" class="h-14 rounded-2xl glass-card hover:bg-white/15 text-xl font-extrabold tabular-nums cursor-pointer">${d}</button>
+              <button type="button" data-pin-digit="${d}" ${lockRem > 0 ? 'disabled' : ''} class="h-14 rounded-2xl glass-card hover:bg-white/15 text-xl font-extrabold tabular-nums cursor-pointer disabled:opacity-40">${d}</button>
             `).join('')}
             <button type="button" data-action="pin-clear" class="h-14 rounded-2xl glass-card text-xs font-bold text-sec cursor-pointer">Clear</button>
-            <button type="button" data-pin-digit="0" class="h-14 rounded-2xl glass-card hover:bg-white/15 text-xl font-extrabold tabular-nums cursor-pointer">0</button>
+            <button type="button" data-pin-digit="0" ${lockRem > 0 ? 'disabled' : ''} class="h-14 rounded-2xl glass-card hover:bg-white/15 text-xl font-extrabold tabular-nums cursor-pointer disabled:opacity-40">0</button>
             <button type="button" data-action="pin-backspace" class="h-14 rounded-2xl glass-card text-sm font-bold text-sec cursor-pointer">⌫</button>
           </div>
           <button type="button" data-action="signout" class="mt-6 text-xs text-cyan-400 hover:underline cursor-pointer">PIN bhool gaye? Password se Login karein</button>
@@ -4163,18 +4626,20 @@
               </div>
             ` : `
               <div class="divide-y divide-white/10">
-                ${recentCustomers.map(c => `
+                ${recentCustomers.map(c => {
+                  const works = getCustomerWorkItems(c);
+                  return `
                   <button type="button" data-open-customer="${esc(c.id)}" class="w-full py-3 flex items-center justify-between gap-3 text-left hover:bg-white/5 rounded-xl px-2 transition-colors cursor-pointer min-h-[56px]">
                     <div class="min-w-0">
                       <div class="text-sm font-semibold truncate">${esc(c.name)}</div>
-                      <div class="text-xs text-sec mt-0.5">${esc(formatShortDate(c.lastDate))}</div>
+                      <div class="text-xs text-sec mt-0.5 truncate">${esc(formatShortDate(c.lastDate))}${works.length ? ' · ' + esc(works.join(', ')) : ''}</div>
                     </div>
                     <div class="text-right shrink-0">
                       <div class="text-sm font-bold tabular-nums ${c.baqaya > 0 ? 'text-amber-400' : 'text-emerald-400'}">${esc(fmtRs(c.baqaya, true))}</div>
                       <div class="text-[11px] ${c.extraPaid > 0 ? 'text-rose-400 font-semibold' : 'text-mut'}">${c.extraPaid > 0 ? 'Extra ' + esc(fmtRs(c.extraPaid, true)) : (c.baqaya > 0 ? 'Baqaya' : 'Clear ✓')}</div>
                     </div>
                   </button>
-                `).join('')}
+                `; }).join('')}
               </div>
             `}
           </section>
@@ -4249,21 +4714,27 @@
                 const st = getCustomerStats(c.id);
                 const custOrders = state.orders.filter(o => o.customerId === c.id);
                 const latestOrd = custOrders.length ? custOrders[custOrders.length - 1] : null;
+                const workItems = getCustomerWorkItems(c);
                 return `
                   <div data-open-customer="${esc(c.id)}" class="w-full glass-card rounded-2xl p-4 text-left hover:border-cyan-400/50 transition-colors cursor-pointer space-y-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
                         <div class="text-base font-bold truncate">${esc(c.name)}</div>
                         <div class="text-xs text-sec mt-0.5">📞 ${esc(c.mobile || 'No phone')}${c.address ? ' · ' + esc(c.address) : ''}</div>
-                        ${latestOrd ? `
+                        ${workItems.length ? `
+                          <div class="flex flex-wrap gap-1 mt-1.5">
+                            ${workItems.map(w => `<span class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-200 text-[10px] font-bold">${esc(w)}</span>`).join('')}
+                          </div>
+                        ` : (latestOrd ? `
                           <div class="text-xs font-semibold text-cyan-300 mt-1 truncate">
                             🛠️ ${esc(latestOrd.itemName)}${latestOrd.description ? ' — ' + esc(latestOrd.description) : ''}
                           </div>
-                        ` : ''}
+                        ` : '')}
+                        ${latestOrd && latestOrd.description ? `<div class="text-[11px] text-sec mt-1 truncate">${esc(latestOrd.description)}</div>` : ''}
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" data-stop-prop data-edit-customer="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-cyan-300 hover:bg-white/10 cursor-pointer">Edit</button>
                         <button type="button" data-stop-prop data-print-cust="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-amber-300 hover:bg-white/10 cursor-pointer">Invoice</button>
-                        <span class="text-xs text-cyan-400 font-semibold">Details →</span>
                       </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-xs">
@@ -4290,13 +4761,15 @@
       const st = getCustomerStats(c.id);
       const orders = state.orders.filter(o => o.customerId === c.id).reverse();
       const generalPays = state.customerPayments.filter(p => p.customerId === c.id && !p.orderId).reverse();
+      const custWorks = getCustomerWorkItems(c);
       return `
         <div class="space-y-4">
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <button type="button" data-nav="customers" class="h-10 px-3 rounded-xl glass-card flex items-center gap-1.5 text-xs font-semibold cursor-pointer">${icon('back', 'w-4 h-4')} Customers</button>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" data-edit-customer="${esc(c.id)}" class="h-10 px-3 rounded-xl glass-card text-xs font-semibold text-cyan-300 cursor-pointer">Edit</button>
               <button type="button" data-share-wa="${esc(c.id)}" class="h-10 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer">WhatsApp</button>
-              <button type="button" data-print-cust="${esc(c.id)}" class="h-10 px-3 rounded-xl glass-card text-xs font-semibold cursor-pointer">Print</button>
+              <button type="button" data-print-cust="${esc(c.id)}" class="h-10 px-3 rounded-xl glass-card text-xs font-semibold cursor-pointer">Invoice</button>
               <button type="button" data-delete-customer="${esc(c.id)}" class="h-10 px-3 rounded-xl bg-rose-600/20 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer">Delete</button>
             </div>
           </div>
@@ -4304,6 +4777,11 @@
           <div class="blue-hero-card rounded-3xl p-5 text-white">
             <div class="text-lg font-extrabold">${esc(c.name)}</div>
             <div class="text-xs text-blue-100/85 mt-0.5">${esc(c.mobile || 'No phone')} ${c.address ? '· ' + esc(c.address) : ''}</div>
+            ${custWorks.length ? `
+              <div class="flex flex-wrap gap-1.5 mt-2.5">
+                ${custWorks.map(w => `<span class="px-2.5 py-0.5 rounded-full bg-white/15 border border-white/25 text-[11px] font-bold text-white">${esc(w)}</span>`).join('')}
+              </div>
+            ` : ''}
             <div class="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-white/15">
               <div><div class="text-[11px] text-blue-100/80">Total Bill</div><div class="text-base font-bold tabular-nums">${esc(fmtRs(st.billed))}</div></div>
               <div><div class="text-[11px] text-blue-100/80">Total Advance Paid</div><div class="text-base font-bold text-emerald-300 tabular-nums">${esc(fmtRs(st.received))}</div></div>
@@ -4331,6 +4809,7 @@
               </div>
             ` : orders.map(o => {
               const ost = getOrderStats(o);
+              const orderWorks = Array.isArray(o.workItems) && o.workItems.length ? o.workItems.join(', ') : (o.itemName || 'Aluminium Work');
               const statusColors = {
                 Pending: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
                 'In Progress': 'bg-blue-500/20 text-cyan-300 border-cyan-400/40',
@@ -4341,7 +4820,7 @@
                 <div data-open-order="${esc(o.id)}" class="glass-card rounded-2xl p-4 space-y-2.5 hover:border-cyan-400/50 transition-colors cursor-pointer">
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <div class="text-sm font-bold truncate">${esc(o.itemName)}</div>
+                      <div class="text-sm font-bold truncate">${esc(orderWorks)}</div>
                       <div class="text-xs text-sec mt-0.5">${esc(formatDateTime(o.date, o.time, o.createdAt))}${o.deliveryDate ? ' · Delivery: ' + esc(formatShortDate(o.deliveryDate)) : ''}</div>
                     </div>
                     <select data-order-status="${esc(o.id)}" data-stop-prop class="h-8 px-2.5 rounded-lg text-[11px] font-bold border ${statusColors[o.status || 'Pending'] || 'glass-input'}">
@@ -4353,7 +4832,7 @@
                   </div>
                   <div class="text-xs text-sec bg-white/5 rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2">
                     <span>${esc(o.description || (o.sqFt > 0 && o.rate > 0 ? `${o.length} × ${o.width} × ${o.qty} (${Number(ost.sqFt.toFixed(2))} sq.ft)` : 'Aluminium Work Order'))}</span>
-                    <span class="font-semibold text-cyan-300">${esc(o.itemName)}</span>
+                    <span class="font-semibold text-cyan-300">${esc(orderWorks)}</span>
                   </div>
                   <div class="grid grid-cols-3 gap-2 text-xs pt-1 tabular-nums">
                     <div><div class="text-mut">Total Bill</div><div class="font-bold">${esc(fmtRs(ost.total))}</div></div>
@@ -5891,15 +6370,21 @@
             </div>
           </div>
 
-          <!-- Saudi Payment / Bank Details Settings -->
+          <!-- Saudi Payment / Bank Details Settings (Multi-Bank Max 3 on Invoice) -->
           ${(() => {
-            const curBank = state.settings.defaultBank || 'Al Rajhi Bank';
-            const bData = (state.settings.bankAccounts && state.settings.bankAccounts[curBank]) || {};
+            const curBank = LEGACY_BANK_NAME_MAP[state.settings.defaultBank] || state.settings.defaultBank || 'Al Rajhi';
+            const bankMap = state.settings.bankAccounts || {};
+            const bData = bankMap[curBank] || {};
+            const savedEntries = SAUDI_BANKS.filter(b => bankMap[b] && (bankMap[b].accountName || bankMap[b].iban || bankMap[b].branchName || bankMap[b].showOnInvoice));
+            const tickedCount = savedEntries.filter(b => bankMap[b]?.showOnInvoice).length;
             return `
               <div class="glass-card rounded-3xl p-4 space-y-3">
-                <div>
-                  <h2 class="text-sm font-bold">Saudi Payment &amp; Bank Details (Invoice)</h2>
-                  <p class="text-[11px] text-sec mt-0.5">Har Saudi Bank ka Account Name, Account No / IBAN aur Branch save karein.</p>
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 class="text-sm font-bold">Saudi Payment &amp; Bank Details (Invoice)</h2>
+                    <p class="text-[11px] text-sec mt-0.5">Ek saath 2-3 Banks tick karein (Max 3) — Invoice ke PAYMENT INFO me khud aayenge.</p>
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-400/35 text-amber-300 shrink-0">${tickedCount}/3 on Invoice</span>
                 </div>
                 <div>
                   <label class="block text-xs text-sec mb-1">Select Bank / Payment Method</label>
@@ -5921,11 +6406,98 @@
                     <input id="bank-acc-branch" type="text" value="${esc(bData.branchName || '')}" placeholder="e.g. Riyadh Main Branch" class="w-full h-10 px-3 rounded-xl glass-input text-xs" />
                   </div>
                 </div>
-                <label class="flex items-center gap-2 text-xs text-sec cursor-pointer select-none">
-                  <input id="bank-set-default" type="checkbox" checked class="w-4 h-4 rounded accent-cyan-400" />
-                  <span>Set as Default Bank on Invoices</span>
+                <label class="flex items-center gap-2 text-xs text-cyan-200 font-semibold cursor-pointer select-none">
+                  <input id="bank-show-invoice" type="checkbox" ${bData.showOnInvoice ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400" />
+                  <span>Show on Invoice (Max 3 Banks)</span>
                 </label>
                 <button type="button" data-action="save-bank-detail" class="w-full h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold cursor-pointer">Save Bank Account Detail</button>
+                ${savedEntries.length > 0 ? `
+                  <div class="pt-2 border-t border-white/10 space-y-1.5">
+                    <div class="text-[11px] font-bold text-sec">Saved Banks (Tick up to 3 for Invoice):</div>
+                    ${savedEntries.map(b => {
+                      const rec = bankMap[b] || {};
+                      return `
+                        <div class="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs">
+                          <label class="flex items-center gap-2 min-w-0 cursor-pointer flex-1">
+                            <input type="checkbox" data-toggle-bank-invoice="${esc(b)}" ${rec.showOnInvoice ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
+                            <div class="min-w-0">
+                              <div class="font-bold truncate">${esc(b)}${rec.accountName ? ' · ' + esc(rec.accountName) : ''}</div>
+                              ${rec.iban ? `<div class="text-[10px] text-sec font-mono truncate">${esc(rec.iban)}</div>` : ''}
+                            </div>
+                          </label>
+                          <button type="button" data-edit-bank="${esc(b)}" class="px-2 h-7 rounded-lg glass-card text-[10px] font-bold text-cyan-300 shrink-0 cursor-pointer">Edit</button>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          })()}
+
+          <!-- Owner Signatures System (2 Owners + Auto Background Cleaner + Rotate + Size) -->
+          ${(() => {
+            const sig1 = getSignatureConfig('owner1');
+            const sig2 = getSignatureConfig('owner2');
+            const slots = [
+              { id: 'owner1', label: 'Owner 1 Signature', cfg: sig1, hasDefault: true },
+              { id: 'owner2', label: 'Owner 2 Signature', cfg: sig2, hasDefault: false }
+            ];
+            return `
+              <div class="glass-card rounded-3xl p-4 space-y-3.5">
+                <div>
+                  <h2 class="text-sm font-bold">Owner Signatures (Invoice)</h2>
+                  <p class="text-[11px] text-sec mt-0.5">White/ruled paper photo upload karne par background &amp; lines khud saaf ho jati hain.</p>
+                </div>
+                ${slots.map(sl => {
+                  const previewH = Math.round(44 * (sl.cfg.size / 100));
+                  return `
+                    <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2.5">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-extrabold text-cyan-300">${esc(sl.label)}</span>
+                        <div class="flex items-center gap-1.5">
+                          <input id="sig-${sl.id}-file" type="file" accept="image/*" class="sr-only" />
+                          <button type="button" data-sig-upload="${sl.id}" class="px-3 h-8 rounded-xl btn-primary-grad text-[11px] font-bold cursor-pointer">Upload Sign</button>
+                          ${(sl.cfg.src && !(sl.hasDefault && sl.cfg.src === DEFAULT_OWNER1_SIGN_PATH)) ? `
+                            <button type="button" data-sig-reset="${sl.id}" class="px-2.5 h-8 rounded-xl glass-card text-[11px] font-bold text-rose-300 cursor-pointer">${sl.hasDefault ? 'Reset' : 'Clear'}</button>
+                          ` : ''}
+                        </div>
+                      </div>
+                      <div class="bg-white rounded-xl p-3 flex items-center justify-center min-h-[78px] overflow-hidden">
+                        ${sl.cfg.src ? `
+                          <img src="${esc(sl.cfg.src)}" alt="${esc(sl.label)}" style="max-height:${previewH}px;width:auto;transform:rotate(${sl.cfg.rotation}deg);" />
+                        ` : `
+                          <span class="text-xs text-slate-400 font-semibold">Abhi Owner 2 Signature upload nahi hua</span>
+                        `}
+                      </div>
+                      <div>
+                        <label class="block text-[11px] text-sec mb-1">Owner Name</label>
+                        <input id="sig-${sl.id}-name" type="text" value="${esc(sl.cfg.name)}" placeholder="Owner Name" class="w-full h-9 px-3 rounded-xl glass-input text-xs font-semibold" />
+                      </div>
+                      <div class="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <div class="flex items-center justify-between text-[11px] text-sec mb-1">
+                            <span>Rotate</span>
+                            <span class="font-bold text-white tabular-nums">${sl.cfg.rotation}°</span>
+                          </div>
+                          <div class="flex items-center gap-1">
+                            <button type="button" data-sig-rotate="${sl.id}:-90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">-90°</button>
+                            <button type="button" data-sig-rotate="${sl.id}:0" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">0°</button>
+                            <button type="button" data-sig-rotate="${sl.id}:90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">+90°</button>
+                          </div>
+                        </div>
+                        <div>
+                          <div class="flex items-center justify-between text-[11px] text-sec mb-1">
+                            <span>Size</span>
+                            <span class="font-bold text-white tabular-nums">${sl.cfg.size}%</span>
+                          </div>
+                          <input id="sig-${sl.id}-size" data-sig-size="${sl.id}" type="range" min="55" max="155" step="5" value="${sl.cfg.size}" class="w-full h-8 accent-cyan-400 cursor-pointer" />
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+                <button type="button" data-action="save-signatures" class="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer">Save Signatures</button>
               </div>
             `;
           })()}
@@ -6338,7 +6910,11 @@
       const root = document.getElementById('app');
       if (!root) return;
       if (!state.session) {
-        root.innerHTML = renderAuth();
+        if ((ui.loginPending || ui.startupCheckingAuth) && ui.authMode === 'login') {
+          root.innerHTML = renderAuthLoadingScreen();
+        } else {
+          root.innerHTML = renderAuth();
+        }
       } else if (ui.pinLocked && !isAdminSession() && state.pinSecurity?.enabled && state.pinSecurity?.hash) {
         root.innerHTML = renderPinLock();
       } else {
@@ -6364,6 +6940,7 @@
 
       if (type === 'add-customer') {
         title = 'Add Customer & Work';
+        ui.modalWorkItems = ['Aluminium Window'];
         content = `
           <form id="modal-customer-form" class="space-y-3">
             <div><label class="block text-xs text-sec mb-1">Customer Name *</label><input name="name" type="text" required placeholder="e.g. Haji Tariq" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
@@ -6372,10 +6949,8 @@
               <div><label class="block text-xs text-sec mb-1">Address (Optional)</label><input name="address" type="text" placeholder="Site / Colony" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
             </div>
             <div>
-              <label class="block text-xs text-sec mb-1">Work Type *</label>
-              <select name="itemName" required class="w-full h-11 px-3 rounded-xl glass-input text-sm">
-                ${ALUMINIUM_WORK_ITEMS.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}
-              </select>
+              <label class="block text-xs text-sec mb-1">Work Type (Multi-Select — 1 se zyada select karein) *</label>
+              ${renderWorkMultiSelect(ui.modalWorkItems)}
             </div>
             <div><label class="block text-xs text-sec mb-1">Work Description (Optional)</label><input name="workDesc" type="text" placeholder="Jaise: 2 Window, 1 Door" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
             <div class="grid grid-cols-2 gap-2.5">
@@ -6393,9 +6968,30 @@
             </div>
             <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">Save Customer &amp; Bill</button>
           </form>`;
+      } else if (type === 'edit-customer') {
+        const c = state.customers.find(x => x.id === extra.customerId);
+        if (!c) return;
+        const existingWorks = getCustomerWorkItems(c);
+        ui.modalWorkItems = existingWorks.length ? [...existingWorks] : ['Aluminium Window'];
+        title = `Edit Customer · ${c.name}`;
+        content = `
+          <form id="modal-edit-customer-form" class="space-y-3">
+            <input type="hidden" name="customerId" value="${esc(c.id)}" />
+            <div><label class="block text-xs text-sec mb-1">Customer Name *</label><input name="name" type="text" required value="${esc(c.name)}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div><label class="block text-xs text-sec mb-1">Phone Number *</label><input name="mobile" type="tel" required value="${esc(c.mobile || '')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm tabular-nums" /></div>
+              <div><label class="block text-xs text-sec mb-1">Address (Optional)</label><input name="address" type="text" value="${esc(c.address || '')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            </div>
+            <div>
+              <label class="block text-xs text-sec mb-1">Work Type (Multi-Select — 1 se zyada select karein) *</label>
+              ${renderWorkMultiSelect(ui.modalWorkItems)}
+            </div>
+            <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">Update Customer &amp; Work</button>
+          </form>`;
       } else if (type === 'add-work') {
         title = 'Add Work Order';
         const preCust = extra.customerId || '';
+        ui.modalWorkItems = ['Aluminium Window'];
         content = `
           <form id="modal-work-form" class="space-y-3">
             <div>
@@ -6410,10 +7006,8 @@
               <input id="wo-new-mobile" name="newCustMobile" type="tel" placeholder="Phone Number *" class="h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
             </div>
             <div>
-              <label class="block text-xs text-sec mb-1">Work Type *</label>
-              <select name="itemName" required class="w-full h-11 px-3 rounded-xl glass-input text-sm">
-                ${ALUMINIUM_WORK_ITEMS.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join('')}
-              </select>
+              <label class="block text-xs text-sec mb-1">Work Type (Multi-Select — 1 se zyada select karein) *</label>
+              ${renderWorkMultiSelect(ui.modalWorkItems)}
             </div>
             <div><label class="block text-xs text-sec mb-1">Work Description (Optional)</label><input name="workDesc" type="text" placeholder="Jaise: 2 Window, 1 Door" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
             <div class="grid grid-cols-2 gap-2.5">
@@ -6439,48 +7033,67 @@
         const custId = extra.customerId || '';
         const c = state.customers.find(x => x.id === custId);
         if (!c) return;
-        const initBank = state.settings.defaultBank || 'Al Rajhi Bank';
+        const initBank = LEGACY_BANK_NAME_MAP[state.settings.defaultBank] || state.settings.defaultBank || 'Al Rajhi';
         const initVat = state.settings.vatEnabledDefault !== false;
         const initInvNo = c.lastInvoiceNo || getNextInvoiceNumber(c);
         ui.invoiceDraft = {
           customerId: custId,
           invoiceNo: initInvNo,
           invoiceDate: todayISO(),
+          dueDate: todayISO(),
           custEmail: c.email || '',
           bankName: initBank,
-          vatEnabled: initVat
+          vatEnabled: initVat,
+          useOwner1Sign: false,
+          useOwner2Sign: false
         };
         const inv = buildCustomerInvoiceModel(custId, ui.invoiceDraft);
-        title = `Professional Invoice · ${c.name}`;
+        const s1Cfg = getSignatureConfig('owner1');
+        const s2Cfg = getSignatureConfig('owner2');
+        title = `Invoice · ${c.name}`;
         content = `
           <form id="modal-print-bill-form" class="space-y-3">
             <input type="hidden" name="customerId" value="${esc(custId)}" />
-            <div class="grid grid-cols-2 gap-2">
-              <div><label class="block text-[11px] text-sec mb-1">Invoice No (Auto)</label><input id="inv-no-input" name="invoiceNo" type="text" value="${esc(inv.invoiceNo)}" class="w-full h-10 px-2.5 rounded-xl glass-input text-xs font-bold" /></div>
-              <div><label class="block text-[11px] text-sec mb-1">Invoice Date</label><input id="inv-date-input" name="invoiceDate" type="date" value="${esc(inv.invoiceDate)}" class="w-full h-10 px-2 rounded-xl glass-input text-xs tabular-nums" /></div>
+            <div class="grid grid-cols-3 gap-2">
+              <div><label class="block text-[11px] text-sec mb-1">Invoice No</label><input id="inv-no-input" name="invoiceNo" type="text" value="${esc(inv.invoiceNo)}" class="w-full h-10 px-2 rounded-xl glass-input text-xs font-bold" /></div>
+              <div><label class="block text-[11px] text-sec mb-1">Invoice Date</label><input id="inv-date-input" name="invoiceDate" type="date" value="${esc(inv.invoiceDate)}" class="w-full h-10 px-2 rounded-xl glass-input text-[11px] tabular-nums" /></div>
+              <div><label class="block text-[11px] text-sec mb-1">Due Date</label><input id="inv-due-input" name="dueDate" type="date" value="${esc(inv.dueDate)}" class="w-full h-10 px-2 rounded-xl glass-input text-[11px] tabular-nums" /></div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[11px] text-sec mb-1">Saudi Payment Bank (Auto Detail)</label>
-                <select id="inv-bank-select" name="bankName" class="w-full h-10 px-2.5 rounded-xl glass-input text-xs font-semibold">
-                  ${SAUDI_BANKS.map(b => `<option value="${esc(b)}" ${b === inv.bankName ? 'selected' : ''}>${esc(b)}</option>`).join('')}
-                </select>
-              </div>
               <div><label class="block text-[11px] text-sec mb-1">Customer Email (Optional)</label><input id="inv-cust-email" name="custEmail" type="email" value="${esc(inv.custEmail)}" placeholder="customer@email.com" class="w-full h-10 px-2.5 rounded-xl glass-input text-xs" /></div>
+              <label class="flex items-center justify-between px-3 h-10 sm:mt-4 rounded-xl glass-card text-xs cursor-pointer select-none">
+                <span class="font-bold text-amber-300">Include VAT 15%</span>
+                <input id="inv-vat-toggle" name="vatEnabled" type="checkbox" ${inv.vatEnabled ? 'checked' : ''} class="w-4 h-4 rounded accent-amber-400" />
+              </label>
             </div>
-            <label class="flex items-center justify-between px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
-              <span class="font-bold text-amber-300">Include VAT 15% (Saudi Arabia)</span>
-              <input id="inv-vat-toggle" name="vatEnabled" type="checkbox" ${inv.vatEnabled ? 'checked' : ''} class="w-4 h-4 rounded accent-amber-400" />
-            </label>
-            <div id="inv-live-preview" class="rounded-xl overflow-hidden shadow-lg border border-white/15">
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
+                <input id="inv-sign1-toggle" name="useOwner1Sign" type="checkbox" ${inv.useOwner1Sign ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400 shrink-0" />
+                <div class="min-w-0">
+                  <div class="font-bold truncate">Owner 1 Sign Lagao</div>
+                  <div class="text-[10px] text-sec truncate">${esc(s1Cfg.name)}</div>
+                </div>
+              </label>
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
+                <input id="inv-sign2-toggle" name="useOwner2Sign" type="checkbox" ${inv.useOwner2Sign ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400 shrink-0" />
+                <div class="min-w-0">
+                  <div class="font-bold truncate">Owner 2 Sign Lagao</div>
+                  <div class="text-[10px] text-sec truncate">${esc(s2Cfg.src ? s2Cfg.name : 'Upload in Settings')}</div>
+                </div>
+              </label>
+            </div>
+            <div id="inv-live-preview" class="rounded-xl overflow-hidden bg-white shadow-lg">
               ${renderProfessionalInvoiceHtml(inv, true)}
             </div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
               <button type="submit" class="h-12 rounded-xl btn-primary-grad font-extrabold text-xs cursor-pointer flex items-center justify-center gap-1.5">🖨️ Print Invoice</button>
               <button type="button" data-action="invoice-wa-share" class="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs cursor-pointer flex items-center justify-center gap-1.5">💬 WhatsApp Invoice</button>
             </div>
-            <button type="button" data-action="invoice-download-img" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">⬇️ Download Invoice Photo (PNG)</button>
+            <button type="button" data-action="invoice-download-pdf" class="w-full h-11 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">📄 Download Invoice PDF</button>
           </form>`;
+        setTimeout(() => {
+          ensureInvoiceQrDataUrl(inv).then(() => refreshInvoiceDraftPreview());
+        }, 10);
       } else if (type === 'pin-setup-prompt') {
         title = '4-Digit PIN Set Karein?';
         content = `
@@ -7063,6 +7676,15 @@
       const box = document.getElementById('inv-live-preview');
       if (inv && box) {
         box.innerHTML = renderProfessionalInvoiceHtml(inv, true);
+        if (!inv.qrDataUrl) {
+          ensureInvoiceQrDataUrl(inv).then((url) => {
+            if (url && ui.invoiceDraft && ui.invoiceDraft.customerId === inv.customerId) {
+              const latest = buildCustomerInvoiceModel(d.customerId, ui.invoiceDraft);
+              const targetBox = document.getElementById('inv-live-preview');
+              if (latest && targetBox) targetBox.innerHTML = renderProfessionalInvoiceHtml(latest, true);
+            }
+          });
+        }
       }
     }
 
@@ -7390,8 +8012,86 @@
       const shareWa = t.closest('[data-share-wa]');
       if (shareWa) { shareWhatsAppKhata(shareWa.getAttribute('data-share-wa') || null); return; }
 
+      const editCustBtn = t.closest('[data-edit-customer]');
+      if (editCustBtn) { openModal('edit-customer', { customerId: editCustBtn.getAttribute('data-edit-customer') }); return; }
+
       const printCust = t.closest('[data-print-cust]');
       if (printCust) { openModal('print-cust-bill', { customerId: printCust.getAttribute('data-print-cust') }); return; }
+
+      const workToggleBtn = t.closest('[data-work-toggle]');
+      if (workToggleBtn) {
+        const w = workToggleBtn.getAttribute('data-work-toggle');
+        const list = Array.isArray(ui.modalWorkItems) ? [...ui.modalWorkItems] : [];
+        const idx = list.indexOf(w);
+        if (idx >= 0) {
+          list.splice(idx, 1);
+        } else {
+          list.push(w);
+        }
+        ui.modalWorkItems = list;
+        const rootEl = document.getElementById('work-multiselect-root');
+        if (rootEl) rootEl.outerHTML = renderWorkMultiSelect(ui.modalWorkItems);
+        return;
+      }
+
+      const workRemoveBtn = t.closest('[data-work-chip-remove]');
+      if (workRemoveBtn) {
+        const w = workRemoveBtn.getAttribute('data-work-chip-remove');
+        ui.modalWorkItems = (ui.modalWorkItems || []).filter(item => item !== w);
+        const rootEl = document.getElementById('work-multiselect-root');
+        if (rootEl) rootEl.outerHTML = renderWorkMultiSelect(ui.modalWorkItems);
+        return;
+      }
+
+      const editBankBtn = t.closest('[data-edit-bank]');
+      if (editBankBtn) {
+        const bank = editBankBtn.getAttribute('data-edit-bank');
+        const sel = document.getElementById('settings-bank-select');
+        if (sel && bank) {
+          sel.value = bank;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      const sigUploadBtn = t.closest('[data-sig-upload]');
+      if (sigUploadBtn) {
+        const slot = sigUploadBtn.getAttribute('data-sig-upload');
+        document.getElementById(`sig-${slot}-file`)?.click();
+        return;
+      }
+
+      const sigRotateBtn = t.closest('[data-sig-rotate]');
+      if (sigRotateBtn) {
+        const [slot, degStr] = String(sigRotateBtn.getAttribute('data-sig-rotate') || '').split(':');
+        const deg = Number(degStr || 0);
+        if (!state.settings.signatures) state.settings.signatures = {};
+        if (!state.settings.signatures[slot]) state.settings.signatures[slot] = { ...getSignatureConfig(slot), dataUrl: '' };
+        if (deg === 0) {
+          state.settings.signatures[slot].rotation = 0;
+        } else {
+          state.settings.signatures[slot].rotation = (Number(state.settings.signatures[slot].rotation || 0) + deg + 360) % 360;
+        }
+        saveState();
+        render();
+        return;
+      }
+
+      const sigResetBtn = t.closest('[data-sig-reset]');
+      if (sigResetBtn) {
+        const slot = sigResetBtn.getAttribute('data-sig-reset');
+        if (!state.settings.signatures) state.settings.signatures = {};
+        if (!state.settings.signatures[slot]) state.settings.signatures[slot] = {};
+        state.settings.signatures[slot].dataUrl = '';
+        state.settings.signatures[slot].rotation = 0;
+        state.settings.signatures[slot].size = 100;
+        saveState();
+        await flushCloudSync();
+        render();
+        toast(slot === 'owner1' ? 'Owner 1 signature default par reset ho gaya' : 'Owner 2 signature clear ho gaya', 'info');
+        return;
+      }
 
       const custF = t.closest('[data-cust-filter]');
       if (custF) { ui.customerFilter = custF.getAttribute('data-cust-filter'); render(); return; }
@@ -7747,20 +8447,56 @@
         toast(synced ? 'Shop & Invoice settings saved to Cloud ✓' : 'Shop & Invoice settings saved ✓', 'success');
       }
       else if (act === 'save-bank-detail') {
-        const bank = document.getElementById('settings-bank-select')?.value || 'Al Rajhi Bank';
+        const bank = document.getElementById('settings-bank-select')?.value || 'Al Rajhi';
         const accountName = document.getElementById('bank-acc-name')?.value.trim() || '';
         const iban = document.getElementById('bank-acc-iban')?.value.trim() || '';
         const branchName = document.getElementById('bank-acc-branch')?.value.trim() || '';
-        const setDef = document.getElementById('bank-set-default')?.checked;
+        const showOnInv = Boolean(document.getElementById('bank-show-invoice')?.checked);
         if (!state.settings.bankAccounts || typeof state.settings.bankAccounts !== 'object') {
           state.settings.bankAccounts = {};
         }
-        state.settings.bankAccounts[bank] = { accountName, iban, branchName };
-        if (setDef) state.settings.defaultBank = bank;
+        const existingOtherTicked = SAUDI_BANKS.filter(b => b !== bank && state.settings.bankAccounts[b]?.showOnInvoice).length;
+        if (showOnInv && existingOtherTicked >= 3) {
+          toast('Invoice par maximum 3 Banks hi select ho sakte hain. Pehle kisi ek ko untick karein.', 'error');
+          return;
+        }
+        state.settings.bankAccounts[bank] = { accountName, iban, branchName, showOnInvoice: showOnInv };
+        if (showOnInv) state.settings.defaultBank = bank;
         saveState();
         const synced = await flushCloudSync();
         render();
         toast(synced ? `${bank} details saved to Cloud ✓` : `${bank} details saved ✓`, 'success');
+      }
+      else if (act === 'save-signatures') {
+        if (!state.settings.signatures) state.settings.signatures = {};
+        ['owner1', 'owner2'].forEach(slot => {
+          const cur = getSignatureConfig(slot);
+          const nameInput = document.getElementById(`sig-${slot}-name`)?.value.trim();
+          const sizeInput = Number(document.getElementById(`sig-${slot}-size`)?.value || cur.size || 100);
+          state.settings.signatures[slot] = {
+            name: nameInput || cur.name,
+            dataUrl: state.settings.signatures[slot]?.dataUrl || '',
+            rotation: Number(state.settings.signatures[slot]?.rotation ?? cur.rotation ?? 0),
+            size: Math.min(160, Math.max(50, sizeInput))
+          };
+        });
+        saveState();
+        const synced = await flushCloudSync();
+        render();
+        toast(synced ? 'Owner signatures saved & synced to Cloud ✓' : 'Owner signatures saved ✓', 'success');
+      }
+      else if (act === 'retry-login') {
+        if (ui.loginRetry) {
+          const r = { ...ui.loginRetry };
+          await executeLoginWithCredentials(r.identifier, r.pass, r.remember);
+        }
+      }
+      else if (act === 'cancel-login-retry') {
+        ui.loginPending = false;
+        ui.loginRetry = null;
+        ui.authLoading = false;
+        ui.authMode = 'login';
+        render();
       }
       else if (act === 'invoice-wa-share') {
         if (ui.invoiceDraft) {
@@ -7768,10 +8504,10 @@
           if (inv) await shareInvoiceOnWhatsApp(inv);
         }
       }
-      else if (act === 'invoice-download-img') {
+      else if (act === 'invoice-download-pdf') {
         if (ui.invoiceDraft) {
           const inv = buildCustomerInvoiceModel(ui.invoiceDraft.customerId, ui.invoiceDraft);
-          if (inv) await downloadInvoicePng(inv);
+          if (inv) await downloadInvoicePdf(inv);
         }
       }
       else if (act === 'archive-now') {
@@ -7786,6 +8522,10 @@
       else if (act === 'signout') {
         hydrateGeneration++;
         if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
+        localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+        ui.loginPending = false;
+        ui.loginRetry = null;
+        ui.startupCheckingAuth = false;
         const curUid = state.session?.uid || state.session?.cloudUid || state.session?.id || state.cloudMeta?.uid || '';
         if (ui.kycTimer) { clearInterval(ui.kycTimer); ui.kycTimer = null; }
         if (ui.cameraStream) { ui.cameraStream.getTracks().forEach(tr => tr.stop()); ui.cameraStream = null; }
@@ -7852,10 +8592,21 @@
     });
 
     async function verifyPinEntryCode(enteredPin) {
+      const remLock = getPinLockoutRemainingSec();
+      if (remLock > 0) {
+        ui.pinEntry = '';
+        const lm = Math.floor(remLock / 60);
+        const ls = remLock % 60;
+        render();
+        toast(`3 baar galat PIN! ${lm}m ${ls}s baad try karein.`, 'error');
+        return;
+      }
       const enteredHash = await hashPassword(enteredPin);
       if (!state.session && ui.authMode === 'pin') {
         const pinMeta = loadLastPinMeta();
         if (pinMeta && enteredHash === pinMeta.pinHash) {
+          clearFailedPinAttempts();
+          localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
           ui.pinEntry = '';
           ui.pinErrorCount = 0;
           const cloud = getCloud();
@@ -7899,6 +8650,7 @@
           return;
         }
       } else if (state.session && enteredHash === state.pinSecurity?.hash) {
+        clearFailedPinAttempts();
         ui.pinEntry = '';
         ui.pinErrorCount = 0;
         ui.pinLocked = false;
@@ -7910,25 +8662,165 @@
       }
 
       ui.pinEntry = '';
-      ui.pinErrorCount = Number(ui.pinErrorCount || 0) + 1;
-      if (ui.pinErrorCount >= 5) {
-        const cloud = getCloud();
-        if (cloud) { try { await cloud.signOutUser(); } catch (e) {} }
-        localStorage.removeItem(ACTIVE_UID_KEY);
-        sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
-        const remKeep = loadRememberMe();
-        state = defaultData();
-        state.rememberMe = remKeep;
-        ui.pinLocked = false;
-        ui.authMode = 'login';
-        ui.pinErrorCount = 0;
-        render();
-        toast('5 wrong PIN attempts. Security logout ho gaya — Password se login karein.', 'error');
+      const lockState = recordFailedPinAttempt();
+      ui.pinErrorCount = lockState.count;
+      render();
+      if (lockState.count >= 3) {
+        toast('3 baar galat PIN! Account 5 minute ke liye lock ho gaya hai.', 'error');
       } else {
-        render();
         const grp = !state.session && ui.authMode === 'pin' ? 'auth-pin' : 'lock-pin';
         document.querySelector(`[data-digit-group="${grp}"][data-digit-index="0"]`)?.focus();
-        toast('Wrong PIN!', 'error');
+        toast(`Wrong PIN (${lockState.count}/3)`, 'error');
+      }
+    }
+
+    async function executeLoginWithCredentials(identifier, pass, remember) {
+      const cloud = getCloud();
+      if (!cloud) {
+        ui.loginPending = true;
+        ui.loginRetry = { identifier, pass, remember, errorText: 'Cloud service abhi load ho rahi hai. Retry karein.' };
+        render();
+        return;
+      }
+
+      manualAuthFlow = true;
+      ui.loginPending = true;
+      ui.loginRetry = null;
+      ui.loginStageText = 'Account verify ho raha hai...';
+      ui.authLoading = true;
+      render();
+      try {
+        const res = await withTimeout(cloud.signIn(identifier, pass), 20000, 'LOGIN_TIMEOUT');
+        clearFailedPasswordAttempts();
+        localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
+        saveRememberMe({ email: remember ? identifier : '', remember });
+        state.rememberMe = loadRememberMe();
+        sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, res.user.uid);
+
+        ui.loginStageText = 'Session save ho rahi hai...';
+        render();
+        try {
+          await withTimeout(res.user.getIdToken(), 12000, 'TOKEN_TIMEOUT');
+        } catch (tokErr) {}
+
+        if (cloud.isAdminEmail(res.norm.email)) {
+          state = defaultData();
+          state.rememberMe = loadRememberMe();
+          state.session = {
+            id: res.user.uid,
+            uid: res.user.uid,
+            name: res.user.displayName || 'Admin',
+            email: res.norm.email,
+            mobile: '',
+            identifier: res.norm.email,
+            authType: 'email',
+            photo: '',
+            provider: 'firebase',
+            isAdmin: true,
+            loginAt: Date.now()
+          };
+          state.kyc.status = 'approved';
+          ui.pinLocked = false;
+          ui.view = 'admin';
+          saveState(true);
+          ui.loginPending = false;
+          ui.authLoading = false;
+          ui.loginRetry = null;
+          render();
+          toast('Welcome Admin ✓', 'success');
+          loadAdminUsersList();
+        } else {
+          const cached = loadUserCache(res.user.uid);
+          const overrideInfo = {
+            identifier,
+            email: res.norm.email,
+            mobile: res.norm.mobile,
+            authType: res.norm.authType
+          };
+          if (cached) {
+            state = cached;
+            state.rememberMe = loadRememberMe();
+            state.session = {
+              id: res.user.uid,
+              uid: res.user.uid,
+              cloudUid: res.user.uid,
+              name: state.session?.name || res.user.displayName || state.settings?.ownerName || 'User',
+              email: res.norm.email || state.session?.email || '',
+              mobile: res.norm.mobile || state.session?.mobile || '',
+              identifier,
+              authType: res.norm.authType,
+              photo: '',
+              provider: 'firebase',
+              loginAt: Date.now()
+            };
+            ui.pinLocked = false;
+            ui.view = (state.blocked || !isKycVerified()) ? 'kyc' : 'home';
+            saveState(true);
+            ui.loginPending = false;
+            ui.authLoading = false;
+            ui.loginRetry = null;
+            render();
+            toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
+            hydrateFromFirebaseUser(res.user, overrideInfo, { background: true });
+          } else {
+            ui.loginStageText = 'Workshop data load ho raha hai...';
+            render();
+            await hydrateFromFirebaseUser(res.user, overrideInfo, { strictNetwork: true });
+            ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
+            ui.loginPending = false;
+            ui.authLoading = false;
+            ui.loginRetry = null;
+            render();
+            toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
+          }
+          if (!state.blocked && isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
+            if (ui.promptPinAfterLogin) {
+              ui.promptPinAfterLogin = false;
+              setTimeout(() => openModal('set-pin'), 250);
+            } else {
+              setTimeout(() => openModal('pin-setup-prompt'), 350);
+            }
+          } else {
+            ui.promptPinAfterLogin = false;
+          }
+        }
+      } catch (err) {
+        ui.authLoading = false;
+        const code = String(err?.code || '');
+        const msgStr = String(err?.message || '');
+        const isNetworkOrTimeout =
+          msgStr === 'LOGIN_TIMEOUT' ||
+          msgStr === 'TOKEN_TIMEOUT' ||
+          msgStr === 'BUNDLE_TIMEOUT' ||
+          code === 'auth/network-request-failed' ||
+          code === 'unavailable' ||
+          msgStr.toLowerCase().includes('network') ||
+          msgStr.toLowerCase().includes('timeout');
+
+        if (isNetworkOrTimeout) {
+          ui.loginPending = true;
+          ui.loginRetry = {
+            identifier,
+            pass,
+            remember,
+            errorText: 'Internet slow hai ya network timeout ho gaya. Retry dabayein.'
+          };
+          render();
+          toast('Internet slow hai — Retry button dabayein.', 'error');
+        } else {
+          ui.loginPending = false;
+          ui.loginRetry = null;
+          const lockState = recordFailedPasswordAttempt();
+          const msg = mapFirebaseAuthError(err);
+          if (lockState.count >= 5) {
+            toast('5 wrong passwords! Security lock active for 5 minutes.', 'error');
+          } else {
+            toast(`${msg} (${lockState.count}/5)`, 'error');
+          }
+          render();
+        }
+      } finally {
+        manualAuthFlow = false;
       }
     }
 
@@ -7947,103 +8839,7 @@
         const identifier = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-password').value;
         const remember = document.getElementById('login-remember').checked;
-        const cloud = getCloud();
-        if (!cloud) { toast('Cloud service loading, 1 second baad try karein.', 'info'); return; }
-
-        manualAuthFlow = true;
-        ui.authLoading = true;
-        render();
-        try {
-          const res = await cloud.signIn(identifier, pass);
-          clearFailedPasswordAttempts();
-          saveRememberMe({ email: remember ? identifier : '', remember });
-          state.rememberMe = loadRememberMe();
-          sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, res.user.uid);
-          ui.authLoading = false;
-
-          if (cloud.isAdminEmail(res.norm.email)) {
-            state = defaultData();
-            state.rememberMe = loadRememberMe();
-            state.session = {
-              id: res.user.uid,
-              uid: res.user.uid,
-              name: res.user.displayName || 'Admin',
-              email: res.norm.email,
-              mobile: '',
-              identifier: res.norm.email,
-              authType: 'email',
-              photo: '',
-              provider: 'firebase',
-              isAdmin: true,
-              loginAt: Date.now()
-            };
-            state.kyc.status = 'approved';
-            ui.pinLocked = false;
-            ui.view = 'admin';
-            saveState(true);
-            render();
-            toast('Welcome Admin ✓', 'success');
-            loadAdminUsersList();
-          } else {
-            const cached = loadUserCache(res.user.uid);
-            const overrideInfo = {
-              identifier,
-              email: res.norm.email,
-              mobile: res.norm.mobile,
-              authType: res.norm.authType
-            };
-            if (cached) {
-              state = cached;
-              state.rememberMe = loadRememberMe();
-              state.session = {
-                id: res.user.uid,
-                uid: res.user.uid,
-                cloudUid: res.user.uid,
-                name: state.session?.name || res.user.displayName || state.settings?.ownerName || 'User',
-                email: res.norm.email || state.session?.email || '',
-                mobile: res.norm.mobile || state.session?.mobile || '',
-                identifier,
-                authType: res.norm.authType,
-                photo: '',
-                provider: 'firebase',
-                loginAt: Date.now()
-              };
-              ui.pinLocked = false;
-              ui.view = (state.blocked || !isKycVerified()) ? 'kyc' : 'home';
-              saveState(true);
-              render();
-              toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
-              hydrateFromFirebaseUser(res.user, overrideInfo, { background: true });
-            } else {
-              await hydrateFromFirebaseUser(res.user, overrideInfo);
-              ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
-              render();
-              toast(`Assalam o Alaikum, ${state.session?.name || 'User'} ✓`, 'success');
-            }
-            if (!state.blocked && isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
-              if (ui.promptPinAfterLogin) {
-                ui.promptPinAfterLogin = false;
-                setTimeout(() => openModal('set-pin'), 250);
-              } else {
-                setTimeout(() => openModal('pin-setup-prompt'), 350);
-              }
-            } else {
-              ui.promptPinAfterLogin = false;
-            }
-          }
-        } catch (err) {
-          ui.authLoading = false;
-          const lockState = recordFailedPasswordAttempt();
-          const msg = mapFirebaseAuthError(err);
-          if (lockState.count >= 5) {
-            toast('5 wrong passwords! Security lock active for 5 minutes.', 'error');
-          } else {
-            toast(`${msg} (${lockState.count}/5)`, 'error');
-          }
-          render();
-        } finally {
-          manualAuthFlow = false;
-        }
+        await executeLoginWithCredentials(identifier, pass, remember);
         return;
       }
 
@@ -8242,19 +9038,28 @@
         const custPhone = (fd.get('mobile') || '').toString().trim();
         if (!custName) { toast('Customer Name likhein.', 'error'); return; }
         if (!custPhone) { toast('Phone Number likhein.', 'error'); return; }
+        let selectedWorks = [];
+        try {
+          selectedWorks = JSON.parse((fd.get('workItemsJson') || '[]').toString());
+        } catch { selectedWorks = []; }
+        if (!Array.isArray(selectedWorks) || selectedWorks.length === 0) {
+          toast('Kam az kam 1 Work Type select karein.', 'error');
+          return;
+        }
         const total = Number(fd.get('totalBill') || 0);
         if (isNaN(total) || total < 0) { toast('Sahi Total Bill Amount likhein.', 'error'); return; }
         const advance = Math.max(0, Number(fd.get('advance') || 0));
         const customerId = uid('cust');
+        const itemName = selectedWorks.join(', ');
         state.customers.push({
           id: customerId,
           name: custName,
           mobile: custPhone,
           address: (fd.get('address') || '').toString().trim(),
+          workItems: [...selectedWorks],
           openingBalance: 0,
           createdAt: new Date().toISOString()
         });
-        const itemName = (fd.get('itemName') || '').toString().trim() || 'Aluminium Window';
         const description = (fd.get('workDesc') || '').toString().trim();
         const date = todayISO();
         const time = nowTime();
@@ -8264,6 +9069,7 @@
           id: orderId,
           customerId,
           itemName,
+          workItems: [...selectedWorks],
           description,
           length: 0,
           width: 0,
@@ -8294,8 +9100,45 @@
         saveState(); closeModal(); render(); toast('Customer aur Work save ho gaya ✓', 'success'); return;
       }
 
+      if (f.id === 'modal-edit-customer-form') {
+        const fd = new FormData(f);
+        const customerId = (fd.get('customerId') || '').toString();
+        const c = state.customers.find(x => x.id === customerId);
+        if (!c) { closeModal(); return; }
+        const custName = (fd.get('name') || '').toString().trim();
+        const custPhone = (fd.get('mobile') || '').toString().trim();
+        if (!custName) { toast('Customer Name likhein.', 'error'); return; }
+        if (!custPhone) { toast('Phone Number likhein.', 'error'); return; }
+        let selectedWorks = [];
+        try {
+          selectedWorks = JSON.parse((fd.get('workItemsJson') || '[]').toString());
+        } catch { selectedWorks = []; }
+        if (!Array.isArray(selectedWorks) || selectedWorks.length === 0) {
+          toast('Kam az kam 1 Work Type select karein.', 'error');
+          return;
+        }
+        c.name = custName;
+        c.mobile = custPhone;
+        c.address = (fd.get('address') || '').toString().trim();
+        c.workItems = [...selectedWorks];
+        const custOrders = state.orders.filter(o => o.customerId === customerId);
+        if (custOrders.length === 1) {
+          custOrders[0].workItems = [...selectedWorks];
+          custOrders[0].itemName = selectedWorks.join(', ');
+        }
+        saveState(); closeModal(); render(); toast('Customer & Work update ho gaya ✓', 'success'); return;
+      }
+
       if (f.id === 'modal-work-form') {
         const fd = new FormData(f);
+        let selectedWorks = [];
+        try {
+          selectedWorks = JSON.parse((fd.get('workItemsJson') || '[]').toString());
+        } catch { selectedWorks = []; }
+        if (!Array.isArray(selectedWorks) || selectedWorks.length === 0) {
+          toast('Kam az kam 1 Work Type select karein.', 'error');
+          return;
+        }
         let customerId = fd.get('customerId').toString();
         let custName = '';
         if (customerId === '__new__') {
@@ -8308,6 +9151,7 @@
             name: newName,
             mobile: newMob,
             address: '',
+            workItems: [...selectedWorks],
             openingBalance: 0,
             createdAt: new Date().toISOString()
           };
@@ -8315,7 +9159,12 @@
           customerId = newCust.id;
           custName = newCust.name;
         } else {
-          custName = state.customers.find(c => c.id === customerId)?.name || 'Customer';
+          const existingCust = state.customers.find(c => c.id === customerId);
+          custName = existingCust?.name || 'Customer';
+          if (existingCust) {
+            const merged = new Set([...(Array.isArray(existingCust.workItems) ? existingCust.workItems : []), ...selectedWorks]);
+            existingCust.workItems = Array.from(merged);
+          }
         }
         const total = Number(fd.get('totalBill') || 0);
         if (isNaN(total) || total < 0) { toast('Valid Total Bill Amount likhein.', 'error'); return; }
@@ -8323,7 +9172,7 @@
         const date = fd.get('date').toString() || todayISO();
         if (isDateInClosedMonth(date)) { toast('Closed month me work order add nahi ho sakta 🔒', 'error'); return; }
         const time = fd.get('time').toString() || nowTime();
-        const itemName = fd.get('itemName').toString().trim() || 'Aluminium Window';
+        const itemName = selectedWorks.join(', ');
         const description = (fd.get('workDesc') || '').toString().trim();
         const orderId = uid('ord');
 
@@ -8331,6 +9180,7 @@
           id: orderId,
           customerId,
           itemName,
+          workItems: [...selectedWorks],
           description,
           length: 0,
           width: 0,
@@ -8372,9 +9222,11 @@
         const overrides = {
           invoiceNo: (fd.get('invoiceNo') || '').toString().trim(),
           invoiceDate: (fd.get('invoiceDate') || '').toString() || todayISO(),
-          bankName: (fd.get('bankName') || '').toString() || state.settings.defaultBank || 'Al Rajhi Bank',
+          dueDate: (fd.get('dueDate') || '').toString() || (fd.get('invoiceDate') || '').toString() || todayISO(),
           custEmail,
-          vatEnabled: Boolean(fd.get('vatEnabled'))
+          vatEnabled: Boolean(fd.get('vatEnabled')),
+          useOwner1Sign: Boolean(fd.get('useOwner1Sign')),
+          useOwner2Sign: Boolean(fd.get('useOwner2Sign'))
         };
         closeModal();
         printWorkshopReport(customerId, overrides);
@@ -9012,13 +9864,26 @@
         updateWorkCalculator();
         return;
       }
-      if (t.id === 'inv-no-input' || t.id === 'inv-date-input' || t.id === 'inv-cust-email') {
+      if (t.id === 'inv-no-input' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-cust-email') {
         if (ui.invoiceDraft) {
           if (t.id === 'inv-no-input') ui.invoiceDraft.invoiceNo = t.value;
           if (t.id === 'inv-date-input') ui.invoiceDraft.invoiceDate = t.value;
+          if (t.id === 'inv-due-input') ui.invoiceDraft.dueDate = t.value;
           if (t.id === 'inv-cust-email') ui.invoiceDraft.custEmail = t.value;
           refreshInvoiceDraftPreview();
         }
+        return;
+      }
+      if (t.hasAttribute && t.hasAttribute('data-sig-size')) {
+        const slot = t.getAttribute('data-sig-size');
+        if (!state.settings.signatures) state.settings.signatures = {};
+        if (!state.settings.signatures[slot]) state.settings.signatures[slot] = { ...getSignatureConfig(slot), dataUrl: '' };
+        state.settings.signatures[slot].size = Math.min(160, Math.max(50, Number(t.value || 100)));
+        const card = t.closest('.rounded-2xl');
+        const imgEl = card?.querySelector('img');
+        const lbl = t.previousElementSibling?.querySelector('span:last-child');
+        if (imgEl) imgEl.style.maxHeight = `${Math.round(44 * (state.settings.signatures[slot].size / 100))}px`;
+        if (lbl) lbl.textContent = `${state.settings.signatures[slot].size}%`;
         return;
       }
       if (t.id === 'stk-qty' || t.id === 'stk-cost') {
@@ -9056,17 +9921,64 @@
         const accEl = document.getElementById('bank-acc-name');
         const ibanEl = document.getElementById('bank-acc-iban');
         const brEl = document.getElementById('bank-acc-branch');
+        const showEl = document.getElementById('bank-show-invoice');
         if (accEl) accEl.value = bData.accountName || '';
         if (ibanEl) ibanEl.value = bData.iban || '';
         if (brEl) brEl.value = bData.branchName || '';
+        if (showEl) showEl.checked = Boolean(bData.showOnInvoice);
         return;
       }
-      if (t.id === 'inv-bank-select' || t.id === 'inv-vat-toggle' || t.id === 'inv-date-input') {
+      if (t.hasAttribute && t.hasAttribute('data-toggle-bank-invoice')) {
+        const bank = t.getAttribute('data-toggle-bank-invoice');
+        if (!state.settings.bankAccounts) state.settings.bankAccounts = {};
+        if (!state.settings.bankAccounts[bank]) state.settings.bankAccounts[bank] = { accountName: '', iban: '', branchName: '', showOnInvoice: false };
+        const want = Boolean(t.checked);
+        if (want) {
+          const otherTicked = SAUDI_BANKS.filter(b => b !== bank && state.settings.bankAccounts[b]?.showOnInvoice).length;
+          if (otherTicked >= 3) {
+            t.checked = false;
+            toast('Invoice par maximum 3 Banks select ho sakte hain.', 'error');
+            return;
+          }
+        }
+        state.settings.bankAccounts[bank].showOnInvoice = want;
+        saveState();
+        render();
+        await flushCloudSync();
+        return;
+      }
+      if (t.id === 'inv-vat-toggle' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-sign1-toggle' || t.id === 'inv-sign2-toggle') {
         if (ui.invoiceDraft) {
-          if (t.id === 'inv-bank-select') ui.invoiceDraft.bankName = t.value;
           if (t.id === 'inv-vat-toggle') ui.invoiceDraft.vatEnabled = Boolean(t.checked);
           if (t.id === 'inv-date-input') ui.invoiceDraft.invoiceDate = t.value;
+          if (t.id === 'inv-due-input') ui.invoiceDraft.dueDate = t.value;
+          if (t.id === 'inv-sign1-toggle') ui.invoiceDraft.useOwner1Sign = Boolean(t.checked);
+          if (t.id === 'inv-sign2-toggle') ui.invoiceDraft.useOwner2Sign = Boolean(t.checked);
           refreshInvoiceDraftPreview();
+        }
+        return;
+      }
+      if ((t.id === 'sig-owner1-file' || t.id === 'sig-owner2-file') && t.files && t.files[0]) {
+        const slot = t.id === 'sig-owner1-file' ? 'owner1' : 'owner2';
+        try {
+          toast('Signature photo saaf ho rahi hai...', 'info');
+          const cleanDataUrl = await processUploadedSignatureFile(t.files[0]);
+          if (!state.settings.signatures) state.settings.signatures = {};
+          const cur = getSignatureConfig(slot);
+          state.settings.signatures[slot] = {
+            name: cur.name,
+            dataUrl: cleanDataUrl,
+            rotation: Number(state.settings.signatures[slot]?.rotation || 0),
+            size: Number(state.settings.signatures[slot]?.size || 100)
+          };
+          saveState();
+          render();
+          await flushCloudSync();
+          toast(`${slot === 'owner1' ? 'Owner 1' : 'Owner 2'} Signature clean & save ho gaya ✓`, 'success');
+        } catch (err) {
+          toast('Signature process error: ' + (err?.message || err), 'error');
+        } finally {
+          t.value = '';
         }
         return;
       }
@@ -9131,16 +10043,29 @@
       const cloud = getCloud();
       if (!cloud || cloudBridgeBound) return;
       cloudBridgeBound = true;
+      if (cloud.auth && typeof cloud.auth.authStateReady === 'function') {
+        cloud.auth.authStateReady().then(() => {
+          if (ui.startupCheckingAuth && !cloud.auth.currentUser && !state.session && !ui.loginPending) {
+            ui.startupCheckingAuth = false;
+            render();
+          }
+        }).catch(() => {
+          ui.startupCheckingAuth = false;
+          render();
+        });
+      }
       cloud.onAuthChange(async (fbUser) => {
         if (manualAuthFlow) return;
         if (fbUser) {
+          ui.startupCheckingAuth = false;
           await hydrateFromFirebaseUser(fbUser);
         } else {
+          ui.startupCheckingAuth = false;
           hydrateGeneration++;
           if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
           ui.cloudHydrating = false;
-          // If Firebase says signed out, clear active cloud session cleanly
-          if (state.session && state.session.provider === 'firebase') {
+          // Never auto-logout unless user explicitly pressed Sign Out
+          if (state.session && state.session.provider === 'firebase' && localStorage.getItem(EXPLICIT_SIGNOUT_KEY) === '1') {
             localStorage.removeItem(ACTIVE_UID_KEY);
             sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
             const remKeep = loadRememberMe();
@@ -9148,10 +10073,19 @@
             state.rememberMe = remKeep;
             ui.pinLocked = false;
             ui.view = 'login';
-            render();
           }
+          render();
         }
       });
+    }
+
+    if (ui.startupCheckingAuth) {
+      setTimeout(() => {
+        if (ui.startupCheckingAuth && !state.session && !ui.loginPending) {
+          ui.startupCheckingAuth = false;
+          render();
+        }
+      }, 4500);
     }
 
     window.addEventListener('dk-cloud-ready', initCloudBridge);
