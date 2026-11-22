@@ -9,6 +9,13 @@
   <meta property="og:description" content="Digital Khata workshop management app for Warsha Aluminium with customer ledgers, sq.ft order billing, stock, staff, expenses, reports, Cloud Sync, daily backup, and KYC." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#04091a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DigitalKhata" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet" />
@@ -707,6 +714,10 @@
               size: 100
             }
           },
+          whatsappQr: {
+            owner1Number: '',
+            owner2Number: ''
+          },
           invoiceSeq: 100
         },
         customers: [],
@@ -842,6 +853,10 @@
           signatures: {
             owner1: { ...def.settings.signatures.owner1, ...(rawSigs.owner1 || {}) },
             owner2: { ...def.settings.signatures.owner2, ...(rawSigs.owner2 || {}) }
+          },
+          whatsappQr: {
+            ...def.settings.whatsappQr,
+            ...(rawSettings.whatsappQr || {})
           }
         },
         rememberMe: { ...def.rememberMe, ...(parsed.rememberMe || {}) },
@@ -2878,6 +2893,10 @@
           signatures: {
             owner1: { ...def.settings.signatures.owner1, ...(dSigs.owner1 || {}) },
             owner2: { ...def.settings.signatures.owner2, ...(dSigs.owner2 || {}) }
+          },
+          whatsappQr: {
+            ...def.settings.whatsappQr,
+            ...(d.settings.whatsappQr || {})
           }
         };
       }
@@ -3103,13 +3122,93 @@
       return parts.join(' - ');
     }
 
+    function normalizeWhatsAppQrNumber(rawInput, selectedCountryCode = '+966') {
+      const raw = String(rawInput || '').trim();
+      if (!raw) return '';
+      const stripped = raw.replace(/[^\d+]/g, '');
+      if (!stripped) return '';
+      if (stripped.startsWith('+')) {
+        let d = stripped.slice(1).replace(/\D/g, '');
+        if (!d) return '';
+        if (d.startsWith('9660') && d.length >= 13) d = '966' + d.slice(4);
+        else if (d.startsWith('920') && d.length >= 13) d = '92' + d.slice(3);
+        return '+' + d;
+      }
+      if (stripped.startsWith('00')) {
+        const d = stripped.slice(2).replace(/\D/g, '');
+        return d ? ('+' + d) : '';
+      }
+      let digits = stripped.replace(/\D/g, '');
+      if (!digits) return '';
+      const ccDigits = String(selectedCountryCode || '+966').replace(/\D/g, '') || '966';
+      if (digits.startsWith(ccDigits) && digits.length >= ccDigits.length + 7) {
+        return '+' + digits;
+      }
+      digits = digits.replace(/^0+/, '');
+      return digits ? ('+' + ccDigits + digits) : '';
+    }
+
+    function splitWhatsAppQrForInput(storedVal, defaultCc = '+966') {
+      const val = String(storedVal || '').trim();
+      const knownCodes = ['+966', '+92', '+971', '+974', '+965', '+973', '+968'];
+      if (!val) return { countryCode: defaultCc, number: '' };
+      for (const cc of knownCodes) {
+        if (val.startsWith(cc)) {
+          return { countryCode: cc, number: val.slice(cc.length) };
+        }
+      }
+      if (val.startsWith('+')) {
+        return { countryCode: defaultCc, number: val };
+      }
+      return { countryCode: defaultCc, number: val };
+    }
+
+    function getWhatsAppQrConfig() {
+      const qr = (state.settings && state.settings.whatsappQr) || {};
+      return {
+        owner1Number: normalizeWhatsAppQrNumber(qr.owner1Number || '', '+966'),
+        owner2Number: normalizeWhatsAppQrNumber(qr.owner2Number || '', '+92')
+      };
+    }
+
+    function getActiveInvoiceQrTarget(inv) {
+      if (!inv) return null;
+      const qrCfg = getWhatsAppQrConfig();
+      const order = Array.isArray(inv.qrOrder) ? inv.qrOrder : [];
+      const u1 = Boolean(inv.useOwner1Qr);
+      const u2 = Boolean(inv.useOwner2Qr);
+      const candidates = [];
+      order.forEach(slot => {
+        if ((slot === 'owner1' && u1) || (slot === 'owner2' && u2)) {
+          if (!candidates.includes(slot)) candidates.push(slot);
+        }
+      });
+      if (u1 && !candidates.includes('owner1')) candidates.push('owner1');
+      if (u2 && !candidates.includes('owner2')) candidates.push('owner2');
+      for (const slot of candidates) {
+        const num = slot === 'owner1' ? qrCfg.owner1Number : qrCfg.owner2Number;
+        const digits = String(num || '').replace(/\D/g, '');
+        if (digits.length >= 8) {
+          return { slot, number: num, digits };
+        }
+      }
+      return null;
+    }
+
     function getInvoiceQrText(inv) {
-      return `Invoice: ${inv.invoiceNo}\nDate: ${formatInvoiceDateDDMMYYYY(inv.invoiceDate)}\nCustomer: ${inv.custName}\nTotal: SAR ${Number(inv.grandTotal || 0).toFixed(2)}`;
+      const target = getActiveInvoiceQrTarget(inv);
+      if (!target) return '';
+      const msg = 'Assalam-o-Alaikum, maine aapka Invoice dekha hai.';
+      return `https://wa.me/${target.digits}?text=${encodeURIComponent(msg)}`;
     }
 
     async function ensureInvoiceQrDataUrl(inv) {
       if (!inv) return '';
       const qrText = getInvoiceQrText(inv);
+      if (!qrText) {
+        inv.qrDataUrl = '';
+        return '';
+      }
       if (ui.qrCache[qrText]) {
         inv.qrDataUrl = ui.qrCache[qrText];
         return ui.qrCache[qrText];
@@ -3118,8 +3217,9 @@
       if (!libs || !libs.QRCode) return '';
       try {
         const url = await libs.QRCode.toDataURL(qrText, {
-          width: 140,
+          width: 220,
           margin: 1,
+          errorCorrectionLevel: 'M',
           color: { dark: '#000000', light: '#ffffff' }
         });
         ui.qrCache[qrText] = url;
@@ -3367,12 +3467,16 @@
         selectedBanks,
         useOwner1Sign: Boolean(overrides.useOwner1Sign),
         useOwner2Sign: Boolean(overrides.useOwner2Sign),
+        useOwner1Qr: Boolean(overrides.useOwner1Qr),
+        useOwner2Qr: Boolean(overrides.useOwner2Qr),
+        qrOrder: Array.isArray(overrides.qrOrder) ? [...overrides.qrOrder] : [],
         owner1Sign: owner1Cfg,
         owner2Sign: owner2Cfg,
         qrDataUrl: '',
         terms: (overrides.terms ?? s.invoiceTerms ?? '').trim() || '1. Work starts after advance payment confirmation.\n2. Remaining balance is due upon completion/delivery.'
       };
-      model.qrDataUrl = ui.qrCache[getInvoiceQrText(model)] || '';
+      const qrText = getInvoiceQrText(model);
+      model.qrDataUrl = qrText ? (ui.qrCache[qrText] || '') : '';
       return model;
     }
 
@@ -3461,7 +3565,8 @@
               ${contactPhone ? `<div style="font-size:${compact ? '9px' : '10.5px'};color:#111827;">${esc(contactPhone)}</div>` : ''}
               ${inv.qrDataUrl ? `
                 <div style="margin-top:${compact ? '8px' : '12px'};">
-                  <img src="${inv.qrDataUrl}" alt="Invoice QR" style="width:${compact ? '60px' : '82px'};height:${compact ? '60px' : '82px'};display:block;border:none;" />
+                  <img src="${inv.qrDataUrl}" alt="WhatsApp QR" style="width:${compact ? '68px' : '90px'};height:${compact ? '68px' : '90px'};display:block;border:none;" />
+                  <div style="font-size:${compact ? '8px' : '9.5px'};font-weight:700;color:#111827;margin-top:3px;">Scan to Chat on WhatsApp</div>
                 </div>
               ` : ''}
             </div>
@@ -3697,8 +3802,12 @@
       if (qEmail) { doc.text(qEmail, ml, qy); qy += 4.5; }
       if (qPhone) { doc.text(qPhone, ml, qy); qy += 4.5; }
       if (inv.qrDataUrl) {
-        doc.addImage(inv.qrDataUrl, 'PNG', ml, qy + 3, 25, 25);
-        qy += 30;
+        doc.addImage(inv.qrDataUrl, 'PNG', ml, qy + 3, 27, 27);
+        qy += 33.5;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text('Scan to Chat on WhatsApp', ml, qy);
+        qy += 4;
       }
 
       // Totals on Right
@@ -6502,6 +6611,62 @@
             `;
           })()}
 
+          <!-- QR Code Settings (2 Owners WhatsApp QR) -->
+          ${(() => {
+            const qrCfg = getWhatsAppQrConfig();
+            const o1Split = splitWhatsAppQrForInput(qrCfg.owner1Number, '+966');
+            const o2Split = splitWhatsAppQrForInput(qrCfg.owner2Number, '+92');
+            const ccOptions = [
+              { code: '+966', label: '+966 (Saudi)' },
+              { code: '+92', label: '+92 (Pakistan)' },
+              { code: '+971', label: '+971 (UAE)' },
+              { code: '+974', label: '+974 (Qatar)' },
+              { code: '+965', label: '+965 (Kuwait)' },
+              { code: '+973', label: '+973 (Bahrain)' },
+              { code: '+968', label: '+968 (Oman)' }
+            ];
+            const renderWaLinkPreview = (num) => {
+              const d = String(num || '').replace(/\D/g, '');
+              return d.length >= 8 ? `https://wa.me/${d}` : '';
+            };
+            return `
+              <div class="glass-card rounded-3xl p-4 space-y-3.5">
+                <div>
+                  <h2 class="text-sm font-bold">QR Code (Owner WhatsApp QR)</h2>
+                  <p class="text-[11px] text-sec mt-0.5">Invoice par scan karte hi customer seedha Owner ke WhatsApp par message bhej sakega.</p>
+                </div>
+
+                <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
+                  <div class="text-xs font-extrabold text-cyan-300">Option 1: Owner 1 WhatsApp QR</div>
+                  <div class="grid grid-cols-12 gap-2">
+                    <select id="qr-owner1-cc" class="col-span-5 h-10 px-2 rounded-xl glass-input text-xs font-semibold">
+                      ${ccOptions.map(o => `<option value="${o.code}" ${o.code === o1Split.countryCode ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                    </select>
+                    <input id="qr-owner1-num" type="tel" value="${esc(o1Split.number)}" placeholder="0552869405" class="col-span-7 h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
+                  </div>
+                  ${renderWaLinkPreview(qrCfg.owner1Number) ? `
+                    <div class="text-[11px] text-emerald-300 font-semibold">Saved: ${esc(qrCfg.owner1Number)} · ${esc(renderWaLinkPreview(qrCfg.owner1Number))}</div>
+                  ` : `<div class="text-[11px] text-mut">Number likhein (e.g. 0552869405)</div>`}
+                </div>
+
+                <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
+                  <div class="text-xs font-extrabold text-cyan-300">Option 2: Owner 2 WhatsApp QR</div>
+                  <div class="grid grid-cols-12 gap-2">
+                    <select id="qr-owner2-cc" class="col-span-5 h-10 px-2 rounded-xl glass-input text-xs font-semibold">
+                      ${ccOptions.map(o => `<option value="${o.code}" ${o.code === o2Split.countryCode ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                    </select>
+                    <input id="qr-owner2-num" type="tel" value="${esc(o2Split.number)}" placeholder="0341xxxxxxx" class="col-span-7 h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
+                  </div>
+                  ${renderWaLinkPreview(qrCfg.owner2Number) ? `
+                    <div class="text-[11px] text-emerald-300 font-semibold">Saved: ${esc(qrCfg.owner2Number)} · ${esc(renderWaLinkPreview(qrCfg.owner2Number))}</div>
+                  ` : `<div class="text-[11px] text-mut">Number likhein (e.g. 0341xxxxxxx)</div>`}
+                </div>
+
+                <button type="button" data-action="save-qr-settings" class="w-full h-10 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold cursor-pointer">Save QR WhatsApp Numbers</button>
+              </div>
+            `;
+          })()}
+
           <!-- 4-Digit PIN Lock -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
             <div class="flex items-center justify-between">
@@ -6557,6 +6722,25 @@
           </div>
 
           ${renderGoogleDriveCard()}
+
+          ${(() => {
+            const pwa = window.__DK_PWA__;
+            if (!pwa || pwa.isInstalled || (!pwa.isInstallable && !pwa.isIOS)) return '';
+            return `
+              <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                  <img src="/icon.png" alt="App Icon" class="w-10 h-10 rounded-xl object-cover shrink-0 border border-amber-400/40" />
+                  <div class="min-w-0">
+                    <h2 class="text-sm font-bold truncate">Install App</h2>
+                    <p class="text-[11px] text-sec truncate">${pwa.isIOS ? 'iPhone / iPad Home Screen par add karein' : 'Phone ya Desktop par App ki tarah install karein'}</p>
+                  </div>
+                </div>
+                <button type="button" data-action="pwa-install" class="px-3.5 h-10 rounded-xl btn-primary-grad text-xs font-extrabold shrink-0 cursor-pointer">
+                  ${pwa.isIOS ? 'Install on iOS' : 'Install App'}
+                </button>
+              </div>
+            `;
+          })()}
 
           <!-- Password & Danger Zone -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
@@ -7045,15 +7229,20 @@
           bankName: initBank,
           vatEnabled: initVat,
           useOwner1Sign: false,
-          useOwner2Sign: false
+          useOwner2Sign: false,
+          useOwner1Qr: false,
+          useOwner2Qr: false,
+          qrOrder: []
         };
         const inv = buildCustomerInvoiceModel(custId, ui.invoiceDraft);
         const s1Cfg = getSignatureConfig('owner1');
         const s2Cfg = getSignatureConfig('owner2');
+        const qrCfg = getWhatsAppQrConfig();
         title = `Invoice · ${c.name}`;
         content = `
           <form id="modal-print-bill-form" class="space-y-3">
             <input type="hidden" name="customerId" value="${esc(custId)}" />
+            <input type="hidden" id="inv-qr-order" name="qrOrder" value="${esc(JSON.stringify(ui.invoiceDraft.qrOrder))}" />
             <div class="grid grid-cols-3 gap-2">
               <div><label class="block text-[11px] text-sec mb-1">Invoice No</label><input id="inv-no-input" name="invoiceNo" type="text" value="${esc(inv.invoiceNo)}" class="w-full h-10 px-2 rounded-xl glass-input text-xs font-bold" /></div>
               <div><label class="block text-[11px] text-sec mb-1">Invoice Date</label><input id="inv-date-input" name="invoiceDate" type="date" value="${esc(inv.invoiceDate)}" class="w-full h-10 px-2 rounded-xl glass-input text-[11px] tabular-nums" /></div>
@@ -7082,6 +7271,22 @@
                 </div>
               </label>
             </div>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
+                <input id="inv-qr1-toggle" name="useOwner1Qr" type="checkbox" ${inv.useOwner1Qr ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
+                <div class="min-w-0">
+                  <div class="font-bold truncate">Owner 1 WhatsApp QR Lagao</div>
+                  <div class="text-[10px] text-sec truncate">${esc(qrCfg.owner1Number || 'Settings me number lagayein')}</div>
+                </div>
+              </label>
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
+                <input id="inv-qr2-toggle" name="useOwner2Qr" type="checkbox" ${inv.useOwner2Qr ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
+                <div class="min-w-0">
+                  <div class="font-bold truncate">Owner 2 WhatsApp QR Lagao</div>
+                  <div class="text-[10px] text-sec truncate">${esc(qrCfg.owner2Number || 'Settings me number lagayein')}</div>
+                </div>
+              </label>
+            </div>
             <div id="inv-live-preview" class="rounded-xl overflow-hidden bg-white shadow-lg">
               ${renderProfessionalInvoiceHtml(inv, true)}
             </div>
@@ -7103,6 +7308,22 @@
               <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Abhi Nahi</button>
               <button type="button" data-action="open-set-pin-from-prompt" class="h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Set 4-Digit PIN</button>
             </div>
+          </div>`;
+      } else if (type === 'ios-pwa-guide') {
+        title = 'Install on iPhone / iPad';
+        content = `
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <img src="/icon.png" alt="App Icon" class="w-12 h-12 rounded-2xl object-cover border border-amber-400/40 shrink-0" />
+              <div class="text-xs text-sec leading-relaxed">
+                Safari me is App ko Home Screen par install karne ke liye:
+              </div>
+            </div>
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-3.5 space-y-2 text-xs text-sec leading-relaxed">
+              <div>1. Safari toolbar me <strong class="text-white">Share</strong> button tap karein.</div>
+              <div>2. Neeche scroll kar ke <strong class="text-white">Add to Home Screen</strong> tap karein.</div>
+            </div>
+            <button type="button" data-close-modal class="w-full h-11 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">Samajh Gaya</button>
           </div>`;
       } else if (type === 'add-order-payment' || type === 'edit-order-payment') {
         const isEdit = type === 'edit-order-payment';
@@ -8485,6 +8706,39 @@
         render();
         toast(synced ? 'Owner signatures saved & synced to Cloud ✓' : 'Owner signatures saved ✓', 'success');
       }
+      else if (act === 'save-qr-settings') {
+        const cc1 = document.getElementById('qr-owner1-cc')?.value || '+966';
+        const raw1 = document.getElementById('qr-owner1-num')?.value || '';
+        const cc2 = document.getElementById('qr-owner2-cc')?.value || '+92';
+        const raw2 = document.getElementById('qr-owner2-num')?.value || '';
+        const norm1 = normalizeWhatsAppQrNumber(raw1, cc1);
+        const norm2 = normalizeWhatsAppQrNumber(raw2, cc2);
+        if (raw1.trim() && norm1.replace(/\D/g, '').length < 9) {
+          toast('Owner 1 ka sahi WhatsApp number likhein.', 'error');
+          return;
+        }
+        if (raw2.trim() && norm2.replace(/\D/g, '').length < 9) {
+          toast('Owner 2 ka sahi WhatsApp number likhein.', 'error');
+          return;
+        }
+        state.settings.whatsappQr = {
+          owner1Number: norm1,
+          owner2Number: norm2
+        };
+        saveState();
+        const synced = await flushCloudSync();
+        render();
+        toast(synced ? 'WhatsApp QR Numbers save & sync ho gaye ✓' : 'WhatsApp QR Numbers save ho gaye ✓', 'success');
+      }
+      else if (act === 'pwa-install') {
+        const pwa = window.__DK_PWA__;
+        if (pwa && pwa.isInstallable) {
+          const accepted = await pwa.install();
+          if (accepted) toast('App install ho gaya ✓', 'success');
+        } else if (pwa && pwa.isIOS) {
+          openModal('ios-pwa-guide');
+        }
+      }
       else if (act === 'retry-login') {
         if (ui.loginRetry) {
           const r = { ...ui.loginRetry };
@@ -9219,6 +9473,8 @@
           c.email = custEmail;
           saveState();
         }
+        let qrOrder = [];
+        try { qrOrder = JSON.parse((fd.get('qrOrder') || '[]').toString()); } catch { qrOrder = []; }
         const overrides = {
           invoiceNo: (fd.get('invoiceNo') || '').toString().trim(),
           invoiceDate: (fd.get('invoiceDate') || '').toString() || todayISO(),
@@ -9226,7 +9482,10 @@
           custEmail,
           vatEnabled: Boolean(fd.get('vatEnabled')),
           useOwner1Sign: Boolean(fd.get('useOwner1Sign')),
-          useOwner2Sign: Boolean(fd.get('useOwner2Sign'))
+          useOwner2Sign: Boolean(fd.get('useOwner2Sign')),
+          useOwner1Qr: Boolean(fd.get('useOwner1Qr')),
+          useOwner2Qr: Boolean(fd.get('useOwner2Qr')),
+          qrOrder: Array.isArray(qrOrder) ? qrOrder : []
         };
         closeModal();
         printWorkshopReport(customerId, overrides);
@@ -9947,13 +10206,34 @@
         await flushCloudSync();
         return;
       }
-      if (t.id === 'inv-vat-toggle' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-sign1-toggle' || t.id === 'inv-sign2-toggle') {
+      if (t.id === 'inv-vat-toggle' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-sign1-toggle' || t.id === 'inv-sign2-toggle' || t.id === 'inv-qr1-toggle' || t.id === 'inv-qr2-toggle') {
         if (ui.invoiceDraft) {
           if (t.id === 'inv-vat-toggle') ui.invoiceDraft.vatEnabled = Boolean(t.checked);
           if (t.id === 'inv-date-input') ui.invoiceDraft.invoiceDate = t.value;
           if (t.id === 'inv-due-input') ui.invoiceDraft.dueDate = t.value;
           if (t.id === 'inv-sign1-toggle') ui.invoiceDraft.useOwner1Sign = Boolean(t.checked);
           if (t.id === 'inv-sign2-toggle') ui.invoiceDraft.useOwner2Sign = Boolean(t.checked);
+          if (t.id === 'inv-qr1-toggle' || t.id === 'inv-qr2-toggle') {
+            const slot = t.id === 'inv-qr1-toggle' ? 'owner1' : 'owner2';
+            const checked = Boolean(t.checked);
+            if (slot === 'owner1') ui.invoiceDraft.useOwner1Qr = checked;
+            else ui.invoiceDraft.useOwner2Qr = checked;
+            const order = Array.isArray(ui.invoiceDraft.qrOrder) ? [...ui.invoiceDraft.qrOrder] : [];
+            if (checked) {
+              const qrCfg = getWhatsAppQrConfig();
+              const num = slot === 'owner1' ? qrCfg.owner1Number : qrCfg.owner2Number;
+              if (!num || num.replace(/\D/g, '').length < 8) {
+                toast(`Pehle Settings me ${slot === 'owner1' ? 'Owner 1' : 'Owner 2'} ka WhatsApp Number save karein.`, 'info');
+              }
+              if (!order.includes(slot)) order.push(slot);
+            } else {
+              const idx = order.indexOf(slot);
+              if (idx >= 0) order.splice(idx, 1);
+            }
+            ui.invoiceDraft.qrOrder = order;
+            const orderHidden = document.getElementById('inv-qr-order');
+            if (orderHidden) orderHidden.value = JSON.stringify(order);
+          }
           refreshInvoiceDraftPreview();
         }
         return;
@@ -10089,6 +10369,9 @@
     }
 
     window.addEventListener('dk-cloud-ready', initCloudBridge);
+    window.addEventListener('dk-pwa-state', () => {
+      if (ui.view === 'settings' || ui.view === 'profile') render();
+    });
     window.addEventListener('dk-drive-state', () => {
       if (ui.view === 'profile' || ui.view === 'settings') render();
     });
