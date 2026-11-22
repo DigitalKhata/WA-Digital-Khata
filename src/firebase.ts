@@ -16,6 +16,7 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  enableNetwork,
   doc,
   getDoc,
   getDocFromServer,
@@ -72,16 +73,33 @@ try {
     {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
-      })
+      }),
+      experimentalForceLongPolling: true
     },
     firebaseConfig.firestoreDatabaseId
   );
 } catch {
-  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  try {
+    dbInstance = initializeFirestore(
+      app,
+      {
+        experimentalForceLongPolling: true
+      },
+      firebaseConfig.firestoreDatabaseId
+    );
+  } catch {
+    dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  }
 }
 
 export const db = dbInstance;
 export const auth = getAuth(app);
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    void enableNetwork(dbInstance).catch(() => {});
+  });
+}
 
 export function handleFirestoreError(
   error: unknown,
@@ -112,13 +130,35 @@ export function handleFirestoreError(
 }
 
 export async function testConnection(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return false;
+  }
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration. Firestore client is offline.');
-      return false;
+    const msg = error instanceof Error ? error.message : String(error || '');
+    const isOfflineErr =
+      msg.includes('the client is offline') ||
+      msg.includes('Could not reach Cloud Firestore backend');
+    if (isOfflineErr) {
+      try {
+        await enableNetwork(db);
+        await new Promise((r) => setTimeout(r, 1200));
+        await getDocFromServer(doc(db, 'test', 'connection'));
+        return true;
+      } catch (retryErr) {
+        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr || '');
+        if (
+          (typeof navigator === 'undefined' || navigator.onLine !== false) &&
+          (retryMsg.includes('the client is offline') ||
+            retryMsg.includes('Could not reach Cloud Firestore backend'))
+        ) {
+          console.error('Please check your Firebase configuration. Firestore client is offline.');
+          return false;
+        }
+        return true;
+      }
     }
     return true;
   }
