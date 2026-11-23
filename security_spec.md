@@ -29,7 +29,18 @@
 7. **`/cnicRegistry/{cnicHash}` & `/mobileRegistry/{mobileHash}`**
    - Unchanged 1 CNIC = 1 Account & 1 Mobile = 1 Account atomic claims.
 
-8. **Default Deny**:
+8. **`/adminBackups/{userId}`**
+   - **Get**: Owner (`request.auth.uid == userId`) or Admin.
+   - **List**: Admin ONLY (`isAdmin()`). Users cannot list or read other users' backups.
+   - **Create / Update**: Owner (must set `uid == userId == request.auth.uid`, `userId == userId`, bounded JSON fields, and cannot modify `lastRestoredAt` / `lastRestoredBy`) or Admin.
+   - **Delete**: Admin ONLY.
+
+9. **`/adminActivityLogs/{logId}`**
+   - **Get / List**: Admin ONLY (`isAdmin()`).
+   - **Create**: Admin (`performedByRole == 'admin'`) OR authenticated owner logging own `'AUTO_BACKUP' | 'MANUAL_BACKUP' | 'DATA_CLEARED'` (`uid == request.auth.uid && performedByRole == 'user'`).
+   - **Update / Delete**: `false` (immutable audit trail).
+
+10. **Default Deny**:
    - `match /{document=**} { allow read, write: if false; }`
 
 ## Dirty Dozen Adversarial Payloads (Must Return PERMISSION_DENIED)
@@ -43,5 +54,7 @@
 8. List query against `/deviceApprovalLinks` collection -> DENIED.
 9. Injecting oversized string (>160 chars) into `deviceName` on `/users/{uid}/devices/{id}` -> DENIED.
 10. Modifying `/users/{uid}/loginHistory/{id}` after creation -> DENIED (`update: false`).
-11. Cross-user read on `/users/{otherUid}/devices/{id}` -> DENIED.
-12. Ghost field `isAdmin: true` in `/users/{uid}` profile update -> DENIED.
+11. Cross-user read/list on `/adminBackups` or `/adminBackups/{otherUid}` -> DENIED.
+12. Non-admin reading/listing `/adminActivityLogs` or forging `RESTORE_USER_DATA` / `performedByRole: 'admin'` -> DENIED.
+13. Ghost field `isAdmin: true` in `/users/{uid}` or `/adminBackups/{uid}` -> DENIED.
+

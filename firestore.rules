@@ -49,7 +49,9 @@ service cloud.firestore {
           'activeDeviceId', 'activeDeviceName', 'activeSessionId',
           'activeDeviceCount', 'sessionVersion', 'lastLoginAt',
           'totalKhataAmount', 'totalPendingAmount', 'customerCount',
-          'lastSyncAt', 'lastBackupAt', 'createdAt', 'updatedAt'
+          'lastSyncAt', 'lastBackupAt', 'profilePicUrl',
+          'termsAccepted', 'termsAcceptedAt', 'lastAdminRestoreAt',
+          'createdAt', 'updatedAt'
         ])
         && data.uid == userId
         && isNonEmptyString(data.name, 120)
@@ -77,17 +79,23 @@ service cloud.firestore {
         && isOptionalNumber(data, 'customerCount')
         && isOptionalNumber(data, 'lastSyncAt')
         && isOptionalNumber(data, 'lastBackupAt')
+        && isOptionalString(data, 'profilePicUrl', 300000)
+        && isOptionalBool(data, 'termsAccepted')
+        && isOptionalNumber(data, 'termsAcceptedAt')
+        && isOptionalNumber(data, 'lastAdminRestoreAt')
         && isOptionalNumber(data, 'createdAt');
     }
 
     function isOwnerSafeProfileCreate(data) {
       return (!('blocked' in data) || data.blocked == false)
+        && (!('lastAdminRestoreAt' in data) || data.lastAdminRestoreAt == 0)
         && (!('kycStatus' in data) || data.kycStatus in ['none', 'verifying', 'duplicate']);
     }
 
     function isOwnerSafeProfileUpdate(incoming, existing) {
       return (!('blocked' in existing) || existing.blocked == false)
         && (!('blocked' in incoming) || incoming.blocked == false)
+        && (!('lastAdminRestoreAt' in incoming) || incoming.lastAdminRestoreAt == existing.lastAdminRestoreAt)
         && (
           !('kycStatus' in existing)
           || existing.kycStatus != 'duplicate'
@@ -235,6 +243,105 @@ service cloud.firestore {
         && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
     }
 
+    function isValidAdminUserBackup(data, userId) {
+      return isNonEmptyString(userId, 128)
+        && data.keys().hasAll([
+          'uid', 'userId', 'name', 'isDataDeleted',
+          'allUserDataJson', 'lastGoodBackupJson', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'userId', 'name', 'profilePicUrl', 'phone', 'email',
+          'termsAccepted', 'termsAcceptedAt', 'recordCount', 'isDataDeleted',
+          'deletedAt', 'allUserDataJson', 'lastGoodBackupJson',
+          'lastBackupAt', 'lastRestoredAt', 'lastRestoredBy', 'updatedAt'
+        ])
+        && data.uid == userId
+        && data.userId == userId
+        && isNonEmptyString(data.name, 120)
+        && isOptionalString(data, 'profilePicUrl', 300000)
+        && isOptionalString(data, 'phone', 40)
+        && isOptionalString(data, 'email', 160)
+        && isOptionalBool(data, 'termsAccepted')
+        && isOptionalNumber(data, 'termsAcceptedAt')
+        && isOptionalNumber(data, 'recordCount')
+        && data.isDataDeleted is bool
+        && isOptionalNumber(data, 'deletedAt')
+        && data.allUserDataJson is string
+        && data.allUserDataJson.size() >= 2
+        && data.allUserDataJson.size() <= 450000
+        && data.lastGoodBackupJson is string
+        && data.lastGoodBackupJson.size() >= 2
+        && data.lastGoodBackupJson.size() <= 450000
+        && isOptionalNumber(data, 'lastBackupAt')
+        && isOptionalNumber(data, 'lastRestoredAt')
+        && isOptionalString(data, 'lastRestoredBy', 160)
+        && (data.updatedAt is int || data.updatedAt is float) && data.updatedAt > 0;
+    }
+
+    function isValidAdminActivityLog(data, logId) {
+      return isValidId(logId)
+        && data.keys().hasAll([
+          'id', 'uid', 'userName', 'action', 'performedBy', 'performedByRole', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'uid', 'userName', 'action', 'performedBy',
+          'performedByRole', 'details', 'dateStr', 'timeStr', 'createdAt'
+        ])
+        && data.id == logId
+        && isNonEmptyString(data.uid, 128)
+        && isNonEmptyString(data.userName, 120)
+        && data.action in ['AUTO_BACKUP', 'MANUAL_BACKUP', 'DATA_CLEARED', 'RESTORE_USER_DATA']
+        && isNonEmptyString(data.performedBy, 160)
+        && data.performedByRole in ['user', 'admin']
+        && isOptionalString(data, 'details', 300)
+        && isOptionalString(data, 'dateStr', 32)
+        && isOptionalString(data, 'timeStr', 32)
+        && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
+    }
+
+    match /adminBackups/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidAdminUserBackup(request.resource.data, userId)
+        && (
+          isAdmin()
+          || (
+            isOwner(userId)
+            && (!('lastRestoredAt' in request.resource.data) || request.resource.data.lastRestoredAt == 0)
+            && (!('lastRestoredBy' in request.resource.data) || request.resource.data.lastRestoredBy == '')
+          )
+        );
+      allow update: if isValidAdminUserBackup(request.resource.data, userId)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.userId == resource.data.userId
+        && (
+          isAdmin()
+          || (
+            isOwner(userId)
+            && (!('lastRestoredAt' in request.resource.data) || request.resource.data.lastRestoredAt == resource.data.lastRestoredAt)
+            && (!('lastRestoredBy' in request.resource.data) || request.resource.data.lastRestoredBy == resource.data.lastRestoredBy)
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /adminActivityLogs/{logId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAuthenticated()
+        && isValidAdminActivityLog(request.resource.data, logId)
+        && (
+          (isAdmin() && request.resource.data.performedByRole == 'admin')
+          || (
+            isOwner(request.resource.data.uid)
+            && request.resource.data.performedByRole == 'user'
+            && request.resource.data.action in ['AUTO_BACKUP', 'MANUAL_BACKUP', 'DATA_CLEARED']
+          )
+        );
+      allow update: if false;
+      allow delete: if false;
+    }
+
     match /deviceApprovalLinks/{reqId} {
       allow get: if isValidReqId(reqId);
       allow list: if false;
@@ -307,9 +414,9 @@ service cloud.firestore {
 
       match /backups/{backupId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId)
+        allow create: if (isOwner(userId) || isAdmin())
           && isValidBackupDoc(request.resource.data, userId, backupId);
-        allow update: if isOwner(userId)
+        allow update: if (isOwner(userId) || isAdmin())
           && isValidBackupDoc(request.resource.data, userId, backupId)
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.id == resource.data.id;

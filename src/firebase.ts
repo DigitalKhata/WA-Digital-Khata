@@ -267,6 +267,101 @@ function safeStringifyBounded(obj: Record<string, unknown>): string {
   return s3.length <= VAULT_MAX_BYTES ? s3 : '{}';
 }
 
+const ADMIN_BACKUP_JSON_MAX = 440000;
+const PROFILE_PIC_MAX = 280000;
+
+function extractSafeProfilePic(
+  explicitPic: unknown,
+  appState: Record<string, unknown>,
+  existingData?: Record<string, unknown> | null,
+  existingBackup?: Record<string, unknown> | null
+): string {
+  const sessionObj = (appState.session && typeof appState.session === 'object' ? appState.session : {}) as Record<string, unknown>;
+  const kycObj = (appState.kyc && typeof appState.kyc === 'object' ? appState.kyc : {}) as Record<string, unknown>;
+  const settingsObj = (appState.settings && typeof appState.settings === 'object' ? appState.settings : {}) as Record<string, unknown>;
+  const candidates = [
+    explicitPic,
+    sessionObj.photo,
+    kycObj.selfiePhoto,
+    settingsObj.customLogo,
+    existingData?.profilePicUrl,
+    existingBackup?.profilePicUrl
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim().length > 0 && c.length <= PROFILE_PIC_MAX) {
+      return c.trim();
+    }
+  }
+  return '';
+}
+
+function countWorkshopRecords(dataObj: Record<string, unknown>): number {
+  const keys = [
+    'customers', 'orders', 'customerPayments', 'transactions', 'stock',
+    'suppliers', 'supplierEntries', 'partyPayments', 'staff', 'staffLogs',
+    'salaryHistory', 'messEntries', 'rentRecords', 'rentPayments',
+    'committees', 'archivedReports'
+  ];
+  let total = 0;
+  for (const k of keys) {
+    const val = dataObj[k];
+    if (Array.isArray(val)) total += val.length;
+  }
+  return total;
+}
+
+function buildAdminSnapshotObject(appState: Record<string, unknown>): Record<string, unknown> {
+  return {
+    settings: appState.settings && typeof appState.settings === 'object' ? appState.settings : {},
+    customers: Array.isArray(appState.customers) ? appState.customers : [],
+    orders: Array.isArray(appState.orders) ? appState.orders : [],
+    customerPayments: Array.isArray(appState.customerPayments) ? appState.customerPayments : [],
+    transactions: Array.isArray(appState.transactions) ? appState.transactions : [],
+    stock: Array.isArray(appState.stock) ? appState.stock : [],
+    suppliers: Array.isArray(appState.suppliers) ? appState.suppliers : [],
+    supplierEntries: Array.isArray(appState.supplierEntries) ? appState.supplierEntries : [],
+    partyPayments: Array.isArray(appState.partyPayments) ? appState.partyPayments : [],
+    staff: Array.isArray(appState.staff) ? appState.staff : [],
+    staffLogs: Array.isArray(appState.staffLogs) ? appState.staffLogs : [],
+    salaryHistory: Array.isArray(appState.salaryHistory) ? appState.salaryHistory : [],
+    messEntries: Array.isArray(appState.messEntries) ? appState.messEntries : [],
+    rentRecords: Array.isArray(appState.rentRecords) ? appState.rentRecords : [],
+    rentPayments: Array.isArray(appState.rentPayments) ? appState.rentPayments : [],
+    committees: Array.isArray(appState.committees) ? appState.committees : [],
+    archivedReports: Array.isArray(appState.archivedReports) ? appState.archivedReports : [],
+    lastActiveMonth: typeof appState.lastActiveMonth === 'string' ? appState.lastActiveMonth : '',
+    kyc: appState.kyc && typeof appState.kyc === 'object' ? appState.kyc : {}
+  };
+}
+
+function safeAdminBackupJson(snapshotObj: Record<string, unknown>): string {
+  const s = JSON.stringify(snapshotObj);
+  if (s.length <= ADMIN_BACKUP_JSON_MAX) return s;
+  const clone: Record<string, unknown> = { ...snapshotObj };
+  if (clone.kyc && typeof clone.kyc === 'object') {
+    clone.kyc = { ...(clone.kyc as Record<string, unknown>), frontPhoto: '', backPhoto: '', selfiePhoto: '' };
+  }
+  if (clone.settings && typeof clone.settings === 'object') {
+    const st: Record<string, unknown> = { ...(clone.settings as Record<string, unknown>), customLogo: '' };
+    if (st.signatures && typeof st.signatures === 'object') {
+      const sigs = { ...(st.signatures as Record<string, unknown>) };
+      if (sigs.owner1 && typeof sigs.owner1 === 'object') {
+        sigs.owner1 = { ...(sigs.owner1 as Record<string, unknown>), dataUrl: '' };
+      }
+      st.signatures = sigs;
+    }
+    clone.settings = st;
+  }
+  const s2 = JSON.stringify(clone);
+  if (s2.length <= ADMIN_BACKUP_JSON_MAX) return s2;
+  if (Array.isArray(clone.archivedReports) && clone.archivedReports.length > 24) {
+    clone.archivedReports = clone.archivedReports.slice(-24);
+  }
+  const s3 = JSON.stringify(clone);
+  if (s3.length <= ADMIN_BACKUP_JSON_MAX) return s3;
+  return '{}';
+}
+
 export function normalizeCnic13(rawCnic: string): string {
   const trimmed = String(rawCnic || '').trim();
   if (!trimmed) {
@@ -431,6 +526,7 @@ export interface AdminUserInspection {
   profile: Record<string, unknown> | null;
   vaultData: Record<string, unknown>;
   backups: Array<Record<string, unknown>>;
+  adminBackup: Record<string, unknown> | null;
 }
 
 function computeSummaryStats(appState: Record<string, unknown>): {
@@ -533,7 +629,14 @@ export const dkCloud = {
     return onAuthStateChanged(auth, cb);
   },
 
-  async signUp(name: string, identifier: string, password: string, cnic?: string, extraMobile?: string) {
+  async signUp(
+    name: string,
+    identifier: string,
+    password: string,
+    cnic?: string,
+    extraMobile?: string,
+    termsAccepted = true
+  ) {
     const cleanName = String(name || '').trim().slice(0, 120);
     if (!cleanName) throw new Error('Full Name is required.');
     const validCnic = cnic !== undefined && cnic !== '' ? normalizeCnic13(cnic) : '';
@@ -562,6 +665,7 @@ export const dkCloud = {
 
     await updateProfile(cred.user, { displayName: cleanName });
     const now = Date.now();
+    const acceptedTerms = Boolean(termsAccepted);
     const profileDoc = {
       uid: cred.user.uid,
       name: cleanName,
@@ -588,6 +692,10 @@ export const dkCloud = {
       customerCount: 0,
       lastSyncAt: now,
       lastBackupAt: 0,
+      profilePicUrl: '',
+      termsAccepted: acceptedTerms,
+      termsAcceptedAt: acceptedTerms ? now : 0,
+      lastAdminRestoreAt: 0,
       createdAt: now,
       updatedAt: now
     };
@@ -597,6 +705,33 @@ export const dkCloud = {
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, userPath);
     }
+
+    // Create initial Admin Backup record for the new user
+    try {
+      const emptySnapJson = JSON.stringify({ customers: [], orders: [], transactions: [] });
+      await setDoc(doc(db, 'adminBackups', cred.user.uid), {
+        uid: cred.user.uid,
+        userId: cred.user.uid,
+        name: cleanName,
+        profilePicUrl: '',
+        phone: mobileCandidate.slice(0, 40),
+        email: norm.email.slice(0, 160),
+        termsAccepted: acceptedTerms,
+        termsAcceptedAt: acceptedTerms ? now : 0,
+        recordCount: 0,
+        isDataDeleted: false,
+        deletedAt: 0,
+        allUserDataJson: emptySnapJson,
+        lastGoodBackupJson: emptySnapJson,
+        lastBackupAt: now,
+        lastRestoredAt: 0,
+        lastRestoredBy: '',
+        updatedAt: now
+      });
+    } catch {
+      /* non-fatal during initial signup; saveUserVault will retry */
+    }
+
     return { user: cred.user, profile: profileDoc, norm, cnic: validCnic };
   },
 
@@ -697,6 +832,10 @@ export const dkCloud = {
       cnicHash?: string;
       mobileHash?: string;
       kycDuplicateOf?: string;
+      profilePicUrl?: string;
+      termsAccepted?: boolean;
+      termsAcceptedAt?: number;
+      forceDataDeleted?: boolean;
       lastBackupAt?: number;
       createdAt?: number;
     },
@@ -731,7 +870,8 @@ export const dkCloud = {
       } catch { /* ignore invalid draft CNIC */ }
     }
 
-    const mobileStr = String(meta.mobile ?? existingData?.mobile ?? '').slice(0, 40);
+    const rawKycMobile = typeof rawKyc.mobile === 'string' ? rawKyc.mobile : '';
+    const mobileStr = String(meta.mobile || rawKycMobile || existingData?.mobile || '').slice(0, 40);
     let mobileHashToSave = String(meta.mobileHash ?? existingData?.mobileHash ?? '').slice(0, 64);
     if (!mobileHashToSave && mobileStr && normalizeMobileDigits(mobileStr).length >= 8) {
       try {
@@ -739,7 +879,17 @@ export const dkCloud = {
       } catch { /* ignore */ }
     }
 
-    const profileDoc = {
+    const profilePicUrl = extractSafeProfilePic(meta.profilePicUrl, appState, existingData);
+    const termsAccepted = meta.termsAccepted !== undefined
+      ? Boolean(meta.termsAccepted)
+      : Boolean(existingData?.termsAccepted ?? true);
+    const termsAcceptedAt = Number(
+      meta.termsAcceptedAt ??
+      existingData?.termsAcceptedAt ??
+      (termsAccepted ? Number(existingData?.createdAt ?? now) : 0)
+    );
+
+    const profileDoc: Record<string, unknown> = {
       uid,
       name: String(meta.name || existingData?.name || 'Workshop Owner').slice(0, 120),
       identifier: String(meta.identifier ?? existingData?.identifier ?? '').slice(0, 160),
@@ -765,9 +915,17 @@ export const dkCloud = {
       customerCount: summary.customerCount,
       lastSyncAt: now,
       lastBackupAt: Number(meta.lastBackupAt ?? existingData?.lastBackupAt ?? 0),
+      profilePicUrl,
+      termsAccepted,
+      termsAcceptedAt,
       createdAt: Number(existingData?.createdAt ?? meta.createdAt ?? now),
       updatedAt: now
     };
+    if (!existingData) {
+      profileDoc.lastAdminRestoreAt = 0;
+    } else if ('lastAdminRestoreAt' in existingData) {
+      profileDoc.lastAdminRestoreAt = Number(existingData.lastAdminRestoreAt || 0);
+    }
 
     try {
       await setDoc(doc(db, 'users', uid), profileDoc);
@@ -838,7 +996,167 @@ export const dkCloud = {
       }
     }
 
+    // Real-time Auto Backup copy in Admin Database (/adminBackups/{uid})
+    try {
+      await this.syncAdminBackupSnapshot(
+        uid,
+        {
+          name: String(profileDoc.name || 'Workshop Owner'),
+          email: String(profileDoc.email || ''),
+          phone: mobileStr,
+          profilePicUrl,
+          termsAccepted,
+          termsAcceptedAt,
+          forceDataDeleted: Boolean(meta.forceDataDeleted)
+        },
+        appState,
+        existingData
+      );
+    } catch (adminBackupErr) {
+      console.warn('Admin Auto Backup sync warning:', adminBackupErr);
+    }
+
     return now;
+  },
+
+  async appendAdminActivityLog(entry: {
+    uid: string;
+    userName: string;
+    action: 'AUTO_BACKUP' | 'MANUAL_BACKUP' | 'DATA_CLEARED' | 'RESTORE_USER_DATA';
+    performedBy: string;
+    performedByRole: 'user' | 'admin';
+    details?: string;
+  }): Promise<void> {
+    if (!auth.currentUser) return;
+    const now = Date.now();
+    const logId = this._randomSafeId('act_', 18);
+    const { dateStr, timeStr } = this._formatDateTimeParts(now);
+    const path = `adminActivityLogs/${logId}`;
+    try {
+      await setDoc(doc(db, 'adminActivityLogs', logId), {
+        id: logId,
+        uid: String(entry.uid || '').slice(0, 128),
+        userName: String(entry.userName || 'Workshop User').slice(0, 120),
+        action: entry.action,
+        performedBy: String(entry.performedBy || 'User').slice(0, 160),
+        performedByRole: entry.performedByRole,
+        details: String(entry.details || '').slice(0, 300),
+        dateStr,
+        timeStr,
+        createdAt: now
+      });
+    } catch (err) {
+      console.warn('Admin activity log warning:', path, err);
+    }
+  },
+
+  async syncAdminBackupSnapshot(
+    uid: string,
+    meta: {
+      name: string;
+      email?: string;
+      phone?: string;
+      profilePicUrl?: string;
+      termsAccepted?: boolean;
+      termsAcceptedAt?: number;
+      forceDataDeleted?: boolean;
+    },
+    appState: Record<string, unknown>,
+    existingProfile?: Record<string, unknown> | null
+  ): Promise<void> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+    const now = Date.now();
+    const backupRef = doc(db, 'adminBackups', uid);
+    const existingSnap = await getDoc(backupRef).catch(() => null);
+    const existingBackup = existingSnap && existingSnap.exists() ? existingSnap.data() : null;
+
+    const snapObj = buildAdminSnapshotObject(appState);
+    const allUserDataJson = safeAdminBackupJson(snapObj);
+    const recordCount = countWorkshopRecords(snapObj);
+    const prevRecordCount = Number(existingBackup?.recordCount || 0);
+    const wasDeleted = Boolean(existingBackup?.isDataDeleted);
+
+    const isDataDeleted = Boolean(
+      meta.forceDataDeleted ||
+      (recordCount === 0 && (prevRecordCount > 0 || wasDeleted))
+    );
+
+    const existingGoodJson = String(existingBackup?.lastGoodBackupJson || '');
+    const lastGoodBackupJson =
+      recordCount > 0
+        ? allUserDataJson
+        : (isDataDeleted && existingGoodJson.length > 2 ? existingGoodJson : allUserDataJson);
+
+    const profilePicUrl = extractSafeProfilePic(meta.profilePicUrl, appState, existingProfile, existingBackup);
+    const phone = String(meta.phone || existingBackup?.phone || existingProfile?.mobile || '').slice(0, 40);
+    const email = String(meta.email || existingBackup?.email || existingProfile?.email || '').slice(0, 160);
+    const name = String(meta.name || existingBackup?.name || existingProfile?.name || 'Workshop Owner').slice(0, 120);
+    const termsAccepted = meta.termsAccepted !== undefined
+      ? Boolean(meta.termsAccepted)
+      : Boolean(existingBackup?.termsAccepted ?? existingProfile?.termsAccepted ?? true);
+    const termsAcceptedAt = Number(
+      meta.termsAcceptedAt ??
+      existingBackup?.termsAcceptedAt ??
+      existingProfile?.termsAcceptedAt ??
+      now
+    );
+    const deletedAt = isDataDeleted
+      ? (meta.forceDataDeleted || !wasDeleted ? now : Number(existingBackup?.deletedAt || now))
+      : 0;
+
+    const payload: Record<string, unknown> = {
+      uid,
+      userId: uid,
+      name,
+      profilePicUrl,
+      phone,
+      email,
+      termsAccepted,
+      termsAcceptedAt,
+      recordCount,
+      isDataDeleted,
+      deletedAt,
+      allUserDataJson,
+      lastGoodBackupJson,
+      lastBackupAt: now,
+      updatedAt: now
+    };
+    if (!existingBackup) {
+      payload.lastRestoredAt = 0;
+      payload.lastRestoredBy = '';
+    } else {
+      if ('lastRestoredAt' in existingBackup) {
+        payload.lastRestoredAt = Number(existingBackup.lastRestoredAt || 0);
+      }
+      if ('lastRestoredBy' in existingBackup) {
+        payload.lastRestoredBy = String(existingBackup.lastRestoredBy || '').slice(0, 160);
+      }
+    }
+
+    const prevJson = String(existingBackup?.allUserDataJson || '');
+    const dataChanged = prevJson !== allUserDataJson || Boolean(meta.forceDataDeleted);
+
+    try {
+      await setDoc(backupRef, payload);
+    } catch (err) {
+      if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+      handleFirestoreError(err, OperationType.WRITE, `adminBackups/${uid}`);
+    }
+
+    if (dataChanged) {
+      const actionType: 'AUTO_BACKUP' | 'DATA_CLEARED' = isDataDeleted ? 'DATA_CLEARED' : 'AUTO_BACKUP';
+      const detailText = isDataDeleted
+        ? `User data cleared/deleted (previous snapshot preserved: ${lastGoodBackupJson.length} bytes).`
+        : `Real-time auto backup saved (${recordCount} records).`;
+      await this.appendAdminActivityLog({
+        uid,
+        userName: name,
+        action: actionType,
+        performedBy: email || phone || name,
+        performedByRole: 'user',
+        details: detailText
+      });
+    }
   },
 
   async saveBackupSnapshot(
@@ -885,11 +1203,16 @@ export const dkCloud = {
     }
 
     const userPath = `users/${uid}`;
+    let snapName = String(auth.currentUser.displayName || 'Workshop User');
+    let snapActor = String(auth.currentUser.email || snapName);
     try {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
+        const sd = snap.data();
+        snapName = String(sd.name || snapName);
+        snapActor = String(sd.email || sd.mobile || snapName);
         await setDoc(doc(db, 'users', uid), {
-          ...snap.data(),
+          ...sd,
           lastBackupAt: now,
           updatedAt: now
         });
@@ -897,6 +1220,17 @@ export const dkCloud = {
     } catch (err) {
       if (!auth.currentUser || auth.currentUser.uid !== uid) throw new Error('AUTH_SESSION_CHANGED');
       handleFirestoreError(err, OperationType.UPDATE, userPath);
+    }
+
+    if (kind === 'manual') {
+      await this.appendAdminActivityLog({
+        uid,
+        userName: snapName,
+        action: 'MANUAL_BACKUP',
+        performedBy: snapActor,
+        performedByRole: 'user',
+        details: `Manual JSON snapshot saved (${dateKey}).`
+      });
     }
 
     return now;
@@ -999,6 +1333,10 @@ export const dkCloud = {
       customerCount: 0,
       lastSyncAt: now,
       lastBackupAt: 0,
+      profilePicUrl: '',
+      termsAccepted: true,
+      termsAcceptedAt: now,
+      lastAdminRestoreAt: 0,
       createdAt: now,
       updatedAt: now
     };
@@ -1381,10 +1719,13 @@ export const dkCloud = {
     deviceId: string,
     sessionId: string,
     localSessionVersion: number,
-    onRevoked: (reason: 'other_device' | 'logout_all' | 'blocked' | 'revoked') => void
+    onRevoked: (reason: 'other_device' | 'logout_all' | 'blocked' | 'revoked') => void,
+    onAdminRestore?: (restoredAt: number) => void,
+    initialAdminRestoreAt = 0
   ): () => void {
     const userPath = `users/${uid}`;
     let fired = false;
+    let lastKnownRestoreAt = Number(initialAdminRestoreAt || 0);
     return onSnapshot(
       doc(db, 'users', uid),
       (snap) => {
@@ -1418,6 +1759,12 @@ export const dkCloud = {
         if (remoteSessionId && sessionId && remoteSessionId !== sessionId) {
           fired = true;
           onRevoked('other_device');
+          return;
+        }
+        const remoteRestoreAt = Number(d.lastAdminRestoreAt || 0);
+        if (remoteRestoreAt > lastKnownRestoreAt) {
+          lastKnownRestoreAt = remoteRestoreAt;
+          if (onAdminRestore) onAdminRestore(remoteRestoreAt);
         }
       },
       (err) => {
@@ -1531,8 +1878,65 @@ export const dkCloud = {
       throw new Error('Admin authorization required.');
     }
     try {
-      const snaps = await getDocs(collection(db, 'users'));
-      const list = snaps.docs.map((d) => d.data());
+      const [userSnaps, backupSnaps] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'adminBackups')).catch(() => null)
+      ]);
+      const backupMap = new Map<string, Record<string, unknown>>();
+      if (backupSnaps) {
+        backupSnaps.docs.forEach((bDoc) => {
+          const bd = bDoc.data();
+          const bUid = String(bd.uid || bd.userId || bDoc.id);
+          backupMap.set(bUid, bd);
+        });
+      }
+      const userMap = new Map<string, Record<string, unknown>>();
+      userSnaps.docs.forEach((d) => {
+        const u = d.data();
+        const uUid = String(u.uid || d.id);
+        const bk = backupMap.get(uUid);
+        userMap.set(uUid, {
+          ...u,
+          uid: uUid,
+          userId: uUid,
+          profilePicUrl: String(bk?.profilePicUrl || u.profilePicUrl || ''),
+          phone: String(u.mobile || bk?.phone || ''),
+          mobile: String(u.mobile || bk?.phone || ''),
+          email: String(u.email || bk?.email || ''),
+          isDataDeleted: Boolean(bk?.isDataDeleted ?? false),
+          deletedAt: Number(bk?.deletedAt ?? 0),
+          recordCount: Number(bk?.recordCount ?? 0),
+          adminBackupAt: Number(bk?.lastBackupAt ?? bk?.updatedAt ?? u.lastSyncAt ?? 0),
+          lastRestoredAt: Number(bk?.lastRestoredAt ?? u.lastAdminRestoreAt ?? 0),
+          lastRestoredBy: String(bk?.lastRestoredBy ?? '')
+        });
+      });
+      // Include any user present in adminBackups even if profile doc was removed
+      backupMap.forEach((bk, bUid) => {
+        if (!userMap.has(bUid)) {
+          userMap.set(bUid, {
+            uid: bUid,
+            userId: bUid,
+            name: String(bk.name || 'User'),
+            profilePicUrl: String(bk.profilePicUrl || ''),
+            phone: String(bk.phone || ''),
+            mobile: String(bk.phone || ''),
+            email: String(bk.email || ''),
+            kycStatus: 'none',
+            blocked: false,
+            customerCount: 0,
+            totalPendingAmount: 0,
+            isDataDeleted: Boolean(bk.isDataDeleted ?? false),
+            deletedAt: Number(bk.deletedAt ?? 0),
+            recordCount: Number(bk.recordCount ?? 0),
+            adminBackupAt: Number(bk.lastBackupAt ?? bk.updatedAt ?? 0),
+            lastRestoredAt: Number(bk.lastRestoredAt ?? 0),
+            lastRestoredBy: String(bk.lastRestoredBy ?? ''),
+            createdAt: Number(bk.updatedAt || 0)
+          });
+        }
+      });
+      const list = Array.from(userMap.values());
       list.sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0));
       return list;
     } catch (err) {
@@ -1552,6 +1956,14 @@ export const dkCloud = {
       handleFirestoreError(err, OperationType.GET, `users/${uid}`);
     }
 
+    let adminBackup: Record<string, unknown> | null = null;
+    try {
+      const abSnap = await getDoc(doc(db, 'adminBackups', uid));
+      if (abSnap.exists()) adminBackup = abSnap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `adminBackups/${uid}`);
+    }
+
     const vaultData: Record<string, unknown> = {};
     for (const shardId of ['core', 'ledger', 'operations', 'kyc'] as const) {
       try {
@@ -1567,6 +1979,35 @@ export const dkCloud = {
       }
     }
 
+    // Prefer rich backed-up Admin snapshot (especially recoverable lastGoodBackupJson if user cleared/deleted data)
+    if (adminBackup) {
+      try {
+        const primaryJson = adminBackup.isDataDeleted
+          ? String(adminBackup.lastGoodBackupJson || adminBackup.allUserDataJson || '{}')
+          : String(adminBackup.allUserDataJson || adminBackup.lastGoodBackupJson || '{}');
+        const parsedAb = JSON.parse(primaryJson);
+        if (parsedAb && typeof parsedAb === 'object') {
+          const curRecords = countWorkshopRecords(vaultData);
+          const abRecords = countWorkshopRecords(parsedAb as Record<string, unknown>);
+          if (adminBackup.isDataDeleted || curRecords === 0 || abRecords > curRecords) {
+            const existingKyc = (vaultData.kyc && typeof vaultData.kyc === 'object' ? vaultData.kyc : {}) as Record<string, unknown>;
+            const abKyc = (parsedAb.kyc && typeof parsedAb.kyc === 'object' ? parsedAb.kyc : {}) as Record<string, unknown>;
+            Object.assign(vaultData, parsedAb);
+            if (existingKyc.frontPhoto || existingKyc.backPhoto || existingKyc.selfiePhoto) {
+              vaultData.kyc = {
+                ...abKyc,
+                frontPhoto: abKyc.frontPhoto || existingKyc.frontPhoto || '',
+                backPhoto: abKyc.backPhoto || existingKyc.backPhoto || '',
+                selfiePhoto: abKyc.selfiePhoto || existingKyc.selfiePhoto || ''
+              };
+            }
+          }
+        }
+      } catch {
+        /* ignore malformed backup json */
+      }
+    }
+
     const backups: Array<Record<string, unknown>> = [];
     try {
       const q = query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(10));
@@ -1576,7 +2017,508 @@ export const dkCloud = {
       handleFirestoreError(err, OperationType.LIST, `users/${uid}/backups`);
     }
 
-    return { profile, vaultData, backups };
+    return { profile, vaultData, backups, adminBackup };
+  },
+
+  adminWatchUserLive(
+    uid: string,
+    onUpdate: (inspection: AdminUserInspection) => void,
+    onError?: (err: unknown) => void
+  ): () => void {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      return () => {};
+    }
+    let profile: Record<string, unknown> | null = null;
+    let adminBackup: Record<string, unknown> | null = null;
+    const shardMap: Record<string, Record<string, unknown>> = {};
+    let backups: Array<Record<string, unknown>> = [];
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+
+    const emitMerged = () => {
+      if (closed) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (closed) return;
+        const vaultData: Record<string, unknown> = {};
+        for (const shardId of ['core', 'ledger', 'operations', 'kyc']) {
+          if (shardMap[shardId]) {
+            Object.assign(vaultData, shardMap[shardId]);
+          }
+        }
+        if (adminBackup) {
+          try {
+            const primaryJson = adminBackup.isDataDeleted
+              ? String(adminBackup.lastGoodBackupJson || adminBackup.allUserDataJson || '{}')
+              : String(adminBackup.allUserDataJson || adminBackup.lastGoodBackupJson || '{}');
+            const parsedAb = JSON.parse(primaryJson);
+            if (parsedAb && typeof parsedAb === 'object') {
+              const curRecords = countWorkshopRecords(vaultData);
+              if (adminBackup.isDataDeleted || curRecords === 0) {
+                const existingKyc = (vaultData.kyc && typeof vaultData.kyc === 'object' ? vaultData.kyc : {}) as Record<string, unknown>;
+                const abKyc = (parsedAb.kyc && typeof parsedAb.kyc === 'object' ? parsedAb.kyc : {}) as Record<string, unknown>;
+                Object.assign(vaultData, parsedAb);
+                if (existingKyc.frontPhoto || existingKyc.backPhoto || existingKyc.selfiePhoto) {
+                  vaultData.kyc = {
+                    ...abKyc,
+                    frontPhoto: abKyc.frontPhoto || existingKyc.frontPhoto || '',
+                    backPhoto: abKyc.backPhoto || existingKyc.backPhoto || '',
+                    selfiePhoto: abKyc.selfiePhoto || existingKyc.selfiePhoto || ''
+                  };
+                }
+              }
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        onUpdate({ profile, vaultData, backups, adminBackup });
+      }, 80);
+    };
+
+    const unsubProfile = onSnapshot(
+      doc(db, 'users', uid),
+      (snap) => {
+        profile = snap.exists() ? snap.data() : null;
+        emitMerged();
+      },
+      (err) => { if (onError) onError(err); }
+    );
+
+    const unsubBackup = onSnapshot(
+      doc(db, 'adminBackups', uid),
+      (snap) => {
+        adminBackup = snap.exists() ? snap.data() : null;
+        emitMerged();
+      },
+      (err) => { if (onError) onError(err); }
+    );
+
+    const unsubVault = onSnapshot(
+      collection(db, 'users', uid, 'vault'),
+      (snaps) => {
+        snaps.docs.forEach((d) => {
+          const data = d.data();
+          const docId = String(data.docType || d.id);
+          if (typeof data.payloadJson === 'string' && data.payloadJson.length >= 2) {
+            try {
+              shardMap[docId] = JSON.parse(data.payloadJson) as Record<string, unknown>;
+            } catch {
+              /* ignore */
+            }
+          }
+        });
+        emitMerged();
+      },
+      (err) => { if (onError) onError(err); }
+    );
+
+    getDocs(query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(10)))
+      .then((snaps) => {
+        backups = snaps.docs.map((d) => d.data());
+        emitMerged();
+      })
+      .catch(() => {});
+
+    return () => {
+      closed = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      unsubProfile();
+      unsubBackup();
+      unsubVault();
+    };
+  },
+
+  async adminSaveUserAndCustomerData(
+    uid: string,
+    profileUpdates: {
+      name?: string;
+      mobile?: string;
+      email?: string;
+    },
+    vaultUpdates: Record<string, unknown>,
+    detailMessage = 'Admin updated user/customer data.'
+  ): Promise<{ updatedAt: number; recordCount: number }> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const adminActor = String(auth.currentUser.email || ADMIN_EMAIL);
+    const now = Date.now();
+
+    const current = await this.adminLoadUserInspection(uid);
+    const existingProfile = current.profile || {};
+    const existingBackup = current.adminBackup || {};
+
+    const mergedRaw = {
+      ...current.vaultData,
+      ...vaultUpdates
+    };
+    const normalized = buildAdminSnapshotObject(mergedRaw);
+    const recordCount = countWorkshopRecords(normalized);
+    const prevGoodJson = String(existingBackup.lastGoodBackupJson || '');
+
+    const corePayload = {
+      settings: normalized.settings || {},
+      customers: normalized.customers || [],
+      orders: normalized.orders || [],
+      customerPayments: normalized.customerPayments || []
+    };
+    const ledgerPayload = {
+      transactions: normalized.transactions || [],
+      suppliers: normalized.suppliers || [],
+      supplierEntries: normalized.supplierEntries || [],
+      partyPayments: normalized.partyPayments || []
+    };
+    const opsPayload = {
+      stock: normalized.stock || [],
+      staff: normalized.staff || [],
+      staffLogs: normalized.staffLogs || [],
+      salaryHistory: normalized.salaryHistory || [],
+      messEntries: normalized.messEntries || [],
+      rentRecords: normalized.rentRecords || [],
+      rentPayments: normalized.rentPayments || [],
+      committees: normalized.committees || [],
+      archivedReports: normalized.archivedReports || [],
+      lastActiveMonth: normalized.lastActiveMonth || ''
+    };
+    const rawKyc = (normalized.kyc && typeof normalized.kyc === 'object' ? normalized.kyc : {}) as Record<string, unknown>;
+    let kycJson = JSON.stringify({ kyc: rawKyc });
+    if (kycJson.length > VAULT_MAX_BYTES) {
+      kycJson = JSON.stringify({
+        kyc: { ...rawKyc, frontPhoto: '', backPhoto: '', selfiePhoto: '' }
+      });
+    }
+
+    const shards: Array<{ id: 'core' | 'ledger' | 'operations' | 'kyc'; payloadJson: string }> = [
+      { id: 'core', payloadJson: safeStringifyBounded(corePayload) },
+      { id: 'ledger', payloadJson: safeStringifyBounded(ledgerPayload) },
+      { id: 'operations', payloadJson: safeStringifyBounded(opsPayload) },
+      { id: 'kyc', payloadJson: kycJson }
+    ];
+
+    for (const shard of shards) {
+      await setDoc(doc(db, 'users', uid, 'vault', shard.id), {
+        uid,
+        docType: shard.id,
+        payloadJson: shard.payloadJson,
+        updatedAt: now
+      });
+    }
+
+    const userName = String(profileUpdates.name ?? existingProfile.name ?? existingBackup.name ?? 'Workshop User').trim().slice(0, 120) || 'Workshop User';
+    const userMobile = String(profileUpdates.mobile ?? existingProfile.mobile ?? existingBackup.phone ?? '').trim().slice(0, 40);
+    const userEmail = String(profileUpdates.email ?? existingProfile.email ?? existingBackup.email ?? '').trim().slice(0, 160);
+    const summary = computeSummaryStats(normalized);
+
+    const updatedProfile: Record<string, unknown> = {
+      ...existingProfile,
+      uid,
+      name: userName,
+      mobile: userMobile,
+      email: userEmail,
+      totalKhataAmount: summary.totalKhataAmount,
+      totalPendingAmount: summary.totalPendingAmount,
+      customerCount: summary.customerCount,
+      lastSyncAt: now,
+      lastAdminRestoreAt: now,
+      createdAt: Number(existingProfile.createdAt || existingBackup.updatedAt || now),
+      updatedAt: now
+    };
+    await setDoc(doc(db, 'users', uid), updatedProfile);
+
+    const snapJson = safeAdminBackupJson(normalized);
+    const preserveGoodJson = recordCount > 0 ? snapJson : (prevGoodJson.length > 2 ? prevGoodJson : snapJson);
+    await setDoc(doc(db, 'adminBackups', uid), {
+      ...existingBackup,
+      uid,
+      userId: uid,
+      name: userName,
+      profilePicUrl: String(existingBackup.profilePicUrl || existingProfile.profilePicUrl || '').slice(0, PROFILE_PIC_MAX),
+      phone: userMobile,
+      email: userEmail,
+      termsAccepted: Boolean(existingBackup.termsAccepted ?? existingProfile.termsAccepted ?? true),
+      termsAcceptedAt: Number(existingBackup.termsAcceptedAt ?? existingProfile.termsAcceptedAt ?? now),
+      recordCount,
+      isDataDeleted: false,
+      deletedAt: 0,
+      allUserDataJson: snapJson,
+      lastGoodBackupJson: preserveGoodJson,
+      lastBackupAt: now,
+      lastRestoredAt: now,
+      lastRestoredBy: adminActor.slice(0, 160),
+      updatedAt: now
+    });
+
+    await this.appendAdminActivityLog({
+      uid,
+      userName,
+      action: 'RESTORE_USER_DATA',
+      performedBy: adminActor,
+      performedByRole: 'admin',
+      details: String(detailMessage || 'Admin updated user data.').slice(0, 300)
+    });
+
+    return { updatedAt: now, recordCount };
+  },
+
+  async adminDeleteUserData(uid: string): Promise<{ deletedAt: number; userName: string }> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const adminActor = String(auth.currentUser.email || ADMIN_EMAIL);
+    const now = Date.now();
+    const current = await this.adminLoadUserInspection(uid);
+    const existingProfile = current.profile || {};
+    const existingBackup = current.adminBackup || {};
+
+    const prevSnap = buildAdminSnapshotObject(current.vaultData);
+    const prevGoodJson = safeAdminBackupJson(prevSnap);
+    const keepGoodJson = prevGoodJson.length > 2
+      ? prevGoodJson
+      : String(existingBackup.lastGoodBackupJson || '{}');
+
+    const emptyData = buildAdminSnapshotObject({
+      settings: prevSnap.settings || {},
+      kyc: prevSnap.kyc || {}
+    });
+
+    const shards: Array<{ id: 'core' | 'ledger' | 'operations'; payloadJson: string }> = [
+      { id: 'core', payloadJson: safeStringifyBounded({ settings: emptyData.settings, customers: [], orders: [], customerPayments: [] }) },
+      { id: 'ledger', payloadJson: safeStringifyBounded({ transactions: [], suppliers: [], supplierEntries: [], partyPayments: [] }) },
+      { id: 'operations', payloadJson: safeStringifyBounded({ stock: [], staff: [], staffLogs: [], salaryHistory: [], messEntries: [], rentRecords: [], rentPayments: [], committees: [], archivedReports: [], lastActiveMonth: '' }) }
+    ];
+    for (const shard of shards) {
+      await setDoc(doc(db, 'users', uid, 'vault', shard.id), {
+        uid,
+        docType: shard.id,
+        payloadJson: shard.payloadJson,
+        updatedAt: now
+      });
+    }
+
+    const userName = String(existingProfile.name || existingBackup.name || 'Workshop User').slice(0, 120);
+    await setDoc(doc(db, 'users', uid), {
+      ...existingProfile,
+      uid,
+      name: userName,
+      totalKhataAmount: 0,
+      totalPendingAmount: 0,
+      customerCount: 0,
+      lastSyncAt: now,
+      lastAdminRestoreAt: now,
+      createdAt: Number(existingProfile.createdAt || existingBackup.updatedAt || now),
+      updatedAt: now
+    });
+
+    await setDoc(doc(db, 'adminBackups', uid), {
+      ...existingBackup,
+      uid,
+      userId: uid,
+      name: userName,
+      profilePicUrl: String(existingBackup.profilePicUrl || existingProfile.profilePicUrl || '').slice(0, PROFILE_PIC_MAX),
+      phone: String(existingBackup.phone || existingProfile.mobile || '').slice(0, 40),
+      email: String(existingBackup.email || existingProfile.email || '').slice(0, 160),
+      termsAccepted: Boolean(existingBackup.termsAccepted ?? existingProfile.termsAccepted ?? true),
+      termsAcceptedAt: Number(existingBackup.termsAcceptedAt ?? existingProfile.termsAcceptedAt ?? now),
+      recordCount: 0,
+      isDataDeleted: true,
+      deletedAt: now,
+      allUserDataJson: safeAdminBackupJson(emptyData),
+      lastGoodBackupJson: keepGoodJson,
+      lastBackupAt: now,
+      lastRestoredAt: Number(existingBackup.lastRestoredAt || 0),
+      lastRestoredBy: String(existingBackup.lastRestoredBy || ''),
+      updatedAt: now
+    });
+
+    await this.appendAdminActivityLog({
+      uid,
+      userName,
+      action: 'DATA_CLEARED',
+      performedBy: adminActor,
+      performedByRole: 'admin',
+      details: `Admin deleted workshop data (${countWorkshopRecords(prevSnap)} records archived in lastGoodBackupJson for restore).`
+    });
+
+    return { deletedAt: now, userName };
+  },
+
+  async adminRestoreUserBackup(uid: string): Promise<{ restoredAt: number; recordCount: number; userName: string }> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const adminActor = String(auth.currentUser.email || ADMIN_EMAIL);
+    const now = Date.now();
+
+    let existingProfile: Record<string, unknown> | null = null;
+    try {
+      const pSnap = await getDoc(doc(db, 'users', uid));
+      if (pSnap.exists()) existingProfile = pSnap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `users/${uid}`);
+    }
+
+    let adminBackup: Record<string, unknown> | null = null;
+    try {
+      const abSnap = await getDoc(doc(db, 'adminBackups', uid));
+      if (abSnap.exists()) adminBackup = abSnap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `adminBackups/${uid}`);
+    }
+
+    let restoreData: Record<string, unknown> | null = null;
+    if (adminBackup) {
+      const candidateJson = String(adminBackup.lastGoodBackupJson || adminBackup.allUserDataJson || '');
+      if (candidateJson.length > 2) {
+        try {
+          const parsed = JSON.parse(candidateJson);
+          if (parsed && typeof parsed === 'object') {
+            restoreData = parsed as Record<string, unknown>;
+          }
+        } catch { /* fallback below */ }
+      }
+    }
+
+    // Fallback to latest /users/{uid}/backups snapshot if needed
+    if (!restoreData || countWorkshopRecords(restoreData) === 0) {
+      try {
+        const bq = query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(5));
+        const bSnaps = await getDocs(bq);
+        for (const s of bSnaps.docs) {
+          const p = JSON.parse(String(s.data()?.payloadJson || '{}'));
+          const inner = (p?.data && typeof p.data === 'object' ? p.data : p) as Record<string, unknown>;
+          if (inner && countWorkshopRecords(inner) > 0) {
+            restoreData = inner;
+            break;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!restoreData) {
+      throw new Error('No backed-up data found to restore for this user.');
+    }
+
+    const normalized = buildAdminSnapshotObject(restoreData);
+    const recordCount = countWorkshopRecords(normalized);
+    const userName = String(existingProfile?.name || adminBackup?.name || 'Workshop User').slice(0, 120);
+
+    // 1. Write all 4 vault shards back to user's live Firestore vault (preserving user's account structure)
+    const corePayload = {
+      settings: normalized.settings || {},
+      customers: normalized.customers || [],
+      orders: normalized.orders || [],
+      customerPayments: normalized.customerPayments || []
+    };
+    const ledgerPayload = {
+      transactions: normalized.transactions || [],
+      suppliers: normalized.suppliers || [],
+      supplierEntries: normalized.supplierEntries || [],
+      partyPayments: normalized.partyPayments || []
+    };
+    const opsPayload = {
+      stock: normalized.stock || [],
+      staff: normalized.staff || [],
+      staffLogs: normalized.staffLogs || [],
+      salaryHistory: normalized.salaryHistory || [],
+      messEntries: normalized.messEntries || [],
+      rentRecords: normalized.rentRecords || [],
+      rentPayments: normalized.rentPayments || [],
+      committees: normalized.committees || [],
+      archivedReports: normalized.archivedReports || [],
+      lastActiveMonth: normalized.lastActiveMonth || ''
+    };
+    const rawKyc = (normalized.kyc && typeof normalized.kyc === 'object' ? normalized.kyc : {}) as Record<string, unknown>;
+    let kycJson = JSON.stringify({ kyc: rawKyc });
+    if (kycJson.length > VAULT_MAX_BYTES) {
+      kycJson = JSON.stringify({
+        kyc: { ...rawKyc, frontPhoto: '', backPhoto: '', selfiePhoto: '' }
+      });
+    }
+
+    const shards: Array<{ id: 'core' | 'ledger' | 'operations' | 'kyc'; payloadJson: string }> = [
+      { id: 'core', payloadJson: safeStringifyBounded(corePayload) },
+      { id: 'ledger', payloadJson: safeStringifyBounded(ledgerPayload) },
+      { id: 'operations', payloadJson: safeStringifyBounded(opsPayload) },
+      { id: 'kyc', payloadJson: kycJson }
+    ];
+
+    for (const shard of shards) {
+      await setDoc(doc(db, 'users', uid, 'vault', shard.id), {
+        uid,
+        docType: shard.id,
+        payloadJson: shard.payloadJson,
+        updatedAt: now
+      });
+    }
+
+    // 2. Update /users/{uid} summary + lastAdminRestoreAt trigger (preserve device session fields!)
+    const summary = computeSummaryStats(normalized);
+    const updatedProfile = {
+      ...(existingProfile || {}),
+      uid,
+      name: userName,
+      email: String(existingProfile?.email || adminBackup?.email || '').slice(0, 160),
+      mobile: String(existingProfile?.mobile || adminBackup?.phone || '').slice(0, 40),
+      totalKhataAmount: summary.totalKhataAmount,
+      totalPendingAmount: summary.totalPendingAmount,
+      customerCount: summary.customerCount,
+      lastSyncAt: now,
+      lastBackupAt: now,
+      lastAdminRestoreAt: now,
+      createdAt: Number(existingProfile?.createdAt || adminBackup?.updatedAt || now),
+      updatedAt: now
+    };
+    await setDoc(doc(db, 'users', uid), updatedProfile);
+
+    // 3. Update /adminBackups/{uid} to mark restored and clear isDataDeleted flag
+    const restoredJson = safeAdminBackupJson(normalized);
+    await setDoc(doc(db, 'adminBackups', uid), {
+      ...(adminBackup || {}),
+      uid,
+      userId: uid,
+      name: userName,
+      profilePicUrl: String(adminBackup?.profilePicUrl || existingProfile?.profilePicUrl || '').slice(0, PROFILE_PIC_MAX),
+      phone: String(adminBackup?.phone || existingProfile?.mobile || '').slice(0, 40),
+      email: String(adminBackup?.email || existingProfile?.email || '').slice(0, 160),
+      termsAccepted: Boolean(adminBackup?.termsAccepted ?? existingProfile?.termsAccepted ?? true),
+      termsAcceptedAt: Number(adminBackup?.termsAcceptedAt ?? existingProfile?.termsAcceptedAt ?? now),
+      recordCount,
+      isDataDeleted: false,
+      deletedAt: 0,
+      allUserDataJson: restoredJson,
+      lastGoodBackupJson: restoredJson,
+      lastBackupAt: now,
+      lastRestoredAt: now,
+      lastRestoredBy: adminActor.slice(0, 160),
+      updatedAt: now
+    });
+
+    // 4. Write Admin Activity Log entry with Restored By Admin, Date & Time
+    await this.appendAdminActivityLog({
+      uid,
+      userName,
+      action: 'RESTORE_USER_DATA',
+      performedBy: adminActor,
+      performedByRole: 'admin',
+      details: `Restored By Admin (${adminActor}) — ${recordCount} records restored to user account.`
+    });
+
+    return { restoredAt: now, recordCount, userName };
+  },
+
+  async adminListActivityLogs(): Promise<Array<Record<string, unknown>>> {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const path = 'adminActivityLogs';
+    try {
+      const q = query(collection(db, 'adminActivityLogs'), orderBy('createdAt', 'desc'), limit(150));
+      const snaps = await getDocs(q);
+      return snaps.docs.map((d) => d.data());
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, path);
+    }
   },
 
   async adminUpdateUserStatus(

@@ -551,14 +551,35 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color-adjust: exact !important;
+        box-sizing: border-box !important;
       }
       @page {
-        size: A4;
-        margin: 12mm;
+        size: auto;
+        margin: 8mm;
       }
-      body { background: #ffffff !important; color: #000000 !important; }
+      html, body {
+        width: 100% !important;
+        height: auto !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
       #app, #modal-root, #toast-root { display: none !important; }
-      #print-root { display: block !important; color: #000000 !important; background: #ffffff !important; padding: 0 !important; margin: 0 auto !important; max-width: 100% !important; }
+      #print-root {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        color: #000000 !important;
+        background: #ffffff !important;
+        padding: 4px !important;
+        margin: 0 auto !important;
+      }
+      #print-root .print-avoid-break {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
     }
   </style>
 </head>
@@ -872,7 +893,10 @@
           uid: '',
           lastSyncAt: 0,
           lastBackupAt: 0,
-          lastDailyBackupDate: ''
+          lastDailyBackupDate: '',
+          termsAccepted: false,
+          termsAcceptedAt: 0,
+          lastAdminRestoreAt: 0
         },
         pinSecurity: {
           enabled: false,
@@ -1127,6 +1151,7 @@
         otpVerified: false,
         password: '',
         confirmPassword: '',
+        agreedTerms: false,
         error: ''
       };
     }
@@ -1147,6 +1172,8 @@
       authMode: 'login',
       signupStep: 1,
       signupData: newSignupData(),
+      loginTermsAgreed: true,
+      termsReturnView: 'login',
       showPass: false,
       authLoading: false,
       loginPending: false,
@@ -1172,14 +1199,27 @@
       rentTab: 'Home',
       paymentFilter: 'all',
       recordSearch: '',
+      recordTimeFilter: 'all',
+      recordCatFilter: 'all',
+      selectedRecordItem: null,
       searchQuery: '',
       expandedArchiveMonth: '',
       adminUsers: [],
+      adminLogs: [],
+      adminTab: 'users',
       adminLoading: false,
       adminFilter: 'all',
       adminSearch: '',
       adminInspectUid: '',
       adminInspectData: null,
+      adminInspectSubView: 'overview',
+      adminInspectCustomerId: '',
+      adminCustomerSearch: '',
+      adminCustomerFilter: 'all',
+      adminDeleteTarget: null,
+      adminRestoreTargetUid: '',
+      adminRestoreTargetName: '',
+      adminRestoring: false,
       kycTimer: null,
       cameraStream: null,
       invoiceDraft: null,
@@ -1208,6 +1248,7 @@
     let hydrateGeneration = 0;
     let unsubDeviceApprovalWatch = null;
     let unsubActiveSessionWatch = null;
+    let unsubAdminLiveWatch = null;
     let midnightBackupTimer = null;
 
     function updateSyncStatusBadgeDom() {
@@ -1387,6 +1428,26 @@
         <img src="${esc(src)}" alt="Workshop Logo" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
         <div class="w-full h-full hidden">${defaultSvgLogoData()}</div>
       </div>`;
+    }
+
+    function renderOrderStatusBadge(status) {
+      const st = status || 'Pending';
+      const styles = {
+        'Pending': 'bg-amber-500/20 text-amber-300 border-amber-400/45',
+        'In Progress': 'bg-cyan-500/20 text-cyan-300 border-cyan-400/45',
+        'Completed': 'bg-emerald-500/20 text-emerald-300 border-emerald-400/45',
+        'Delivered': 'bg-violet-500/20 text-violet-300 border-violet-400/45'
+      };
+      const dots = {
+        'Pending': 'bg-amber-400',
+        'In Progress': 'bg-cyan-400',
+        'Completed': 'bg-emerald-400',
+        'Delivered': 'bg-violet-400'
+      };
+      return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${styles[st] || styles['Pending']}">
+        <span class="w-1.5 h-1.5 rounded-full ${dots[st] || dots['Pending']}"></span>
+        ${esc(trStatus(st))}
+      </span>`;
     }
 
     // Auto Archive & Closed Month Protection
@@ -2493,7 +2554,7 @@
       cloudSyncTimer = setTimeout(() => { flushCloudSync(); }, 750);
     }
 
-    async function flushCloudSync() {
+    async function flushCloudSync(opts = {}) {
       const cloud = getCloud();
       const s = state.session;
       if (!cloud || !s || !s.uid) return false;
@@ -2504,7 +2565,7 @@
         updateSyncStatusBadgeDom();
         return false;
       }
-      if (isSyncInFlight) {
+      if (isSyncInFlight && !opts.forceDataDeleted) {
         pendingCloudResync = true;
         return false;
       }
@@ -2518,11 +2579,15 @@
             name: s.name,
             identifier: s.identifier || s.email || s.mobile || '',
             email: s.email || '',
-            mobile: s.mobile || '',
+            mobile: s.mobile || state.kyc?.mobile || '',
             authType: s.authType || 'email',
             pinEnabled: Boolean(state.pinSecurity?.enabled),
             pinHash: state.pinSecurity?.hash || '',
             kycDuplicateOf: state.kyc?.duplicateOf || '',
+            profilePicUrl: s.photo || state.kyc?.selfiePhoto || state.settings?.customLogo || '',
+            termsAccepted: Boolean(state.cloudMeta?.termsAccepted ?? true),
+            termsAcceptedAt: Number(state.cloudMeta?.termsAcceptedAt || 0),
+            forceDataDeleted: Boolean(opts.forceDataDeleted),
             lastBackupAt: Number(state.cloudMeta?.lastBackupAt || 0)
           },
           state
@@ -3151,9 +3216,13 @@
         try { unsubActiveSessionWatch(); } catch (e) {}
         unsubActiveSessionWatch = null;
       }
+      if (typeof unsubAdminLiveWatch === 'function') {
+        try { unsubAdminLiveWatch(); } catch (e) {}
+        unsubAdminLiveWatch = null;
+      }
     }
 
-    function attachActiveSessionWatcher(uid, sessionId, localSessionVersion) {
+    function attachActiveSessionWatcher(uid, sessionId, localSessionVersion, knownAdminRestoreAt = 0) {
       if (typeof unsubActiveSessionWatch === 'function') {
         try { unsubActiveSessionWatch(); } catch (e) {}
         unsubActiveSessionWatch = null;
@@ -3161,6 +3230,7 @@
       const cloud = getCloud();
       if (!cloud || !uid || isAdminSession()) return;
       const myDeviceId = getOrCreateDeviceId();
+      const baseRestoreTs = Math.max(Number(knownAdminRestoreAt || 0), Number(state.cloudMeta?.lastAdminRestoreAt || 0));
       unsubActiveSessionWatch = cloud.watchUserActiveSession(
         uid,
         myDeviceId,
@@ -3199,7 +3269,34 @@
           } else {
             toast(L('Logged out from all devices by Owner.', 'تم تسجيل الخروج من جميع الأجهزة.'), 'info');
           }
-        }
+        },
+        async (restoredAt) => {
+          if (!state.session || state.session.uid !== uid) return;
+          if (restoredAt <= Number(state.cloudMeta?.lastAdminRestoreAt || 0)) return;
+          try {
+            const bundle = await cloud.loadUserBundle(uid);
+            if (bundle && bundle.hasCloudData) {
+              applyBackupPayload({ data: bundle.vaultData }, true, true);
+              if (bundle.profile && state.session) {
+                if (bundle.profile.name) state.session.name = String(bundle.profile.name);
+                if (bundle.profile.mobile !== undefined) state.session.mobile = String(bundle.profile.mobile || '');
+                if (bundle.profile.email !== undefined) state.session.email = String(bundle.profile.email || '');
+              }
+              state.cloudMeta = {
+                ...(state.cloudMeta || {}),
+                uid,
+                lastAdminRestoreAt: restoredAt,
+                lastBackupAt: restoredAt,
+                lastSyncAt: restoredAt
+              };
+              localStorage.removeItem(PENDING_SYNC_KEY);
+              saveState(true);
+              render();
+              toast(L('Account data synced with Admin update ✓', 'تمت مزامنة البيانات من لوحة المسؤول ✓'), 'success');
+            }
+          } catch (e) {}
+        },
+        baseRestoreTs
       );
     }
 
@@ -3340,7 +3437,12 @@
       ui.adminLoading = true;
       render();
       try {
-        ui.adminUsers = await cloud.adminListAllUsers();
+        const [usersRes, logsRes] = await Promise.all([
+          cloud.adminListAllUsers(),
+          cloud.adminListActivityLogs().catch(() => [])
+        ]);
+        ui.adminUsers = usersRes || [];
+        ui.adminLogs = logsRes || [];
       } catch (err) {
         toast('Users list load nahi ho saki: ' + (err.message || err), 'error');
       } finally {
@@ -3349,11 +3451,25 @@
       }
     }
 
-    async function openAdminInspectUser(uidVal) {
+    function stopAdminLiveWatcher() {
+      if (typeof unsubAdminLiveWatch === 'function') {
+        try { unsubAdminLiveWatch(); } catch (e) {}
+        unsubAdminLiveWatch = null;
+      }
+    }
+
+    async function openAdminInspectUser(uidVal, opts = {}) {
       const cloud = getCloud();
       if (!cloud || !isAdminSession() || !uidVal) return;
+      const keepSubView = Boolean(opts.preserveSubView && ui.adminInspectUid === uidVal);
+      if (!keepSubView) {
+        ui.adminInspectSubView = 'overview';
+        ui.adminInspectCustomerId = '';
+        ui.adminCustomerSearch = '';
+        ui.adminCustomerFilter = 'all';
+      }
       ui.adminInspectUid = uidVal;
-      ui.adminInspectData = null;
+      if (!keepSubView) ui.adminInspectData = null;
       ui.adminLoading = true;
       ui.view = 'admin-inspect';
       render();
@@ -3364,6 +3480,17 @@
       } finally {
         ui.adminLoading = false;
         render();
+      }
+      stopAdminLiveWatcher();
+      if (typeof cloud.adminWatchUserLive === 'function') {
+        unsubAdminLiveWatch = cloud.adminWatchUserLive(uidVal, (liveInspection) => {
+          if (ui.view !== 'admin-inspect' || ui.adminInspectUid !== uidVal) return;
+          ui.adminInspectData = liveInspection;
+          const activeEl = document.activeElement;
+          if (!activeEl || !['admin-cust-search', 'admin-order-search'].includes(activeEl.id)) {
+            render();
+          }
+        });
       }
     }
 
@@ -3514,8 +3641,9 @@
 
         const displayName = String(overrideInfo.name || prof.name || fbUser.displayName || 'User');
         const emailVal = String(overrideInfo.email || prof.email || (fbUser.email && !fbUser.email.endsWith('@mobile.digitalkhata.app') ? fbUser.email : '') || '');
-        const mobileVal = String(overrideInfo.mobile || prof.mobile || '');
+        const mobileVal = String(overrideInfo.mobile || prof.mobile || state.kyc?.mobile || '');
         const identifierVal = String(overrideInfo.identifier || prof.identifier || emailVal || mobileVal || '');
+        const photoVal = String(prof.profilePicUrl || state.kyc?.selfiePhoto || state.session?.photo || '');
 
         state.session = {
           id: fbUser.uid,
@@ -3526,7 +3654,7 @@
           mobile: mobileVal,
           identifier: identifierVal,
           authType: (prof.authType === 'mobile' || overrideInfo.authType === 'mobile') ? 'mobile' : 'email',
-          photo: '',
+          photo: photoVal,
           provider: 'firebase',
           loginAt: Date.now()
         };
@@ -3541,11 +3669,15 @@
         } else if (prof.kycStatus === 'approved' && state.kyc.status !== 'approved') {
           state.kyc.status = 'approved';
         }
+        const remoteRestoreAt = Number(prof.lastAdminRestoreAt || 0);
         state.cloudMeta = {
           ...(state.cloudMeta || {}),
           uid: fbUser.uid,
           lastSyncAt: Number(prof.lastSyncAt || state.cloudMeta?.lastSyncAt || 0),
-          lastBackupAt: Number(prof.lastBackupAt || bundle.latestBackup?.createdAt || state.cloudMeta?.lastBackupAt || 0)
+          lastBackupAt: Number(prof.lastBackupAt || bundle.latestBackup?.createdAt || state.cloudMeta?.lastBackupAt || 0),
+          termsAccepted: Boolean(prof.termsAccepted ?? state.cloudMeta?.termsAccepted ?? true),
+          termsAcceptedAt: Number(prof.termsAcceptedAt || state.cloudMeta?.termsAcceptedAt || prof.createdAt || 0),
+          lastAdminRestoreAt: Math.max(remoteRestoreAt, Number(state.cloudMeta?.lastAdminRestoreAt || 0))
         };
         if (!state.kyc.fullName && displayName) state.kyc.fullName = displayName;
         if (!state.kyc.mobile && mobileVal) state.kyc.mobile = mobileVal;
@@ -5094,45 +5226,679 @@
       toast(L('Invoice PDF downloaded & WhatsApp opened ✓', 'تم تنزيل الفاتورة وفتح واتساب ✓'), 'success');
     }
 
+    function getWorkshopSummaryPrintModel() {
+      const m = getMetrics();
+      const logoSrc = (state.settings?.customLogo || '').trim() || DEFAULT_LOGO_PATH;
+      const shopName = (isAr() && (state.settings?.shopNameAr || '').trim())
+        ? state.settings.shopNameAr.trim()
+        : ((state.settings?.shopName || '').trim() || 'Warsha Aluminium Workshop');
+      const reportDate = formatDisplayDate(todayISO());
+      const reportTime = formatTime12(nowTime());
+      return {
+        m,
+        logoSrc,
+        shopName,
+        reportDate,
+        reportTime,
+        dateTimeLabel: `${reportDate} · ${reportTime}`
+      };
+    }
+
+    function buildWorkshopSummaryPrintHtml() {
+      const info = getWorkshopSummaryPrintModel();
+      const m = info.m;
+      const dir = isAr() ? 'rtl' : 'ltr';
+      return `
+        <div dir="${dir}" style="font-family:'Cairo','Plus Jakarta Sans',sans-serif;color:#0f172a;background:#ffffff;padding:12px;max-width:780px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+          <div class="print-avoid-break" style="display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <img src="${esc(info.logoSrc)}" style="width:54px;height:54px;border-radius:14px;object-fit:cover;border:2px solid #2563eb;background:#ffffff;" onerror="this.style.display='none'"/>
+              <div>
+                <h1 style="margin:0;font-size:19px;font-weight:800;color:#1e3a8a;">${esc(info.shopName)}</h1>
+                <p style="margin:3px 0 0;font-size:11px;color:#475569;">${esc(L('Workshop Financial Summary Report', 'تقرير الملخص المالي للورشة'))} · ${esc(info.dateTimeLabel)}</p>
+              </div>
+            </div>
+          </div>
+          <div class="print-avoid-break" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+            <div style="border:1.5px solid #93c5fd;background:#eff6ff;padding:12px;border-radius:10px;">
+              <div style="font-size:11px;color:#1e40af;font-weight:700;">${esc(L('Total Profit', 'إجمالي الأرباح'))}</div>
+              <div style="font-size:18px;font-weight:800;color:${m.totalProfit >= 0 ? '#1d4ed8' : '#dc2626'};margin-top:4px;" dir="ltr">${esc(fmtRs(m.totalProfit))}</div>
+            </div>
+            <div style="border:1.5px solid #a7f3d0;background:#ecfdf5;padding:12px;border-radius:10px;">
+              <div style="font-size:11px;color:#065f46;font-weight:700;">${esc(L('This Month Income', 'دخل هذا الشهر'))}</div>
+              <div style="font-size:18px;font-weight:800;color:#059669;margin-top:4px;" dir="ltr">${esc(fmtRs(m.monthIncome))}</div>
+            </div>
+            <div style="border:1.5px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:10px;">
+              <div style="font-size:11px;color:#9a3412;font-weight:700;">${esc(L('This Month Expense', 'مصاريف هذا الشهر'))}</div>
+              <div style="font-size:18px;font-weight:800;color:#ea580c;margin-top:4px;" dir="ltr">${esc(fmtRs(m.monthExpense))}</div>
+            </div>
+          </div>
+          <div class="print-avoid-break" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+            <div style="border:1px solid #cbd5e1;background:#f8fafc;padding:9px;border-radius:8px;">
+              <div style="font-size:10px;color:#475569;">${esc(L('All-Time Income', 'إجمالي الدخل'))}</div>
+              <div style="font-size:14px;font-weight:700;color:#059669;" dir="ltr">${esc(fmtRs(m.totalIncome))}</div>
+            </div>
+            <div style="border:1px solid #cbd5e1;background:#f8fafc;padding:9px;border-radius:8px;">
+              <div style="font-size:10px;color:#475569;">${esc(L('All-Time Expense', 'إجمالي المصاريف'))}</div>
+              <div style="font-size:14px;font-weight:700;color:#ea580c;" dir="ltr">${esc(fmtRs(m.totalExpense))}</div>
+            </div>
+            <div style="border:1px solid #fecaca;background:#fef2f2;padding:9px;border-radius:8px;">
+              <div style="font-size:10px;color:#991b1b;">${esc(L('Total Udhaar / Baqaya', 'إجمالي الدين المتبقي'))}</div>
+              <div style="font-size:14px;font-weight:700;color:#dc2626;" dir="ltr">${esc(fmtRs(m.custBaqaya))}</div>
+            </div>
+          </div>
+          <h3 style="font-size:13px;margin:10px 0 6px;color:#1e3a8a;font-weight:800;">${esc(L('Customer Ledger Summary', 'ملخص حسابات العملاء'))} (${state.customers.length})</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px;">
+            <thead><tr style="background:#1e40af;color:#ffffff;"><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Name', 'الاسم'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Phone', 'الهاتف'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Total Bill', 'الفاتورة'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Paid', 'المدفوع'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Remaining', 'المتبقي'))}</th></tr></thead>
+            <tbody>
+              ${state.customers.length ? state.customers.map((c, i) => { const st = getCustomerStats(c.id); return `<tr class="print-avoid-break" style="background:${i % 2 === 0 ? '#ffffff' : '#f1f5f9'};"><td style="padding:6px;border:1px solid #cbd5e1;font-weight:700;">${esc(c.name)}</td><td style="padding:6px;border:1px solid #cbd5e1;" dir="ltr">${esc(c.mobile || '-')}</td><td style="padding:6px;border:1px solid #cbd5e1;" dir="ltr">${esc(fmtRs(st.billed))}</td><td style="padding:6px;border:1px solid #cbd5e1;color:#047857;font-weight:600;" dir="ltr">${esc(fmtRs(st.received))}</td><td style="padding:6px;border:1px solid #cbd5e1;font-weight:700;color:${st.baqaya > 0 ? '#dc2626' : '#059669'};" dir="ltr">${esc(fmtRs(st.baqaya))}</td></tr>`; }).join('') : `<tr><td colspan="5" style="padding:10px;text-align:center;border:1px solid #cbd5e1;">${esc(L('No customer records', 'لا توجد سجلات عملاء'))}</td></tr>`}
+            </tbody>
+          </table>
+          <div style="text-align:center;font-size:10px;color:#64748b;padding-top:8px;border-top:1px dashed #cbd5e1;">
+            Digital Khata · ${esc(info.shopName)} · ${esc(info.dateTimeLabel)}
+          </div>
+        </div>
+      `;
+    }
+
+    async function generateWorkshopSummaryPdfBlob() {
+      const libs = window.__DK_INVOICE_LIBS__;
+      if (!libs || !libs.jsPDF) return null;
+      const { jsPDF } = libs;
+      const info = getWorkshopSummaryPrintModel();
+      const m = info.m;
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) {}
+      }
+      const W = 1240;
+      const rowsCount = Math.min(28, state.customers.length);
+      const H = Math.max(1500, 820 + rowsCount * 46);
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+
+      const fontFam = "'Cairo','Plus Jakarta Sans',sans-serif";
+      const pad = 68;
+      // Top blue header bar
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, 0, W, 178);
+      try {
+        const logoUrl = await renderCircularLogoDataUrl(info.logoSrc);
+        if (logoUrl) {
+          const img = await loadImgForCanvas(logoUrl);
+          if (img) ctx.drawImage(img, pad, 34, 110, 110);
+        }
+      } catch (e) {}
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `800 38px ${fontFam}`;
+      ctx.fillText(info.shopName, pad + 132, 86);
+      ctx.fillStyle = '#bfdbfe';
+      ctx.font = `600 22px ${fontFam}`;
+      ctx.fillText(`Financial Summary Report · ${info.dateTimeLabel}`, pad + 132, 128);
+
+      // 3 Primary KPI Boxes
+      const cardY = 216;
+      const cardW = (W - pad * 2 - 40) / 3;
+      const cards = [
+        { label: 'Total Profit', val: fmtRs(m.totalProfit), bg: '#eff6ff', border: '#93c5fd', color: m.totalProfit >= 0 ? '#1d4ed8' : '#dc2626' },
+        { label: 'This Month Income', val: fmtRs(m.monthIncome), bg: '#ecfdf5', border: '#86efac', color: '#059669' },
+        { label: 'This Month Expense', val: fmtRs(m.monthExpense), bg: '#fff7ed', border: '#fdba74', color: '#ea580c' }
+      ];
+      cards.forEach((c, idx) => {
+        const cx = pad + idx * (cardW + 20);
+        ctx.fillStyle = c.bg;
+        ctx.strokeStyle = c.border;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(cx, cardY, cardW, 138, 18);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#334155';
+        ctx.font = `700 21px ${fontFam}`;
+        ctx.fillText(c.label, cx + 24, cardY + 48);
+        ctx.fillStyle = c.color;
+        ctx.font = `800 34px ${fontFam}`;
+        ctx.fillText(c.val, cx + 24, cardY + 102);
+      });
+
+      // Secondary stats row
+      const subY = 382;
+      const subCards = [
+        { label: 'All-Time Income', val: fmtRs(m.totalIncome), color: '#059669' },
+        { label: 'All-Time Expense', val: fmtRs(m.totalExpense), color: '#ea580c' },
+        { label: 'Customers Udhaar', val: fmtRs(m.custBaqaya), color: '#dc2626' }
+      ];
+      subCards.forEach((sc, idx) => {
+        const sx = pad + idx * (cardW + 20);
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(sx, subY, cardW, 96, 14);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#475569';
+        ctx.font = `600 19px ${fontFam}`;
+        ctx.fillText(sc.label, sx + 22, subY + 36);
+        ctx.fillStyle = sc.color;
+        ctx.font = `800 26px ${fontFam}`;
+        ctx.fillText(sc.val, sx + 22, subY + 74);
+      });
+
+      // Customer Table
+      let ty = 524;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.font = `800 26px ${fontFam}`;
+      ctx.fillText(`Customer Ledgers (${state.customers.length})`, pad, ty);
+      ty += 22;
+
+      ctx.fillStyle = '#1e40af';
+      ctx.fillRect(pad, ty, W - pad * 2, 46);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 20px ${fontFam}`;
+      ctx.fillText('Customer Name', pad + 16, ty + 31);
+      ctx.fillText('Phone', pad + 390, ty + 31);
+      ctx.fillText('Total Bill', pad + 640, ty + 31);
+      ctx.fillText('Paid', pad + 830, ty + 31);
+      ctx.fillText('Remaining', pad + 980, ty + 31);
+      ty += 46;
+
+      if (state.customers.length === 0) {
+        ctx.fillStyle = '#475569';
+        ctx.font = `600 21px ${fontFam}`;
+        ctx.fillText('No customer records yet.', pad + 20, ty + 42);
+      } else {
+        state.customers.slice(0, 28).forEach((c, idx) => {
+          const st = getCustomerStats(c.id);
+          ctx.fillStyle = idx % 2 === 0 ? '#ffffff' : '#f1f5f9';
+          ctx.fillRect(pad, ty, W - pad * 2, 44);
+          ctx.fillStyle = '#0f172a';
+          ctx.font = `700 19px ${fontFam}`;
+          ctx.fillText(String(c.name || '').slice(0, 24), pad + 16, ty + 29);
+          ctx.font = `500 18px ${fontFam}`;
+          ctx.fillText(String(c.mobile || '-').slice(0, 16), pad + 390, ty + 29);
+          ctx.fillText(fmtRs(st.billed), pad + 640, ty + 29);
+          ctx.fillStyle = '#059669';
+          ctx.fillText(fmtRs(st.received), pad + 830, ty + 29);
+          ctx.fillStyle = st.baqaya > 0 ? '#dc2626' : '#059669';
+          ctx.font = `700 19px ${fontFam}`;
+          ctx.fillText(fmtRs(st.baqaya), pad + 980, ty + 29);
+          ty += 44;
+        });
+      }
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfH = Math.min(297, Math.round((H / W) * 210));
+      doc.addImage(imgData, 'JPEG', 0, 0, 210, pdfH);
+      return doc.output('blob');
+    }
+
+    async function printWorkshopSummaryWithFallback() {
+      const root = document.getElementById('print-root');
+      if (root) {
+        root.innerHTML = buildWorkshopSummaryPrintHtml();
+      }
+      // Download crisp PDF fallback immediately so mobile users without a printer get the report file reliably
+      try {
+        const blob = await generateWorkshopSummaryPdfBlob();
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `DigitalKhata_Report_${todayISO()}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1800);
+          toast(L('Report PDF downloaded ✓ Opening Print dialog...', 'تم تنزيل التقرير PDF ✓ جاري فتح الطباعة...'), 'success');
+        }
+      } catch (e) {}
+      setTimeout(() => {
+        try { window.print(); } catch (e) {}
+      }, 220);
+    }
+
+    async function shareWorkshopSummaryOnWhatsApp() {
+      const info = getWorkshopSummaryPrintModel();
+      const m = info.m;
+      const summaryText = isAr()
+        ? `*${info.shopName}*\n📅 ${info.dateTimeLabel}\n💰 إجمالي الأرباح: ${fmtRs(m.totalProfit)}\n📈 دخل هذا الشهر: ${fmtRs(m.monthIncome)}\n📉 مصاريف هذا الشهر: ${fmtRs(m.monthExpense)}\n🧾 إجمالي الدين المتبقي: ${fmtRs(m.custBaqaya)}`
+        : `*${info.shopName} — Financial Summary*\n📅 ${info.dateTimeLabel}\n💰 Total Profit: ${fmtRs(m.totalProfit)}\n📈 This Month Income: ${fmtRs(m.monthIncome)}\n📉 This Month Expense: ${fmtRs(m.monthExpense)}\n🧾 Customers Udhaar: ${fmtRs(m.custBaqaya)}`;
+
+      try {
+        const pdfBlob = await generateWorkshopSummaryPdfBlob();
+        if (pdfBlob && navigator.share && navigator.canShare) {
+          const file = new File([pdfBlob], `DigitalKhata_Report_${todayISO()}.pdf`, { type: 'application/pdf' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ title: info.shopName, text: summaryText, files: [file] });
+            return;
+          }
+        }
+      } catch (e) {}
+
+      const url = `https://wa.me/?text=${encodeURIComponent(summaryText)}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast(L('WhatsApp opened with live report summary ✓', 'تم فتح واتساب بملخص التقرير المباشر ✓'), 'success');
+    }
+
+    function buildUnifiedRecordsList() {
+      const records = [];
+      const custById = new Map((state.customers || []).map(c => [c.id, c]));
+      const supById = new Map((state.suppliers || []).map(s => [s.id, s]));
+      const staffById = new Map((state.staff || []).map(s => [s.id, s]));
+      const rentById = new Map((state.rentRecords || []).map(r => [r.id, r]));
+
+      const toSortTs = (dStr, tStr, iso) => {
+        if (iso) {
+          const parsed = Date.parse(iso);
+          if (!isNaN(parsed)) return parsed;
+        }
+        const d = (dStr || todayISO()).slice(0, 10);
+        const tm = (tStr || '12:00').slice(0, 5);
+        const parsed = Date.parse(`${d}T${tm}:00`);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      // 1. Customers Work Orders
+      (state.orders || []).forEach(o => {
+        const cust = custById.get(o.customerId);
+        const ost = getOrderStats(o);
+        const workTitle = Array.isArray(o.workItems) && o.workItems.length
+          ? o.workItems.map(trWork).join(', ')
+          : trWork(o.itemName || 'Aluminium Work');
+        records.push({
+          id: `rec_ord_${o.id}`,
+          kind: 'order',
+          refId: o.id,
+          customerId: o.customerId,
+          category: 'Customers',
+          subCategory: trStatus(o.status || 'Pending'),
+          date: (o.date || todayISO()).slice(0, 10),
+          time: o.time || '12:00',
+          sortTs: toSortTs(o.date, o.time, o.createdAt),
+          title: `${cust ? cust.name : L('Customer', 'عميل')} · ${workTitle}`,
+          subtitle: `${L('Bill', 'الفاتورة')}: ${fmtRs(ost.total)} · ${L('Jama', 'المدفوع')}: ${fmtRs(ost.paid)} · ${L('Udhaar', 'المتبقي')}: ${fmtRs(ost.remaining)}`,
+          amount: ost.total,
+          flowType: 'income',
+          details: [
+            { label: L('Customer Name', 'اسم العميل'), val: cust ? cust.name : '-' },
+            { label: L('Work Type', 'نوع العمل'), val: workTitle },
+            { label: L('Status', 'الحالة'), val: trStatus(o.status || 'Pending') },
+            { label: L('Total Bill', 'إجمالي الفاتورة'), val: fmtRs(ost.total) },
+            { label: L('Paid (Jama)', 'المدفوع'), val: fmtRs(ost.paid) },
+            { label: L('Remaining (Udhaar)', 'المتبقي'), val: fmtRs(ost.remaining) },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(o.date, o.time, o.createdAt) },
+            { label: L('Description', 'الوصف'), val: o.description || '-' }
+          ]
+        });
+      });
+
+      // 2. Customer Payments Received
+      (state.customerPayments || []).forEach(p => {
+        const cust = custById.get(p.customerId);
+        records.push({
+          id: `rec_cpay_${p.id}`,
+          kind: 'customer-payment',
+          refId: p.id,
+          customerId: p.customerId,
+          orderId: p.orderId || '',
+          category: 'Payments',
+          subCategory: trMethod(p.method || 'Cash'),
+          date: (p.date || todayISO()).slice(0, 10),
+          time: p.time || '12:00',
+          sortTs: toSortTs(p.date, p.time, p.createdAt),
+          title: `${L('Payment from', 'دفعة من')} ${cust ? cust.name : L('Customer', 'عميل')}`,
+          subtitle: `${trMethod(p.method || 'Cash')}${p.note ? ' · ' + p.note : ''}`,
+          amount: Number(p.amount || 0),
+          flowType: 'income',
+          details: [
+            { label: L('Who Paid', 'الدافع'), val: cust ? cust.name : L('Customer', 'عميل') },
+            { label: L('Amount Received', 'المبلغ المستلم'), val: fmtRs(p.amount) },
+            { label: L('Method', 'الطريقة'), val: trMethod(p.method || 'Cash') },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(p.date, p.time, p.createdAt) },
+            { label: L('Note', 'ملاحظة'), val: p.note || '-' }
+          ]
+        });
+      });
+
+      // 3. Party / Dealer Payments
+      (state.partyPayments || []).forEach(p => {
+        const sup = supById.get(p.supplierId);
+        records.push({
+          id: `rec_ppay_${p.id}`,
+          kind: 'party-payment',
+          refId: p.id,
+          supplierId: p.supplierId,
+          category: 'Payments',
+          subCategory: trMethod(p.method || 'Cash'),
+          date: (p.date || todayISO()).slice(0, 10),
+          time: p.time || '12:00',
+          sortTs: toSortTs(p.date, p.time, p.createdAt),
+          title: `${L('Paid to Party:', 'مدفوع للمورد:')} ${sup ? sup.name : L('Party', 'مورد')}`,
+          subtitle: `${trMethod(p.method || 'Cash')}${p.note ? ' · ' + p.note : ''}`,
+          amount: Number(p.amount || 0),
+          flowType: 'expense',
+          details: [
+            { label: L('Paid To', 'المدفوع له'), val: sup ? sup.name : '-' },
+            { label: L('Amount Paid', 'المبلغ المدفوع'), val: fmtRs(p.amount) },
+            { label: L('Method', 'الطريقة'), val: trMethod(p.method || 'Cash') },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(p.date, p.time, p.createdAt) },
+            { label: L('Note', 'ملاحظة'), val: p.note || '-' }
+          ]
+        });
+      });
+
+      // 4. Stock Added / Removed History
+      (state.stock || []).forEach(s => {
+        const hist = Array.isArray(s.history) && s.history.length
+          ? s.history
+          : [{ id: `init_${s.id}`, type: 'purchase', qtyDelta: Number(s.qty || 0), remaining: Number(s.qty || 0), rate: Number(s.cost || 0), date: s.purchaseDate || todayISO(), time: s.purchaseTime || '12:00', partyName: s.supplierName || '', note: 'Stock Item' }];
+        hist.forEach(h => {
+          const delta = Number(h.qtyDelta ?? 0);
+          const isAdd = delta >= 0;
+          const unitLbl = trUnit(s.unit || 'Pcs');
+          const qtyAbs = Math.abs(delta);
+          const estAmt = Math.round(qtyAbs * Number(h.rate ?? s.cost ?? 0));
+          records.push({
+            id: `rec_stk_${s.id}_${h.id || Math.random()}`,
+            kind: 'stock',
+            refId: s.id,
+            historyId: h.id || '',
+            category: 'Stock',
+            subCategory: isAdd ? L('Stock Added', 'إضافة مخزون') : L('Stock Removed', 'سحب مخزون'),
+            date: (h.date || s.purchaseDate || todayISO()).slice(0, 10),
+            time: h.time || '12:00',
+            sortTs: toSortTs(h.date || s.purchaseDate, h.time, s.updatedAt),
+            title: `${s.item} (${isAdd ? '+' : '-'}${qtyAbs} ${unitLbl})`,
+            subtitle: `${isAdd ? L('Item Added', 'تمت الإضافة') : L('Item Removed / Used', 'تم السحب / الاستخدام')}${h.partyName ? ' · ' + h.partyName : ''}`,
+            amount: estAmt,
+            flowType: isAdd ? 'expense' : 'income',
+            details: [
+              { label: L('Item Name', 'اسم الصنف'), val: s.item },
+              { label: L('Action', 'العملية'), val: isAdd ? L('Added to Stock', 'إضافة للمخزون') : L('Removed / Used', 'سحب من المخزون') },
+              { label: L('Quantity', 'الكمية'), val: `${isAdd ? '+' : '-'}${qtyAbs} ${unitLbl}` },
+              { label: L('Remaining Stock', 'المتبقي'), val: `${h.remaining ?? s.qty} ${unitLbl}` },
+              { label: L('Estimated Value', 'القيمة المقدرة'), val: fmtRs(estAmt) },
+              { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(h.date || s.purchaseDate, h.time) },
+              { label: L('Note', 'ملاحظة'), val: h.note || '-' }
+            ]
+          });
+        });
+      });
+
+      // 5. Mess Expenses
+      (state.messEntries || []).forEach(me => {
+        records.push({
+          id: `rec_mess_${me.id}`,
+          kind: 'mess',
+          refId: me.id,
+          txId: me.txId || '',
+          category: 'Expenses',
+          subCategory: trCat('Mess'),
+          date: (me.date || todayISO()).slice(0, 10),
+          time: me.time || '12:00',
+          sortTs: toSortTs(me.date, me.time, me.createdAt),
+          title: `${L('Mess:', 'طعام:')} ${me.itemName}`,
+          subtitle: `${me.qty ? me.qty + ' · ' : ''}${me.paidBy || L('Workshop', 'الورشة')}`,
+          amount: Number(me.amount || 0),
+          flowType: 'expense',
+          details: [
+            { label: L('Expense Type', 'نوع المصروف'), val: trCat('Mess') },
+            { label: L('Item', 'الصنف'), val: me.itemName },
+            { label: L('Quantity', 'الكمية'), val: me.qty || '-' },
+            { label: L('Amount', 'المبلغ'), val: fmtRs(me.amount) },
+            { label: L('Paid By', 'دفع بواسطة'), val: me.paidBy || L('Workshop', 'الورشة') },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(me.date, me.time, me.createdAt) },
+            { label: L('Note', 'ملاحظة'), val: me.note || '-' }
+          ]
+        });
+      });
+
+      // 6. Rent Payments
+      (state.rentPayments || []).forEach(rp => {
+        const rec = rentById.get(rp.rentId);
+        records.push({
+          id: `rec_rent_${rp.id}`,
+          kind: 'rent-payment',
+          refId: rp.id,
+          txId: rp.txId || '',
+          category: 'Expenses',
+          subCategory: trCat('Rent'),
+          date: (rp.date || todayISO()).slice(0, 10),
+          time: rp.time || '12:00',
+          sortTs: toSortTs(rp.date, rp.time, rp.createdAt),
+          title: `${L('Rent:', 'إيجار:')} ${rec ? rec.title : L('Rent Payment', 'دفعة إيجار')}`,
+          subtitle: `${trMethod(rp.method || 'Cash')}${rp.note ? ' · ' + rp.note : ''}`,
+          amount: Number(rp.amount || 0),
+          flowType: 'expense',
+          details: [
+            { label: L('Expense Type', 'نوع المصروف'), val: trCat('Rent') },
+            { label: L('Rent Title', 'العنوان'), val: rec ? rec.title : '-' },
+            { label: L('Amount Paid', 'المبلغ المدفوع'), val: fmtRs(rp.amount) },
+            { label: L('Method', 'الطريقة'), val: trMethod(rp.method || 'Cash') },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(rp.date, rp.time, rp.createdAt) },
+            { label: L('Note', 'ملاحظة'), val: rp.note || '-' }
+          ]
+        });
+      });
+
+      // 7. Staff Salary / Advance Logs
+      (state.staffLogs || []).forEach(sl => {
+        const stf = staffById.get(sl.staffId);
+        const isAdv = sl.type === 'advance';
+        records.push({
+          id: `rec_stf_${sl.id}`,
+          kind: 'staff-log',
+          refId: sl.id,
+          staffId: sl.staffId,
+          txId: sl.txId || '',
+          category: 'Staff',
+          subCategory: isAdv ? L('Advance', 'سلفة') : L('Salary', 'راتب'),
+          date: (sl.date || todayISO()).slice(0, 10),
+          time: sl.time || '12:00',
+          sortTs: toSortTs(sl.date, sl.time, sl.createdAt),
+          title: `${stf ? stf.name : L('Staff', 'موظف')} · ${isAdv ? L('Advance', 'سلفة') : L('Salary', 'راتب')}`,
+          subtitle: `${sl.forMonth ? sl.forMonth + ' · ' : ''}${trMethod(sl.method || 'Cash')}${sl.note ? ' · ' + sl.note : ''}`,
+          amount: Number(sl.amount || 0),
+          flowType: 'expense',
+          details: [
+            { label: L('Staff Name', 'اسم الموظف'), val: stf ? stf.name : '-' },
+            { label: L('Type', 'النوع'), val: isAdv ? L('Staff Advance', 'سلفة موظف') : L('Salary Paid', 'راتب مدفوع') },
+            { label: L('Amount', 'المبلغ'), val: fmtRs(sl.amount) },
+            { label: L('Method', 'الطريقة'), val: trMethod(sl.method || 'Cash') },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(sl.date, sl.time, sl.createdAt) },
+            { label: L('Note', 'ملاحظة'), val: sl.note || '-' }
+          ]
+        });
+      });
+
+      // 8. Standalone Income & Expense Transactions (Rent, Mess, Diesel, Committee, Manual Income/Expense)
+      (state.transactions || []).forEach(tx => {
+        if (tx.messId || tx.rentPaymentId || tx.partyPayId || tx.staffLogId || tx.orderPayId) return;
+        const isInc = tx.type === 'income';
+        records.push({
+          id: `rec_tx_${tx.id}`,
+          kind: 'transaction',
+          refId: tx.id,
+          category: isInc ? 'Payments' : 'Expenses',
+          subCategory: trCat(tx.category || (isInc ? 'Income' : 'Expense')),
+          date: (tx.date || todayISO()).slice(0, 10),
+          time: tx.time || '12:00',
+          sortTs: toSortTs(tx.date, tx.time, tx.createdAt),
+          title: tx.title || trCat(tx.category || 'Entry'),
+          subtitle: `${trCat(tx.category || (isInc ? 'Income' : 'Expense'))}`,
+          amount: Number(tx.amount || 0),
+          flowType: isInc ? 'income' : 'expense',
+          details: [
+            { label: L('Title', 'العنوان'), val: tx.title || '-' },
+            { label: L('Category', 'الفئة'), val: trCat(tx.category || '-') },
+            { label: L('Type', 'النوع'), val: isInc ? L('Income', 'دخل') : L('Expense', 'مصروف') },
+            { label: L('Amount', 'المبلغ'), val: fmtRs(tx.amount) },
+            { label: L('Date & Time', 'التاريخ والوقت'), val: formatDateTime(tx.date, tx.time, tx.createdAt) }
+          ]
+        });
+      });
+
+      records.sort((a, b) => {
+        const cmpDate = String(b.date || '').localeCompare(String(a.date || ''));
+        if (cmpDate !== 0) return cmpDate;
+        return (b.sortTs || 0) - (a.sortTs || 0);
+      });
+      return records;
+    }
+
+    function filterUnifiedRecords(records) {
+      const q = (ui.recordSearch || '').trim().toLowerCase();
+      const timeF = ui.recordTimeFilter || 'all';
+      const catF = ui.recordCatFilter || 'all';
+      const today = todayISO();
+      const curMonth = currentMonthKey();
+      const nowMs = Date.now();
+      const weekCutoffMs = nowMs - 7 * 86400000;
+
+      return records.filter(r => {
+        if (catF !== 'all' && r.category !== catF) return false;
+        if (timeF === 'today' && r.date !== today) return false;
+        if (timeF === 'month' && !String(r.date || '').startsWith(curMonth)) return false;
+        if (timeF === 'week') {
+          const ts = Date.parse(`${r.date}T12:00:00`);
+          if (isNaN(ts) || ts < weekCutoffMs) return false;
+        }
+        if (q) {
+          const hay = `${r.title} ${r.subtitle} ${r.date} ${r.amount} ${r.category} ${r.subCategory}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+    }
+
+    function printRecordsListReport() {
+      const filtered = filterUnifiedRecords(buildUnifiedRecordsList());
+      const info = getWorkshopSummaryPrintModel();
+      const root = document.getElementById('print-root');
+      if (!root) return;
+      const dir = isAr() ? 'rtl' : 'ltr';
+      root.innerHTML = `
+        <div dir="${dir}" style="font-family:'Cairo','Plus Jakarta Sans',sans-serif;color:#0f172a;background:#ffffff;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1d4ed8;padding-bottom:10px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <img src="${esc(info.logoSrc)}" style="width:46px;height:46px;border-radius:12px;object-fit:cover;border:2px solid #2563eb;" onerror="this.style.display='none'"/>
+              <div>
+                <h1 style="margin:0;font-size:18px;font-weight:800;color:#1e3a8a;">${esc(info.shopName)} · ${esc(L('All Records', 'جميع السجلات'))}</h1>
+                <p style="margin:2px 0 0;font-size:11px;color:#475569;">${esc(info.dateTimeLabel)} · ${filtered.length} ${esc(L('records', 'سجلات'))}</p>
+              </div>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead><tr style="background:#1e40af;color:#ffffff;"><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Date', 'التاريخ'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Category', 'الفئة'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Title', 'التفاصيل'))}</th><th style="padding:6px;border:1px solid #3b82f6;">${esc(L('Amount', 'المبلغ'))}</th></tr></thead>
+            <tbody>
+              ${filtered.length ? filtered.map((r, i) => `
+                <tr class="print-avoid-break" style="background:${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                  <td style="padding:5px;border:1px solid #cbd5e1;" dir="ltr">${esc(formatShortDate(r.date))}</td>
+                  <td style="padding:5px;border:1px solid #cbd5e1;">${esc(r.category)}</td>
+                  <td style="padding:5px;border:1px solid #cbd5e1;font-weight:600;">${esc(r.title)}<div style="font-size:9.5px;color:#475569;font-weight:400;">${esc(r.subtitle)}</div></td>
+                  <td style="padding:5px;border:1px solid #cbd5e1;font-weight:700;color:${r.flowType === 'income' ? '#059669' : '#dc2626'};" dir="ltr">${esc(fmtRs(r.amount))}</td>
+                </tr>`).join('') : `<tr><td colspan="4" style="padding:10px;text-align:center;">${esc(L('No Records Found', 'لا توجد سجلات'))}</td></tr>`}
+            </tbody>
+          </table>
+        </div>`;
+      setTimeout(() => { try { window.print(); } catch (e) {} }, 150);
+    }
+
+    function printAdminCustomerOrAccountReport(uidVal, customerId = '') {
+      const d = ui.adminInspectData;
+      if (!d) return;
+      const p = d.profile || {};
+      const ab = d.adminBackup || {};
+      const v = d.vaultData || {};
+      const root = document.getElementById('print-root');
+      if (!root) return;
+      const customers = Array.isArray(v.customers) ? v.customers : [];
+      const orders = Array.isArray(v.orders) ? v.orders : [];
+      const pays = Array.isArray(v.customerPayments) ? v.customerPayments : [];
+      const cust = customerId ? customers.find(c => c.id === customerId) : null;
+      const logoSrc = (v.settings?.customLogo || '').trim() || DEFAULT_LOGO_PATH;
+      const shopName = v.settings?.shopName || 'Warsha Aluminium Workshop';
+
+      if (cust) {
+        const cOrders = orders.filter(o => o.customerId === cust.id);
+        const cPays = pays.filter(py => py.customerId === cust.id);
+        const billed = Number(cust.openingBalance || 0) + cOrders.reduce((s, o) => s + Number(o.total ?? o.totalAmount ?? (Number(o.sqft || 0) * Number(o.rate || 0))), 0);
+        const paidSum = cPays.reduce((s, py) => s + Number(py.amount || 0), 0);
+        const rem = Math.max(0, billed - paidSum);
+        root.innerHTML = `
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;color:#0f172a;background:#ffffff;padding:16px;">
+            <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #1d4ed8;padding-bottom:10px;margin-bottom:14px;">
+              <img src="${esc(logoSrc)}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:2px solid #2563eb;" onerror="this.style.display='none'"/>
+              <div>
+                <h1 style="margin:0;font-size:18px;font-weight:800;color:#1e3a8a;">${esc(shopName)} — Customer Report</h1>
+                <p style="margin:2px 0 0;font-size:11px;color:#475569;">Customer: <strong>${esc(cust.name)}</strong> · ID: ${esc(cust.id)} · Phone: ${esc(cust.mobile || '-')}</p>
+                ${cust.address ? `<p style="margin:2px 0 0;font-size:11px;color:#475569;">Address: ${esc(cust.address)}</p>` : ''}
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+              <div style="border:1px solid #cbd5e1;padding:10px;border-radius:8px;"><div style="font-size:10px;color:#475569;">Total Bill</div><div style="font-size:16px;font-weight:800;">${esc(fmtRs(billed))}</div></div>
+              <div style="border:1px solid #a7f3d0;background:#ecfdf5;padding:10px;border-radius:8px;"><div style="font-size:10px;color:#065f46;">Total Paid</div><div style="font-size:16px;font-weight:800;color:#059669;">${esc(fmtRs(paidSum))}</div></div>
+              <div style="border:1px solid #fed7aa;background:#fff7ed;padding:10px;border-radius:8px;"><div style="font-size:10px;color:#9a3412;">Remaining Udhaar</div><div style="font-size:16px;font-weight:800;color:#dc2626;">${esc(fmtRs(rem))}</div></div>
+            </div>
+            <h3 style="font-size:13px;margin:10px 0 6px;color:#1e3a8a;">Work Orders (${cOrders.length})</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px;">
+              <thead><tr style="background:#1e40af;color:#fff;"><th style="padding:6px;border:1px solid #3b82f6;">Date</th><th style="padding:6px;border:1px solid #3b82f6;">Work</th><th style="padding:6px;border:1px solid #3b82f6;">Status</th><th style="padding:6px;border:1px solid #3b82f6;">Amount</th></tr></thead>
+              <tbody>${cOrders.map(o => `<tr><td style="padding:5px;border:1px solid #cbd5e1;">${esc(o.date || '-')}</td><td style="padding:5px;border:1px solid #cbd5e1;">${esc(Array.isArray(o.workItems) && o.workItems.length ? o.workItems.join(', ') : (o.itemName || o.item || 'Order'))}</td><td style="padding:5px;border:1px solid #cbd5e1;">${esc(o.status || 'Pending')}</td><td style="padding:5px;border:1px solid #cbd5e1;font-weight:700;">${esc(fmtRs(o.total ?? o.totalAmount ?? 0))}</td></tr>`).join('') || '<tr><td colspan="4" style="padding:8px;text-align:center;">No orders</td></tr>'}</tbody>
+            </table>
+          </div>`;
+      } else {
+        const userName = p.name || ab.name || 'User';
+        const txs = Array.isArray(v.transactions) ? v.transactions : [];
+        const inc = txs.filter(x => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
+        const exp = txs.filter(x => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
+        root.innerHTML = `
+          <div style="font-family:'Plus Jakarta Sans',sans-serif;color:#0f172a;background:#ffffff;padding:16px;">
+            <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #1d4ed8;padding-bottom:10px;margin-bottom:14px;">
+              <img src="${esc(logoSrc)}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;border:2px solid #2563eb;" onerror="this.style.display='none'"/>
+              <div>
+                <h1 style="margin:0;font-size:18px;font-weight:800;color:#1e3a8a;">${esc(shopName)} — Account Full Report</h1>
+                <p style="margin:2px 0 0;font-size:11px;color:#475569;">Owner: ${esc(userName)} · ID: ${esc(uidVal)} · Phone: ${esc(p.mobile || ab.phone || '-')} · Email: ${esc(p.email || ab.email || '-')}</p>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+              <div style="border:1px solid #cbd5e1;padding:8px;border-radius:8px;"><div style="font-size:10px;">Customers</div><div style="font-size:15px;font-weight:800;">${customers.length}</div></div>
+              <div style="border:1px solid #cbd5e1;padding:8px;border-radius:8px;"><div style="font-size:10px;">Orders</div><div style="font-size:15px;font-weight:800;">${orders.length}</div></div>
+              <div style="border:1px solid #a7f3d0;background:#ecfdf5;padding:8px;border-radius:8px;"><div style="font-size:10px;">Income</div><div style="font-size:15px;font-weight:800;color:#059669;">${esc(fmtRs(inc))}</div></div>
+              <div style="border:1px solid #fed7aa;background:#fff7ed;padding:8px;border-radius:8px;"><div style="font-size:10px;">Expense</div><div style="font-size:15px;font-weight:800;color:#ea580c;">${esc(fmtRs(exp))}</div></div>
+            </div>
+            <h3 style="font-size:13px;margin:10px 0 6px;color:#1e3a8a;">Customers (${customers.length})</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;">
+              <thead><tr style="background:#1e40af;color:#fff;"><th style="padding:6px;border:1px solid #3b82f6;">Name</th><th style="padding:6px;border:1px solid #3b82f6;">Phone</th><th style="padding:6px;border:1px solid #3b82f6;">Orders</th></tr></thead>
+              <tbody>${customers.map(c => `<tr><td style="padding:5px;border:1px solid #cbd5e1;">${esc(c.name)}</td><td style="padding:5px;border:1px solid #cbd5e1;">${esc(c.mobile || '-')}</td><td style="padding:5px;border:1px solid #cbd5e1;">${orders.filter(o => o.customerId === c.id).length}</td></tr>`).join('') || '<tr><td colspan="3" style="padding:8px;text-align:center;">No customers</td></tr>'}</tbody>
+            </table>
+          </div>`;
+      }
+      setTimeout(() => { try { window.print(); } catch (e) {} }, 150);
+    }
+
     async function printWorkshopReport(customerId = null, billOverrides = null) {
       const root = document.getElementById('print-root');
-      const logoSrc = (state.settings.customLogo || '').trim() || DEFAULT_LOGO_PATH;
-      const shopName = (billOverrides?.shopName ?? state.settings.shopName ?? 'Warsha Aluminium Workshop').trim() || 'Warsha Aluminium Workshop';
-
       if (customerId) {
         const inv = buildCustomerInvoiceModel(customerId, billOverrides || {});
         if (!inv) return;
         await ensureInvoiceQrDataUrl(inv);
         root.innerHTML = renderProfessionalInvoiceHtml(inv, false);
+        setTimeout(() => { try { window.print(); } catch (e) {} }, 140);
       } else {
-        const m = getMetrics();
-        root.innerHTML = `
-          <div style="font-family: 'Plus Jakarta Sans', sans-serif; color:#0f172a; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #1d4ed8; padding-bottom:12px; margin-bottom:16px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <img src="${esc(logoSrc)}" style="width:52px;height:52px;border-radius:9999px;object-fit:cover;border:2px solid #eab308;" onerror="this.style.display='none'"/>
-                <div>
-                  <h1 style="margin:0;font-size:20px;font-weight:800;color:#1e3a8a;">Digital Khata · ${esc(shopName)}</h1>
-                  <p style="margin:2px 0 0;font-size:12px;color:#475569;">Workshop Financial Summary · ${esc(formatDisplayDate(todayISO()))}</p>
-                </div>
-              </div>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px;">
-              <div style="border:1px solid #a7f3d0;background:#ecfdf5;padding:10px;border-radius:8px;"><div style="font-size:11px;color:#065f46;">Total Income</div><div style="font-size:16px;font-weight:700;color:#059669;">${esc(fmtRs(m.totalIncome))}</div></div>
-              <div style="border:1px solid #fed7aa;background:#fff7ed;padding:10px;border-radius:8px;"><div style="font-size:11px;color:#9a3412;">Total Expense</div><div style="font-size:16px;font-weight:700;color:#ea580c;">${esc(fmtRs(m.totalExpense))}</div></div>
-              <div style="border:1px solid #bfdbfe;background:#eff6ff;padding:10px;border-radius:8px;"><div style="font-size:11px;color:#1e40af;">Net Profit</div><div style="font-size:16px;font-weight:700;color:#1d4ed8;">${esc(fmtRs(m.totalProfit))}</div></div>
-              <div style="border:1px solid #fecaca;background:#fef2f2;padding:10px;border-radius:8px;"><div style="font-size:11px;color:#991b1b;">Customer Baqaya</div><div style="font-size:16px;font-weight:700;color:#dc2626;">${esc(fmtRs(m.custBaqaya))}</div></div>
-            </div>
-            <h3 style="font-size:14px;margin:10px 0 6px;color:#1e3a8a;">Customer Balances</h3>
-            <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:16px;">
-              <thead><tr style="background:#1e40af;color:#ffffff;text-align:left;"><th style="padding:7px;border:1px solid #3b82f6;">Name</th><th style="padding:7px;border:1px solid #3b82f6;">Mobile</th><th style="padding:7px;border:1px solid #3b82f6;">Total Bill</th><th style="padding:7px;border:1px solid #3b82f6;">Advance</th><th style="padding:7px;border:1px solid #3b82f6;">Remaining</th></tr></thead>
-              <tbody>
-                ${state.customers.length ? state.customers.map((c, i) => { const st = getCustomerStats(c.id); return `<tr style="background:${i % 2 === 0 ? '#ffffff' : '#eff6ff'};"><td style="padding:6px;border:1px solid #bfdbfe;font-weight:600;">${esc(c.name)}</td><td style="padding:6px;border:1px solid #bfdbfe;">${esc(c.mobile || '-')}</td><td style="padding:6px;border:1px solid #bfdbfe;">${esc(fmtRs(st.billed))}</td><td style="padding:6px;border:1px solid #bfdbfe;color:#047857;font-weight:600;">${esc(fmtRs(st.received))}</td><td style="padding:6px;border:1px solid #bfdbfe;font-weight:700;color:${st.baqaya > 0 ? '#dc2626' : '#059669'};">${esc(fmtRs(st.baqaya))}</td></tr>`; }).join('') : '<tr><td colspan="5" style="padding:8px;text-align:center;border:1px solid #cbd5e1;">No customer records</td></tr>'}
-              </tbody>
-            </table>
-          </div>`;
+        await printWorkshopSummaryWithFallback();
       }
-      setTimeout(() => window.print(), 140);
     }
 
     async function shareWhatsAppKhata(customerId = null) {
@@ -5143,16 +5909,7 @@
           return;
         }
       }
-      const m = getMetrics();
-      const text = `*Digital Khata Summary (${formatDisplayDate(todayISO())})*\nTotal Work: ${m.totalWork}\nTotal Income: ${fmtRs(m.totalIncome)}\nTotal Expense: ${fmtRs(m.totalExpense)}\nNet Profit: ${fmtRs(m.totalProfit)}\nCustomers Baqaya: ${fmtRs(m.custBaqaya)}`;
-      const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      await shareWorkshopSummaryOnWhatsApp();
     }
 
     // ========================
@@ -5303,6 +6060,13 @@
               </label>
               <button type="button" data-action="go-forgot" class="text-cyan-400 hover:text-cyan-300 font-medium min-h-[36px] px-1 cursor-pointer">${esc(L('Forgot password?', 'نسيت كلمة المرور؟'))}</button>
             </div>
+            <div class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 flex items-start justify-between gap-2 text-xs">
+              <label class="flex items-start gap-2 cursor-pointer text-sec select-none">
+                <input id="login-terms-agree" type="checkbox" ${ui.loginTermsAgreed !== false ? 'checked' : ''} class="w-4 h-4 mt-0.5 rounded accent-cyan-400 shrink-0" />
+                <span class="leading-snug">I agree to Terms &amp; Privacy Policy</span>
+              </label>
+              <button type="button" data-action="open-terms" class="text-cyan-400 hover:text-cyan-300 font-bold underline shrink-0 cursor-pointer">${esc(L('View Terms', 'عرض الشروط'))}</button>
+            </div>
             <button id="login-submit-btn" type="submit" ${ui.authLoading ? 'disabled' : ''} class="w-full h-12 rounded-xl btn-primary-grad font-semibold text-sm tracking-wide cursor-pointer disabled:opacity-60">
               ${esc(ui.authLoading ? L('Signing in...', 'جاري تسجيل الدخول...') : L('Sign in', 'تسجيل الدخول'))}
             </button>
@@ -5384,6 +6148,13 @@
                 <label for="su-step-name" class="block text-xs font-semibold text-sec mb-1.5">${esc(L('Full Name *', 'الاسم الكامل *'))}</label>
                 <input id="su-step-name" name="name" type="text" required value="${esc(sd.name)}" placeholder="${esc(L('e.g. Haroon Irfan', 'مثال: أحمد محمد'))}" class="w-full h-12 px-4 rounded-xl glass-input text-sm" />
               </div>
+              <div class="rounded-xl bg-white/5 border border-cyan-400/25 px-3 py-2.5 flex items-start justify-between gap-2 text-xs">
+                <label class="flex items-start gap-2 cursor-pointer text-sec select-none">
+                  <input id="signup-terms-agree" type="checkbox" ${sd.agreedTerms ? 'checked' : ''} class="w-4 h-4 mt-0.5 rounded accent-cyan-400 shrink-0" />
+                  <span class="leading-snug font-semibold text-white">I agree to Terms &amp; Privacy Policy</span>
+                </label>
+                <button type="button" data-action="open-terms" class="text-cyan-400 hover:text-cyan-300 font-bold underline shrink-0 cursor-pointer">${esc(L('View Terms', 'عرض الشروط'))}</button>
+              </div>
               <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">${esc(L('Next →', 'التالي ←'))}</button>
             </form>
           `;
@@ -5457,6 +6228,13 @@
                     ${ui.showPass ? icon('eyeOff', 'w-5 h-5') : icon('eye', 'w-5 h-5')}
                   </button>
                 </div>
+              </div>
+              <div class="rounded-xl bg-white/5 border border-cyan-400/25 px-3 py-2.5 flex items-start justify-between gap-2 text-xs">
+                <label class="flex items-start gap-2 cursor-pointer text-sec select-none">
+                  <input id="signup-terms-agree" type="checkbox" ${sd.agreedTerms ? 'checked' : ''} class="w-4 h-4 mt-0.5 rounded accent-cyan-400 shrink-0" />
+                  <span class="leading-snug font-semibold text-white">I agree to Terms &amp; Privacy Policy</span>
+                </label>
+                <button type="button" data-action="open-terms" class="text-cyan-400 hover:text-cyan-300 font-bold underline shrink-0 cursor-pointer">${esc(L('View Terms', 'عرض الشروط'))}</button>
               </div>
               <button id="su-submit-btn" type="submit" ${ui.authLoading ? 'disabled' : ''} class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer disabled:opacity-60">
                 ${esc(ui.authLoading ? L('Creating Account...', 'جاري إنشاء الحساب...') : L('Create Account', 'إنشاء حساب'))}
@@ -5786,11 +6564,17 @@
             </button>
           ` : ''}
 
-          <!-- 1) TOP DASHBOARD HEADER - ONLY CENTERED BIG SHOP NAME -->
+          <!-- 1) TOP DASHBOARD HEADER - WORKSHOP LOGO (LEFT) + SHOP NAME (CENTER) + ICONS (RIGHT) -->
           <section class="blue-hero-card rounded-3xl p-5 text-white">
-            <div class="relative flex items-center justify-center min-h-[44px]">
-              <h1 class="text-xl sm:text-2xl font-black text-center px-20 tracking-tight leading-snug break-words">${esc(heroShopName)}</h1>
-              <div class="absolute top-0 end-0 flex items-center gap-1.5">
+            <div class="relative flex items-center justify-center min-h-[48px]">
+              <div class="absolute top-0 left-0 flex items-center">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/95 p-0.5 shadow-lg shadow-slate-950/30 ring-2 ring-white/40 overflow-hidden flex items-center justify-center">
+                  <img src="${esc((state.settings?.customLogo || '').trim() || DEFAULT_LOGO_PATH)}" alt="${esc(heroShopName)}" referrerpolicy="no-referrer" class="w-full h-full object-cover rounded-[13px]" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+                  <div class="w-full h-full hidden">${defaultSvgLogoData()}</div>
+                </div>
+              </div>
+              <h1 class="text-lg sm:text-2xl font-black text-center px-16 sm:px-24 tracking-tight leading-snug break-words">${esc(heroShopName)}</h1>
+              <div class="absolute top-0 right-0 flex items-center gap-1.5">
                 <button type="button" data-modal="notifications" aria-label="${esc(L('Notifications', 'الإشعارات'))}" class="relative w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center transition-colors cursor-pointer">
                   ${icon('bell', 'w-5 h-5 text-white')}
                   ${lowItems.length > 0 ? `<span class="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-blue-900 tabular-nums">${lowItems.length}</span>` : ''}
@@ -6102,7 +6886,10 @@
                   <div data-open-customer="${esc(c.id)}" class="w-full glass-card rounded-2xl p-4 text-start hover:border-cyan-400/50 transition-colors cursor-pointer space-y-2.5">
                     <div class="flex items-start justify-between gap-3">
                       <div class="min-w-0">
-                        <div class="text-base font-bold truncate">${esc(c.name)}</div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                          <span class="text-base font-bold truncate">${esc(c.name)}</span>
+                          ${latestOrd ? renderOrderStatusBadge(latestOrd.status || 'Pending') : ''}
+                        </div>
                         <div class="text-xs text-sec mt-0.5">📞 ${esc(c.mobile || L('No phone', 'لا يوجد هاتف'))}${c.address ? ' · ' + esc(c.address) : ''}</div>
                         ${workItems.length ? `
                           <div class="flex flex-wrap gap-1 mt-1.5">
@@ -6115,9 +6902,19 @@
                         ` : '')}
                         ${latestOrd && latestOrd.description ? `<div class="text-[11px] text-sec mt-1 truncate">${esc(latestOrd.description)}</div>` : ''}
                       </div>
-                      <div class="flex items-center gap-1.5 shrink-0">
-                        <button type="button" data-stop-prop data-edit-customer="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-cyan-300 hover:bg-white/10 cursor-pointer">${esc(L('Edit', 'تعديل'))}</button>
-                        <button type="button" data-stop-prop data-print-cust="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-amber-300 hover:bg-white/10 cursor-pointer">${esc(L('Invoice', 'فاتورة'))}</button>
+                      <div class="flex flex-col items-end gap-1.5 shrink-0">
+                        <div class="flex items-center gap-1.5">
+                          <button type="button" data-stop-prop data-edit-customer="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-cyan-300 hover:bg-white/10 cursor-pointer">${esc(L('Edit', 'تعديل'))}</button>
+                          <button type="button" data-stop-prop data-print-cust="${esc(c.id)}" class="h-8 px-2.5 rounded-lg glass-card text-[11px] font-bold text-amber-300 hover:bg-white/10 cursor-pointer">${esc(L('Invoice', 'فاتورة'))}</button>
+                        </div>
+                        ${latestOrd ? `
+                          <select data-order-status="${esc(latestOrd.id)}" data-stop-prop aria-label="${esc(L('Order Status', 'حالة الطلب'))}" class="h-7 px-2 rounded-lg glass-input text-[10px] font-bold cursor-pointer">
+                            <option value="Pending" ${(latestOrd.status || 'Pending') === 'Pending' ? 'selected' : ''}>${esc(trStatus('Pending'))}</option>
+                            <option value="In Progress" ${latestOrd.status === 'In Progress' ? 'selected' : ''}>${esc(trStatus('In Progress'))}</option>
+                            <option value="Completed" ${latestOrd.status === 'Completed' ? 'selected' : ''}>${esc(trStatus('Completed'))}</option>
+                            <option value="Delivered" ${latestOrd.status === 'Delivered' ? 'selected' : ''}>${esc(trStatus('Delivered'))}</option>
+                          </select>
+                        ` : ''}
                       </div>
                     </div>
                     <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-xs">
@@ -6203,14 +7000,17 @@
                 <div data-open-order="${esc(o.id)}" class="glass-card rounded-2xl p-4 space-y-2.5 hover:border-cyan-400/50 transition-colors cursor-pointer">
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <div class="text-sm font-bold truncate">${esc(orderWorks)}</div>
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="text-sm font-bold truncate">${esc(orderWorks)}</span>
+                        ${renderOrderStatusBadge(o.status || 'Pending')}
+                      </div>
                       <div class="text-xs text-sec mt-0.5">${esc(formatDateTime(o.date, o.time, o.createdAt))}${o.deliveryDate ? ' · ' + esc(L('Delivery:', 'التسليم:')) + ' ' + esc(formatShortDate(o.deliveryDate)) : ''}</div>
                     </div>
-                    <select data-order-status="${esc(o.id)}" data-stop-prop class="h-8 px-2.5 rounded-lg text-[11px] font-bold border ${statusColors[o.status || 'Pending'] || 'glass-input'}">
-                      <option value="Pending" ${(o.status || 'Pending') === 'Pending' ? 'selected' : ''}>${esc(trStatus('Pending'))}</option>
-                      <option value="In Progress" ${o.status === 'In Progress' ? 'selected' : ''}>${esc(trStatus('In Progress'))}</option>
-                      <option value="Completed" ${o.status === 'Completed' ? 'selected' : ''}>${esc(trStatus('Completed'))}</option>
-                      <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>${esc(trStatus('Delivered'))}</option>
+                    <select data-order-status="${esc(o.id)}" data-stop-prop class="h-8 px-2.5 rounded-lg text-[11px] font-bold border shrink-0 cursor-pointer ${statusColors[o.status || 'Pending'] || 'glass-input'}">
+                      <option value="Pending" class="bg-slate-900 text-amber-300" ${(o.status || 'Pending') === 'Pending' ? 'selected' : ''}>${esc(trStatus('Pending'))}</option>
+                      <option value="In Progress" class="bg-slate-900 text-cyan-300" ${o.status === 'In Progress' ? 'selected' : ''}>${esc(trStatus('In Progress'))}</option>
+                      <option value="Completed" class="bg-slate-900 text-emerald-300" ${o.status === 'Completed' ? 'selected' : ''}>${esc(trStatus('Completed'))}</option>
+                      <option value="Delivered" class="bg-slate-900 text-violet-300" ${o.status === 'Delivered' ? 'selected' : ''}>${esc(trStatus('Delivered'))}</option>
                     </select>
                   </div>
                   <div class="text-xs text-sec bg-white/5 rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2">
@@ -6280,10 +7080,13 @@
           <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <div class="text-xs text-blue-100/80">${esc(c ? c.name : L('Customer', 'العميل'))} · ${esc(formatDateTime(o.date, o.time, o.createdAt))}</div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs text-blue-100/80">${esc(c ? c.name : L('Customer', 'العميل'))} · ${esc(formatDateTime(o.date, o.time, o.createdAt))}</span>
+                  ${renderOrderStatusBadge(o.status || 'Pending')}
+                </div>
                 <h1 class="text-xl font-extrabold mt-0.5">${esc(Array.isArray(o.workItems) && o.workItems.length ? o.workItems.map(trWork).join(', ') : trWork(o.itemName))}</h1>
               </div>
-              <select data-order-status="${esc(o.id)}" class="h-9 px-2.5 rounded-xl bg-white/15 border border-white/25 text-white text-xs font-bold">
+              <select data-order-status="${esc(o.id)}" class="h-9 px-2.5 rounded-xl bg-white/15 border border-white/25 text-white text-xs font-bold shrink-0 cursor-pointer">
                 <option value="Pending" class="text-slate-900" ${(o.status || 'Pending') === 'Pending' ? 'selected' : ''}>${esc(trStatus('Pending'))}</option>
                 <option value="In Progress" class="text-slate-900" ${o.status === 'In Progress' ? 'selected' : ''}>${esc(trStatus('In Progress'))}</option>
                 <option value="Completed" class="text-slate-900" ${o.status === 'Completed' ? 'selected' : ''}>${esc(trStatus('Completed'))}</option>
@@ -7277,37 +8080,132 @@
     }
 
     function renderRecords() {
-      const q = (ui.recordSearch || '').toLowerCase();
-      const allOrders = state.orders.filter(o => !q || (o.itemName || '').toLowerCase().includes(q));
-      const allTx = state.transactions.filter(t => !q || (t.title || '').toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q));
+      const allRecords = buildUnifiedRecordsList();
+      const filtered = filterUnifiedRecords(allRecords);
+      const timeF = ui.recordTimeFilter || 'all';
+      const catF = ui.recordCatFilter || 'all';
+      const incTotal = filtered.filter(r => r.flowType === 'income').reduce((s, r) => s + Number(r.amount || 0), 0);
+      const expTotal = filtered.filter(r => r.flowType === 'expense').reduce((s, r) => s + Number(r.amount || 0), 0);
+
+      // Group date-wise (Newest First)
+      const groups = [];
+      const groupMap = new Map();
+      filtered.forEach(rec => {
+        const dKey = rec.date || todayISO();
+        if (!groupMap.has(dKey)) {
+          const arr = [];
+          groupMap.set(dKey, arr);
+          groups.push({ date: dKey, items: arr });
+        }
+        groupMap.get(dKey).push(rec);
+      });
+
+      const catTabs = [
+        { id: 'all', label: L('All', 'الكل') },
+        { id: 'Customers', label: L('Customers', 'العملاء') },
+        { id: 'Stock', label: L('Stock', 'المخزون') },
+        { id: 'Payments', label: L('Payments', 'المدفوعات') },
+        { id: 'Expenses', label: L('Expenses', 'المصاريف') },
+        { id: 'Staff', label: L('Staff', 'الموظفون') }
+      ];
+      const timeTabs = [
+        { id: 'today', label: L('Today', 'اليوم') },
+        { id: 'week', label: L('This Week', 'هذا الأسبوع') },
+        { id: 'month', label: L('This Month', 'هذا الشهر') },
+        { id: 'all', label: L('All', 'الكل') }
+      ];
+
       return `
         <div class="space-y-4">
-          <h1 class="text-xl font-extrabold">${L('All Workshop Records', 'جميع سجلات الورشة')}</h1>
-          <input id="record-search" type="search" value="${esc(ui.recordSearch)}" placeholder="${L('Search orders, expenses, income...', 'ابحث في الطلبات والمصاريف والدخل...')}" class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
-          <div class="grid grid-cols-2 gap-3 text-xs">
-            <button type="button" data-nav="customers" class="glass-card rounded-2xl p-4 text-start cursor-pointer"><div class="text-sec">${L('Customers', 'العملاء')}</div><div class="text-xl font-extrabold mt-1">${state.customers.length}</div></button>
-            <button type="button" data-nav="customers" class="glass-card rounded-2xl p-4 text-start cursor-pointer"><div class="text-sec">${L('Work Orders', 'طلبات العمل')}</div><div class="text-xl font-extrabold mt-1">${state.orders.length}</div></button>
-            <button type="button" data-nav="stock" class="glass-card rounded-2xl p-4 text-start cursor-pointer"><div class="text-sec">${L('Stock Items', 'أصناف المخزون')}</div><div class="text-xl font-extrabold mt-1">${state.stock.length}</div></button>
-            <button type="button" data-nav="staff" class="glass-card rounded-2xl p-4 text-start cursor-pointer"><div class="text-sec">${L('Staff Members', 'الموظفون')}</div><div class="text-xl font-extrabold mt-1">${state.staff.length}</div></button>
-          </div>
-          <div class="glass-card rounded-3xl p-5 space-y-2.5">
-            <h2 class="text-sm font-bold">${L('Matching Work Orders', 'طلبات العمل المطابقة')} (${allOrders.length})</h2>
-            ${allOrders.length === 0 ? `<p class="text-xs text-sec">${L('No matching orders.', 'لا توجد طلبات مطابقة.')}</p>` : allOrders.slice(-10).reverse().map(o => `
-              <button type="button" data-open-order="${esc(o.id)}" class="w-full py-2 border-b border-white/10 last:border-0 flex justify-between text-xs text-start cursor-pointer">
-                <span>${esc(formatWorkDisplay(o.works && o.works.length ? o.works : o.itemName))}${o.length && o.width ? ` (${esc(o.length)}×${esc(o.width)} ft)` : ''} · ${esc(formatShortDate(o.date))}</span>
-                <span class="font-bold tabular-nums">${esc(fmtRs(o.total))}</span>
-              </button>
-            `).join('')}
-          </div>
-          <div class="glass-card rounded-3xl p-5 space-y-2.5">
-            <h2 class="text-sm font-bold">${L('Matching Transactions', 'المعاملات المطابقة')} (${allTx.length})</h2>
-            ${allTx.length === 0 ? `<p class="text-xs text-sec">${L('No matching transactions.', 'لا توجد معاملات مطابقة.')}</p>` : allTx.slice(-15).reverse().map(t => `
-              <div class="py-2 border-b border-white/10 last:border-0 flex justify-between text-xs">
-                <span>${esc(t.title)} (${esc(trCat(t.category))}) · ${esc(formatShortDate(t.date))}</span>
-                <span class="font-bold tabular-nums ${t.type === 'income' ? 'text-emerald-400' : 'text-orange-400'}">${esc(fmtRs(t.amount))}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <button type="button" data-nav="home" aria-label="${esc(L('Back', 'رجوع'))}" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center shrink-0 cursor-pointer">${icon('back', 'w-5 h-5')}</button>
+              <div>
+                <h1 class="text-xl font-extrabold">${esc(L('All Records', 'جميع السجلات'))}</h1>
+                <p class="text-[11px] text-sec">${esc(L('Date-wise complete workshop history', 'سجل الورشة الكامل حسب التاريخ'))}</p>
               </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" data-action="print-records-pdf" class="h-10 px-3 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">🖨️ ${esc(L('Download PDF / Print', 'PDF / طباعة'))}</button>
+              <button type="button" data-action="cloud-backup-now" class="h-10 px-3 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">☁️ ${esc(L('Backup', 'نسخ احتياطي'))}</button>
+            </div>
+          </div>
+
+          <!-- Summary Strip -->
+          <div class="grid grid-cols-3 gap-2.5 tabular-nums">
+            <div class="glass-card rounded-2xl p-3">
+              <div class="text-[11px] text-sec">${esc(L('Records', 'السجلات'))}</div>
+              <div class="text-lg font-extrabold mt-0.5">${filtered.length}</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3 border border-emerald-400/25">
+              <div class="text-[11px] text-sec">${esc(L('Income', 'الدخل'))}</div>
+              <div class="text-base font-extrabold text-emerald-400 mt-0.5 truncate">${esc(fmtRs(incTotal))}</div>
+            </div>
+            <div class="glass-card rounded-2xl p-3 border border-rose-400/25">
+              <div class="text-[11px] text-sec">${esc(L('Expense', 'المصاريف'))}</div>
+              <div class="text-base font-extrabold text-rose-400 mt-0.5 truncate">${esc(fmtRs(expTotal))}</div>
+            </div>
+          </div>
+
+          <!-- Search Bar -->
+          <input id="record-search" type="search" value="${esc(ui.recordSearch)}" placeholder="${esc(L('Search by Name, Date, or Amount...', 'ابحث بالاسم أو التاريخ أو المبلغ...'))}" class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
+
+          <!-- Time Filters -->
+          <div class="flex flex-wrap gap-1.5">
+            ${timeTabs.map(t => `
+              <button type="button" data-record-time-filter="${t.id}" class="px-3.5 h-9 rounded-xl text-xs font-bold cursor-pointer ${timeF === t.id ? 'bg-blue-600 text-white shadow' : 'glass-card text-sec'}">${esc(t.label)}</button>
             `).join('')}
           </div>
+
+          <!-- Category Filters -->
+          <div class="flex flex-wrap gap-1.5">
+            ${catTabs.map(c => `
+              <button type="button" data-record-cat-filter="${c.id}" class="px-3 h-8 rounded-xl text-[11px] font-bold cursor-pointer ${catF === c.id ? 'bg-cyan-500 text-slate-950' : 'glass-card text-sec'}">${esc(c.label)}</button>
+            `).join('')}
+          </div>
+
+          <!-- Date-wise Record Cards -->
+          ${filtered.length === 0 ? `
+            <div class="glass-card rounded-3xl p-10 text-center space-y-2">
+              <div class="text-3xl">🗄️</div>
+              <div class="text-sm font-extrabold text-white">${esc(L('No Records Found', 'لا توجد سجلات'))}</div>
+              <p class="text-xs text-sec">${esc(L('Try changing the search or time/category filter.', 'جرب تغيير البحث أو تصفية الوقت / الفئة.'))}</p>
+            </div>
+          ` : `
+            <div class="space-y-4">
+              ${groups.map(grp => `
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-extrabold text-cyan-300">${esc(formatDisplayDate(grp.date))}</span>
+                    <span class="text-[11px] text-sec tabular-nums">${grp.items.length} ${esc(L('items', 'سجل'))}</span>
+                  </div>
+                  <div class="space-y-2">
+                    ${grp.items.map(rec => {
+                      const isInc = rec.flowType === 'income';
+                      return `
+                        <button type="button" data-open-record-detail="${esc(rec.id)}" class="w-full glass-card rounded-2xl p-3.5 text-start hover:border-cyan-400/50 transition-colors cursor-pointer space-y-1.5 border ${isInc ? 'border-emerald-400/20' : 'border-rose-400/20'}">
+                          <div class="flex items-start justify-between gap-2.5">
+                            <div class="min-w-0 flex-1">
+                              <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isInc ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40' : 'bg-rose-500/20 text-rose-300 border border-rose-400/40'}">${esc(isInc ? L('Income', 'دخل') : L('Expense', 'مصروف'))}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-sec">${esc(rec.category)}${rec.subCategory ? ' · ' + esc(rec.subCategory) : ''}</span>
+                              </div>
+                              <div class="text-sm font-bold text-white mt-1 truncate">${esc(rec.title)}</div>
+                              <div class="text-[11px] text-sec truncate mt-0.5">${esc(rec.subtitle)}</div>
+                            </div>
+                            <div class="text-end shrink-0 tabular-nums">
+                              <div class="text-sm font-extrabold ${isInc ? 'text-emerald-400' : 'text-rose-400'}" dir="ltr">${isInc ? '+' : '-'}${esc(fmtRs(rec.amount))}</div>
+                              <div class="text-[10px] text-mut mt-0.5">${esc(formatDateTime(rec.date, rec.time))}</div>
+                            </div>
+                          </div>
+                        </button>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
         </div>
       `;
     }
@@ -8091,15 +8989,69 @@
             `;
           })()}
 
-          <!-- Password & Danger Zone -->
+          <!-- Password & Security (Clear Data restricted to Admin only) -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
             <h2 class="text-sm font-bold">${L('Security & Data', 'الأمان والبيانات')}</h2>
-            <div class="grid grid-cols-3 gap-2">
-              <button type="button" data-modal="change-password" class="h-11 rounded-xl glass-card text-[11px] font-bold cursor-pointer">${L('Change Password', 'تغيير كلمة المرور')}</button>
-              <button type="button" data-action="signout" class="h-11 rounded-xl glass-card text-[11px] font-bold text-amber-400 cursor-pointer">${L('Sign Out', 'تسجيل الخروج')}</button>
-              <button type="button" data-modal="confirm-clear" class="h-11 rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-300 text-[11px] font-bold cursor-pointer">${L('Clear Data', 'مسح البيانات')}</button>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-modal="change-password" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Change Password', 'تغيير كلمة المرور')}</button>
+              <button type="button" data-action="signout" class="h-11 rounded-xl glass-card text-xs font-bold text-amber-400 cursor-pointer">${L('Sign Out', 'تسجيل الخروج')}</button>
+            </div>
+            <p class="text-[11px] text-sec leading-relaxed">${esc(L('Account data is protected with real-time Auto Backup. Contact Admin if you ever need account data deleted or restored.', 'بيانات الحساب محمية بالنسخ الاحتياطي التلقائي. تواصل مع المسؤول إذا كنت بحاجة إلى حذف البيانات أو استعادتها.'))}</p>
+            <div class="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-xs font-bold">${esc(L('Terms & Privacy Policy', 'الشروط وسياسة الخصوصية'))}</div>
+                <div class="text-[11px] text-sec truncate">${esc(L('Auto backup & data restore safety policy', 'سياسة النسخ الاحتياطي التلقائي وحماية البيانات'))}</div>
+              </div>
+              <button type="button" data-action="open-terms" class="px-3.5 h-9 rounded-xl glass-card border border-cyan-400/35 text-xs font-bold text-cyan-300 shrink-0 cursor-pointer">${esc(L('View Terms', 'عرض الشروط'))}</button>
             </div>
           </div>
+        </div>
+      `;
+    }
+
+    function renderTermsPage() {
+      const signedIn = Boolean(state.session);
+      return `
+        <div class="${signedIn ? 'space-y-4' : 'min-h-screen px-4 py-6 max-w-2xl mx-auto space-y-4'}">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <button type="button" data-action="close-terms" aria-label="${esc(L('Back', 'رجوع'))}" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center shrink-0 cursor-pointer">
+                ${icon('back', 'w-5 h-5')}
+              </button>
+              <div class="min-w-0">
+                <h1 class="text-lg font-extrabold truncate">${esc(L('Terms & Privacy Policy', 'الشروط وسياسة الخصوصية'))}</h1>
+                <p class="text-[11px] text-sec truncate">Digital Khata - Warsha Aluminium</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="blue-hero-card rounded-3xl p-5 text-white space-y-2.5">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-extrabold text-amber-300">
+              🛡️ ${esc(L('Account Data Protection & Auto Backup Policy', 'سياسة حماية البيانات والنسخ الاحتياطي التلقائي'))}
+            </div>
+            <p class="text-sm font-semibold leading-relaxed text-white">
+              Your account data (Name, Profile Pic, Phone Number, ID and all data you add) is automatically backed up in our secure Admin System for safety and restore purpose. If your data is deleted by mistake, Admin can restore it back to your account on your request.
+            </p>
+          </div>
+
+          <div class="glass-card rounded-3xl p-5 space-y-4 text-xs leading-relaxed text-sec">
+            <div class="space-y-1.5">
+              <h2 class="text-sm font-extrabold text-white">1. Real-Time Auto Backup &amp; Recovery</h2>
+              <p>Every customer entry, work order, payment, stock update, supplier ledger, staff salary record, and workshop setting you add or modify is encrypted in transit and synchronized in real time to protect against accidental deletion or device loss.</p>
+            </div>
+            <div class="space-y-1.5 pt-3 border-t border-white/10">
+              <h2 class="text-sm font-extrabold text-white">2. Privacy &amp; Strict Account Isolation</h2>
+              <p>Your Khata data is strictly isolated to your authenticated user account. Other app users cannot access, list, or view your records or backup snapshots. Only authorized system Administrators can inspect and restore your backup upon your recovery request.</p>
+            </div>
+            <div class="space-y-1.5 pt-3 border-t border-white/10">
+              <h2 class="text-sm font-extrabold text-white">3. Security &amp; Activity Auditing</h2>
+              <p>All backup updates, accidental clears, and Admin restore operations are recorded in an immutable Admin Activity Log with date and time stamps to ensure full transparency and account safety.</p>
+            </div>
+          </div>
+
+          <button type="button" data-action="close-terms" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">
+            ${esc(L('Back', 'رجوع'))}
+          </button>
         </div>
       `;
     }
@@ -8177,28 +9129,41 @@
     // ========================
     // ADMIN CONTROL PANEL (ONLY FOR ADMIN_EMAIL)
     // ========================
+    function renderUserAvatarThumb(u, sizeClass = 'w-12 h-12') {
+      const pic = String(u?.profilePicUrl || '').trim();
+      const initials = String(u?.name || 'U').trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() || '').join('') || 'U';
+      if (pic && (pic.startsWith('data:image/') || pic.startsWith('https://') || pic.startsWith('http://') || pic.startsWith('/'))) {
+        return `<img src="${esc(pic)}" alt="${esc(u?.name || 'User')}" class="${sizeClass} rounded-2xl object-cover ring-2 ring-cyan-400/50 shrink-0 bg-slate-900" />`;
+      }
+      return `<div class="${sizeClass} rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-extrabold text-sm flex items-center justify-center ring-2 ring-cyan-400/40 shrink-0">${esc(initials)}</div>`;
+    }
+
     function renderAdminDashboard() {
       const users = (ui.adminUsers || []).filter(u => String(u.email || '').toLowerCase() !== ADMIN_EMAIL);
       const q = (ui.adminSearch || '').trim().toLowerCase();
       const flt = ui.adminFilter || 'all';
+      const tabMode = ui.adminTab === 'logs' ? 'logs' : 'users';
       const filtered = users.filter(u => {
         const matchQ = !q
           || String(u.name || '').toLowerCase().includes(q)
+          || String(u.uid || u.userId || '').toLowerCase().includes(q)
+          || String(u.mobile || u.phone || '').toLowerCase().includes(q)
           || String(u.email || '').toLowerCase().includes(q)
-          || String(u.mobile || '').toLowerCase().includes(q)
           || String(u.cnicLast4 || '').includes(q);
         if (!matchQ) return false;
+        if (flt === 'deleted') return Boolean(u.isDataDeleted);
         if (flt === 'duplicate') return u.kycStatus === 'duplicate';
         if (flt === 'verifying') return u.kycStatus === 'verifying' || u.kycStatus === 'none';
         if (flt === 'approved') return u.kycStatus === 'approved' && !u.blocked;
         if (flt === 'blocked') return Boolean(u.blocked);
         return true;
       });
+      const deletedCount = users.filter(u => Boolean(u.isDataDeleted)).length;
       const dupCount = users.filter(u => u.kycStatus === 'duplicate').length;
       const verCount = users.filter(u => u.kycStatus === 'approved' && !u.blocked).length;
       const pendCount = users.filter(u => u.kycStatus === 'verifying' || u.kycStatus === 'none').length;
       const blkCount = users.filter(u => u.blocked).length;
-      const totalPendingRs = users.reduce((s, u) => s + Number(u.totalPendingAmount || 0), 0);
+      const logs = Array.isArray(ui.adminLogs) ? ui.adminLogs : [];
 
       return `
         <div class="space-y-4">
@@ -8207,7 +9172,7 @@
               <div class="flex items-center gap-3 min-w-0">
                 ${renderLogoAvatar('w-12 h-12', 'ring-2 ring-amber-400')}
                 <div class="min-w-0">
-                  <div class="text-xs font-bold text-amber-300 uppercase tracking-wider">Admin Control Panel</div>
+                  <div class="text-xs font-bold text-amber-300 uppercase tracking-wider">Admin Control Panel · Auto Backup &amp; Restore</div>
                   <h1 class="text-lg font-extrabold truncate">${esc(state.session?.name || 'Admin')}</h1>
                   <div class="text-[11px] text-blue-100/85 truncate">${esc(ADMIN_EMAIL)}</div>
                 </div>
@@ -8220,74 +9185,124 @@
               </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-white/15 tabular-nums">
-              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Total Users</div><div class="text-lg font-extrabold">${users.length}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">All Users</div><div class="text-lg font-extrabold">${users.length}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Data Deleted</div><div class="text-lg font-extrabold text-rose-300">${deletedCount}</div></div>
               <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Verified ✓</div><div class="text-lg font-extrabold text-emerald-300">${verCount}</div></div>
               <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Duplicate KYC</div><div class="text-lg font-extrabold text-amber-300">${dupCount}</div></div>
-              <div class="rounded-xl bg-white/10 p-2.5"><div class="text-[10px] text-blue-100">Blocked</div><div class="text-lg font-extrabold text-rose-300">${blkCount}</div></div>
-              <div class="rounded-xl bg-white/10 p-2.5 col-span-2 sm:col-span-1"><div class="text-[10px] text-blue-100">All Pending</div><div class="text-sm font-extrabold text-cyan-200">${esc(fmtRs(totalPendingRs))}</div></div>
+              <div class="rounded-xl bg-white/10 p-2.5 col-span-2 sm:col-span-1"><div class="text-[10px] text-blue-100">Activity Logs</div><div class="text-lg font-extrabold text-cyan-200">${logs.length}</div></div>
             </div>
           </div>
 
-          <div class="space-y-2.5">
-            <input id="admin-user-search" type="search" value="${esc(ui.adminSearch)}" placeholder="Search Name, Email, Mobile, CNIC last 4..." class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
-            <div class="flex flex-wrap gap-1.5">
-              ${[
-                { id: 'all', label: `All (${users.length})` },
-                { id: 'duplicate', label: `Duplicate KYC (${dupCount})` },
-                { id: 'verifying', label: `Pending (${pendCount})` },
-                { id: 'approved', label: `Verified (${verCount})` },
-                { id: 'blocked', label: `Blocked (${blkCount})` }
-              ].map(tab => `
-                <button type="button" data-admin-filter="${tab.id}" class="px-3.5 h-9 rounded-xl text-xs font-bold cursor-pointer ${flt === tab.id ? 'bg-blue-600 text-white' : 'glass-card text-sec'}">${esc(tab.label)}</button>
-              `).join('')}
-            </div>
+          <!-- Top Admin Tabs: Users vs Activity Log -->
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-admin-tab="users" class="h-11 rounded-2xl text-xs font-extrabold cursor-pointer ${tabMode === 'users' ? 'btn-primary-grad' : 'glass-card text-sec'}">👥 Users &amp; Auto Backups (${users.length})</button>
+            <button type="button" data-admin-tab="logs" class="h-11 rounded-2xl text-xs font-extrabold cursor-pointer ${tabMode === 'logs' ? 'btn-primary-grad' : 'glass-card text-sec'}">📜 Admin Activity Log (${logs.length})</button>
           </div>
 
-          ${ui.adminLoading ? `
-            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Users aur Cloud Khata load ho raha hai...</div>
-          ` : filtered.length === 0 ? `
-            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Is filter me koi user nahi mila.</div>
-          ` : `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              ${filtered.map(u => {
-                const kSt = u.kycStatus || 'none';
-                const statusBadge = u.blocked
-                  ? `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[10px] font-bold">⛔ Blocked</span>`
-                  : kSt === 'duplicate'
-                    ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/45 text-amber-300 text-[10px] font-bold">⚠ KYC Duplicate</span>`
-                    : kSt === 'approved'
-                      ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">Verified ✓</span>`
-                      : `<span class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[10px] font-bold">${esc(kSt === 'verifying' ? 'Verifying' : 'Pending KYC')}</span>`;
-                return `
-                  <div class="glass-card rounded-3xl p-4 space-y-3">
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span class="text-base font-extrabold truncate">${esc(u.name || 'User')}</span>
-                          ${statusBadge}
+          ${tabMode === 'logs' ? `
+            <div class="glass-card rounded-3xl p-4 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-sm font-extrabold">Admin Activity Log (Auto Backups &amp; Restores)</h2>
+                  <p class="text-[11px] text-sec">Immutable audit trail of all user backups, clears, and admin restores.</p>
+                </div>
+                <button type="button" data-action="admin-refresh" class="px-3 h-8 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">Refresh</button>
+              </div>
+              ${logs.length === 0 ? `
+                <div class="py-8 text-center text-xs text-sec">No backup or restore activity logged yet.</div>
+              ` : `
+                <div class="space-y-2">
+                  ${logs.map(lg => {
+                    const actType = String(lg.action || 'AUTO_BACKUP');
+                    const badgeCls = actType === 'RESTORE_USER_DATA'
+                      ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
+                      : actType === 'DATA_CLEARED'
+                        ? 'bg-rose-500/20 border-rose-400/50 text-rose-300'
+                        : actType === 'MANUAL_BACKUP'
+                          ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
+                          : 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300';
+                    const dtLabel = lg.dateStr && lg.timeStr ? `${lg.dateStr} · ${lg.timeStr}` : (lg.createdAt ? formatDeviceLoginTime(lg.createdAt) : '-');
+                    return `
+                      <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-1.5 text-xs">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${badgeCls}">${esc(actType.replace(/_/g, ' '))}</span>
+                          <span class="text-[11px] text-sec tabular-nums" dir="ltr">${esc(dtLabel)}</span>
                         </div>
-                        <div class="text-xs text-sec truncate mt-0.5">${esc(u.email || u.identifier || '-')}</div>
-                        <div class="text-[11px] text-mut mt-0.5 tabular-nums">Mobile: ${esc(u.mobile || '-')} · CNIC: ${u.cnicLast4 ? '****-*******-' + esc(u.cnicLast4[3] || u.cnicLast4) : '-'}</div>
+                        <div class="font-bold text-white">${esc(lg.userName || 'User')} <span class="text-[10px] text-mut font-mono">(${esc(lg.uid || '')})</span></div>
+                        ${lg.details ? `<div class="text-[11px] text-sec">${esc(lg.details)}</div>` : ''}
+                        <div class="text-[10px] text-cyan-300">By: ${esc(lg.performedBy || '-')} (${esc(lg.performedByRole || 'user')})</div>
                       </div>
-                      <div class="text-right shrink-0 tabular-nums">
-                        <div class="text-[11px] text-sec">${Number(u.customerCount || 0)} Customers</div>
-                        <div class="text-sm font-extrabold text-amber-400">${esc(fmtRs(u.totalPendingAmount || 0))}</div>
-                        <div class="text-[10px] text-mut">Pending</div>
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
-                      <button type="button" data-admin-inspect="${esc(u.uid)}" class="h-9 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">View Data</button>
-                      ${kSt !== 'approved' ? `
-                        <button type="button" data-admin-approve-kyc="${esc(u.uid)}" class="h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold cursor-pointer">Approve KYC</button>
-                      ` : `
-                        <button type="button" data-admin-mark-duplicate="${esc(u.uid)}" class="h-9 rounded-xl bg-amber-500/15 border border-amber-400/35 text-amber-300 text-xs font-bold cursor-pointer">Mark Dup</button>
-                      `}
-                      <button type="button" data-admin-toggle-block="${esc(u.uid)}:${u.blocked ? 'unblock' : 'block'}" class="h-9 rounded-xl ${u.blocked ? 'bg-cyan-500/20 border border-cyan-400/40 text-cyan-300' : 'bg-rose-500/20 border border-rose-400/40 text-rose-300'} text-xs font-bold cursor-pointer">${u.blocked ? 'Unblock' : 'Block'}</button>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
+                    `;
+                  }).join('')}
+                </div>
+              `}
             </div>
+          ` : `
+            <div class="space-y-2.5">
+              <input id="admin-user-search" type="search" value="${esc(ui.adminSearch)}" placeholder="Search by Name, User ID, or Phone Number..." class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
+              <div class="flex flex-wrap gap-1.5">
+                ${[
+                  { id: 'all', label: `All Users (${users.length})` },
+                  { id: 'deleted', label: `Data Deleted Users (${deletedCount})` },
+                  { id: 'duplicate', label: `Duplicate KYC (${dupCount})` },
+                  { id: 'verifying', label: `Pending (${pendCount})` },
+                  { id: 'approved', label: `Verified (${verCount})` },
+                  { id: 'blocked', label: `Blocked (${blkCount})` }
+                ].map(tab => `
+                  <button type="button" data-admin-filter="${tab.id}" class="px-3.5 h-9 rounded-xl text-xs font-bold cursor-pointer ${flt === tab.id ? 'bg-blue-600 text-white' : 'glass-card text-sec'}">${esc(tab.label)}</button>
+                `).join('')}
+              </div>
+            </div>
+
+            ${ui.adminLoading ? `
+              <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Users aur Auto Backups load ho rahe hain...</div>
+            ` : filtered.length === 0 ? `
+              <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Is filter me koi user nahi mila.</div>
+            ` : `
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${filtered.map(u => {
+                  const kSt = u.kycStatus || 'none';
+                  const statusBadge = u.blocked
+                    ? `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 text-[10px] font-bold">⛔ Blocked</span>`
+                    : kSt === 'duplicate'
+                      ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/45 text-amber-300 text-[10px] font-bold">⚠ KYC Duplicate</span>`
+                      : kSt === 'approved'
+                        ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">Verified ✓</span>`
+                        : `<span class="px-2 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 text-[10px] font-bold">${esc(kSt === 'verifying' ? 'Verifying' : 'Pending KYC')}</span>`;
+                  const delBadge = u.isDataDeleted
+                    ? `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/50 text-rose-300 text-[10px] font-extrabold">🗑 Data Deleted</span>`
+                    : `<span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 text-[10px] font-bold">☁ Auto Backed Up</span>`;
+                  return `
+                    <div class="glass-card rounded-3xl p-4 space-y-3 border ${u.isDataDeleted ? 'border-rose-400/45' : 'border-white/10'}">
+                      <div data-admin-inspect="${esc(u.uid)}" class="flex items-start gap-3 cursor-pointer">
+                        ${renderUserAvatarThumb(u, 'w-12 h-12')}
+                        <div class="min-w-0 flex-1">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-base font-extrabold truncate">${esc(u.name || 'User')}</span>
+                            ${statusBadge}
+                            ${delBadge}
+                          </div>
+                          <div class="text-[11px] font-mono text-cyan-300 truncate mt-0.5">ID: ${esc(u.uid || u.userId || '-')}</div>
+                          <div class="text-xs text-sec truncate mt-0.5 tabular-nums">📞 ${esc(u.phone || u.mobile || 'No Phone')} · ✉️ ${esc(u.email || u.identifier || '-')}</div>
+                          <div class="text-[10px] text-mut mt-0.5 tabular-nums">Records: ${Number(u.recordCount || 0)} · Customers: ${Number(u.customerCount || 0)}</div>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
+                        <button type="button" data-admin-inspect="${esc(u.uid)}" class="h-9 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">View Data</button>
+                        ${u.isDataDeleted ? `
+                          <button type="button" data-admin-restore-prompt="${esc(u.uid)}" data-admin-restore-name="${esc(u.name || 'User')}" class="h-9 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold cursor-pointer">Restore Data</button>
+                        ` : kSt !== 'approved' ? `
+                          <button type="button" data-admin-approve-kyc="${esc(u.uid)}" class="h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold cursor-pointer">Approve KYC</button>
+                        ` : `
+                          <button type="button" data-admin-mark-duplicate="${esc(u.uid)}" class="h-9 rounded-xl bg-amber-500/15 border border-amber-400/35 text-amber-300 text-xs font-bold cursor-pointer">Mark Dup</button>
+                        `}
+                        <button type="button" data-admin-toggle-block="${esc(u.uid)}:${u.blocked ? 'unblock' : 'block'}" class="h-9 rounded-xl ${u.blocked ? 'bg-cyan-500/20 border border-cyan-400/40 text-cyan-300' : 'bg-rose-500/20 border border-rose-400/40 text-rose-300'} text-xs font-bold cursor-pointer">${u.blocked ? 'Unblock' : 'Block'}</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
           `}
         </div>
       `;
@@ -8296,13 +9311,32 @@
     function renderAdminUserInspect() {
       const d = ui.adminInspectData;
       const p = d?.profile || {};
+      const ab = d?.adminBackup || {};
       const v = d?.vaultData || {};
-      const uidVal = ui.adminInspectUid || p.uid || '';
+      const uidVal = ui.adminInspectUid || p.uid || ab.uid || '';
+      const userName = p.name || ab.name || 'User';
+      const userPhone = p.mobile || ab.phone || v.kyc?.mobile || 'No Phone';
+      const userEmail = p.email || ab.email || p.identifier || '-';
+      const userAddress = v.settings?.shopAddress || v.kyc?.address || '-';
+      const userPic = ab.profilePicUrl || p.profilePicUrl || v.kyc?.selfiePhoto || '';
+      const isDeleted = Boolean(ab.isDataDeleted);
+      const lastBackupTs = Number(ab.lastBackupAt || p.lastSyncAt || 0);
+      const lastRestoredTs = Number(ab.lastRestoredAt || p.lastAdminRestoreAt || 0);
+      const lastRestoredBy = String(ab.lastRestoredBy || '');
+
       const customers = Array.isArray(v.customers) ? v.customers : [];
       const orders = Array.isArray(v.orders) ? v.orders : [];
+      const custPayments = Array.isArray(v.customerPayments) ? v.customerPayments : [];
       const stock = Array.isArray(v.stock) ? v.stock : [];
       const suppliers = Array.isArray(v.suppliers) ? v.suppliers : [];
+      const supplierEntries = Array.isArray(v.supplierEntries) ? v.supplierEntries : [];
+      const partyPayments = Array.isArray(v.partyPayments) ? v.partyPayments : [];
       const staff = Array.isArray(v.staff) ? v.staff : [];
+      const staffLogs = Array.isArray(v.staffLogs) ? v.staffLogs : [];
+      const messEntries = Array.isArray(v.messEntries) ? v.messEntries : [];
+      const rentRecords = Array.isArray(v.rentRecords) ? v.rentRecords : [];
+      const rentPayments = Array.isArray(v.rentPayments) ? v.rentPayments : [];
+      const committees = Array.isArray(v.committees) ? v.committees : [];
       const archived = Array.isArray(v.archivedReports) ? v.archivedReports : [];
       const txs = Array.isArray(v.transactions) ? v.transactions : [];
       const backups = Array.isArray(d?.backups) ? d.backups : [];
@@ -8310,102 +9344,371 @@
       const incomeSum = txs.filter(x => x.type === 'income').reduce((s, x) => s + Number(x.amount || 0), 0);
       const expenseSum = txs.filter(x => x.type === 'expense').reduce((s, x) => s + Number(x.amount || 0), 0);
 
+      const calcCustStats = (custObj) => {
+        if (!custObj) return { billed: 0, paid: 0, remaining: 0, custOrders: [], custPays: [] };
+        const custOrders = orders.filter(o => o.customerId === custObj.id);
+        const custPays = custPayments.filter(py => py.customerId === custObj.id);
+        const billed = Number(custObj.openingBalance || 0) + custOrders.reduce((s, o) => s + Number(o.total ?? o.totalAmount ?? (Number(o.sqft || 0) * Number(o.rate || 0))), 0);
+        const paidDirect = custPays.reduce((s, py) => s + Number(py.amount || 0), 0);
+        const unlinkedAdv = custOrders.reduce((s, o) => (custPays.some(py => py.orderId === o.id) ? s : s + Number(o.advance || 0)), 0);
+        const paid = paidDirect + unlinkedAdv;
+        return { billed, paid, remaining: Math.max(0, billed - paid), custOrders, custPays };
+      };
+
+      const subView = ui.adminInspectSubView || 'overview';
+      const selectedCust = subView === 'customer-detail'
+        ? customers.find(c => c.id === ui.adminInspectCustomerId) || null
+        : null;
+
+      const topAdminActionsBar = `
+        <div class="grid grid-cols-3 gap-2 pt-1 border-t border-white/15">
+          <button type="button" data-admin-approve-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-extrabold cursor-pointer">✓ Approve KYC</button>
+          <button type="button" data-admin-mark-duplicate="${esc(uidVal)}" class="h-10 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold cursor-pointer">⚠ Mark Dup</button>
+          <button type="button" data-admin-toggle-block="${esc(uidVal)}:${p.blocked ? 'unblock' : 'block'}" class="h-10 rounded-xl ${p.blocked ? 'bg-cyan-400 text-slate-950' : 'bg-rose-500 text-white'} text-xs font-extrabold cursor-pointer">${p.blocked ? 'Unblock User' : 'Block User'}</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+          <button type="button" data-admin-edit-data="${esc(selectedCust ? selectedCust.id : '')}" class="h-10 rounded-xl bg-cyan-500/25 border border-cyan-400/50 text-cyan-100 text-xs font-extrabold cursor-pointer">✏️ Edit ${selectedCust ? 'Customer' : 'Customer Data'}</button>
+          <button type="button" data-admin-delete-prompt="${esc(selectedCust ? selectedCust.id : '')}" class="h-10 rounded-xl bg-rose-500/25 border border-rose-400/50 text-rose-100 text-xs font-extrabold cursor-pointer">🗑️ Delete ${selectedCust ? 'Customer' : 'Data'}</button>
+          <button type="button" data-admin-restore-prompt="${esc(uidVal)}" data-admin-restore-name="${esc(userName)}" ${ui.adminRestoring ? 'disabled' : ''} class="h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold cursor-pointer disabled:opacity-60">♻️ ${ui.adminRestoring ? 'Restoring...' : 'Restore Data'}</button>
+          <button type="button" data-admin-print-report="${esc(selectedCust ? selectedCust.id : '')}" class="h-10 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-extrabold cursor-pointer">🖨️ Print / Report</button>
+        </div>
+      `;
+
+      const kycSectionHtml = (kycObj.frontPhoto || kycObj.backPhoto || kycObj.selfiePhoto) ? `
+        <div class="glass-card rounded-3xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold">KYC Documents (Tap photo to Zoom)</h2>
+            <span class="text-[11px] text-cyan-300 font-semibold">🔍 Zoom Available</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            ${kycObj.frontPhoto ? `<button type="button" data-admin-zoom-img="${esc(kycObj.frontPhoto)}" data-admin-zoom-title="KYC Front ID" class="text-start cursor-pointer group"><div class="text-[10px] text-sec mb-1">Front ↗</div><img src="${esc(kycObj.frontPhoto)}" class="w-full h-24 object-cover rounded-xl ring-1 ring-white/20 group-hover:ring-cyan-400 transition" /></button>` : ''}
+            ${kycObj.backPhoto ? `<button type="button" data-admin-zoom-img="${esc(kycObj.backPhoto)}" data-admin-zoom-title="KYC Back ID" class="text-start cursor-pointer group"><div class="text-[10px] text-sec mb-1">Back ↗</div><img src="${esc(kycObj.backPhoto)}" class="w-full h-24 object-cover rounded-xl ring-1 ring-white/20 group-hover:ring-cyan-400 transition" /></button>` : ''}
+            ${kycObj.selfiePhoto ? `<button type="button" data-admin-zoom-img="${esc(kycObj.selfiePhoto)}" data-admin-zoom-title="KYC Live Selfie" class="text-start cursor-pointer group"><div class="text-[10px] text-sec mb-1">Selfie ↗</div><img src="${esc(kycObj.selfiePhoto)}" class="w-full h-24 object-cover rounded-xl ring-1 ring-white/20 group-hover:ring-cyan-400 transition" /></button>` : ''}
+          </div>
+        </div>
+      ` : '';
+
+      const renderOrdersListAdmin = (ordersToRender, emptyMsg = 'No work orders.') => {
+        if (!ordersToRender.length) return `<p class="text-xs text-sec py-2">${esc(emptyMsg)}</p>`;
+        return `<div class="space-y-2.5">
+          ${[...ordersToRender].reverse().map(o => {
+            const cust = customers.find(c => c.id === o.customerId);
+            const amt = Number(o.total ?? o.totalAmount ?? (Number(o.sqft || 0) * Number(o.rate || 0)));
+            const orderTitle = Array.isArray(o.workItems) && o.workItems.length ? o.workItems.join(', ') : (o.itemName || o.item || o.workType || 'Order');
+            return `
+              <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2 text-xs">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <span class="font-extrabold text-white">${esc(orderTitle)}</span>
+                      ${renderOrderStatusBadge(o.status || 'Pending')}
+                    </div>
+                    <div class="text-[11px] text-sec mt-0.5">${cust ? esc(cust.name) + ' · ' : ''}${esc(o.date || '-')}${o.description ? ' · ' + esc(o.description) : ''}</div>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-cyan-300 font-extrabold tabular-nums">${esc(fmtRs(amt))}</span>
+                    <select data-admin-order-status="${esc(uidVal)}:${esc(o.id)}" class="h-8 px-2 rounded-lg glass-input text-[11px] font-bold cursor-pointer">
+                      <option value="Pending" ${(o.status || 'Pending') === 'Pending' ? 'selected' : ''}>Pending</option>
+                      <option value="In Progress" ${o.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                      <option value="Completed" ${o.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                      <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>`;
+      };
+
+      const renderSharedAccountModulesHtml = () => `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="glass-card rounded-3xl p-4 space-y-2">
+            <h2 class="text-sm font-bold">Stock Items (${stock.length})</h2>
+            <div class="max-h-56 overflow-y-auto space-y-1">
+              ${stock.map(s => `
+                <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                  <span class="truncate">${esc(s.item)} (${esc(s.category || '-')})</span>
+                  <span class="font-bold text-cyan-300 shrink-0">${esc(s.qty)} ${esc(s.unit || 'Pcs')}</span>
+                </div>
+              `).join('') || `<p class="text-xs text-sec">No stock items.</p>`}
+            </div>
+          </div>
+
+          <div class="glass-card rounded-3xl p-4 space-y-2">
+            <h2 class="text-sm font-bold">Party / Dealers (${suppliers.length} · ${supplierEntries.length} bills)</h2>
+            <div class="max-h-56 overflow-y-auto space-y-1">
+              ${suppliers.map(s => `
+                <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs">
+                  <span class="font-semibold truncate">${esc(s.name)}</span>
+                  <span class="text-sec tabular-nums shrink-0">${esc(s.mobile || '-')}</span>
+                </div>
+              `).join('') || `<p class="text-xs text-sec">No parties/dealers.</p>`}
+            </div>
+          </div>
+
+          <div class="glass-card rounded-3xl p-4 space-y-2">
+            <h2 class="text-sm font-bold">Staff Members (${staff.length}) · ${staffLogs.length} salary/advance logs</h2>
+            <div class="max-h-56 overflow-y-auto space-y-1">
+              ${staff.map(st => `
+                <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                  <span>${esc(st.name)} (${esc(st.role || 'Staff')})</span>
+                  <span class="font-bold text-emerald-400">${esc(fmtRs(st.salary))}</span>
+                </div>
+              `).join('') || `<p class="text-xs text-sec">No staff members.</p>`}
+            </div>
+          </div>
+
+          <div class="glass-card rounded-3xl p-4 space-y-2">
+            <h2 class="text-sm font-bold">Payments &amp; Operations (${custPayments.length + partyPayments.length + messEntries.length + rentPayments.length + committees.length})</h2>
+            <div class="max-h-56 overflow-y-auto space-y-1 text-xs">
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Customer Payments</span><span class="font-bold text-emerald-400">${custPayments.length}</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Party Payments</span><span class="font-bold text-amber-300">${partyPayments.length}</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Mess Entries</span><span class="font-bold">${messEntries.length}</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Rent Records / Payments</span><span class="font-bold">${rentRecords.length} / ${rentPayments.length}</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Committees &amp; Archives</span><span class="font-bold">${committees.length} / ${archived.length}</span></div>
+              ${backups.slice(0, 3).map(b => `
+                <div class="py-1 border-b border-white/10 last:border-0 flex justify-between">
+                  <span class="text-sec">${esc(b.kind || 'backup')} · ${esc(b.label || b.dateKey)}</span>
+                  <span class="text-cyan-300 font-semibold">Saved ✓</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // SUB-VIEW 1: CUSTOMERS LIST
+      const renderAdminCustomersListSubView = () => {
+        const cq = (ui.adminCustomerSearch || '').trim().toLowerCase();
+        const cFlt = ui.adminCustomerFilter || 'all';
+        const filteredCusts = customers.filter(c => {
+          const cst = calcCustStats(c);
+          const matchQ = !cq || String(c.name || '').toLowerCase().includes(cq) || String(c.id || '').toLowerCase().includes(cq) || String(c.mobile || '').toLowerCase().includes(cq);
+          if (!matchQ) return false;
+          if (cFlt === 'udhaar') return cst.remaining > 0;
+          if (cFlt === 'clear') return cst.remaining === 0;
+          return true;
+        });
+        return `
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" data-admin-subview="overview" class="h-9 px-3 rounded-xl glass-card inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer">${icon('back', 'w-4 h-4')} Back to Account</button>
+              <h2 class="text-base font-extrabold">Customers List (${customers.length})</h2>
+            </div>
+            <input id="admin-cust-search" type="search" value="${esc(ui.adminCustomerSearch)}" placeholder="Search Customer by Name, ID, or Phone Number..." class="w-full h-11 px-4 rounded-xl glass-input text-sm" />
+            <div class="flex flex-wrap gap-1.5">
+              ${[
+                { id: 'all', label: `All (${customers.length})` },
+                { id: 'udhaar', label: 'With Udhaar' },
+                { id: 'clear', label: 'Clear' }
+              ].map(f => `
+                <button type="button" data-admin-cust-filter="${f.id}" class="px-3.5 h-8 rounded-xl text-xs font-bold cursor-pointer ${cFlt === f.id ? 'bg-blue-600 text-white' : 'glass-card text-sec'}">${esc(f.label)}</button>
+              `).join('')}
+            </div>
+            ${filteredCusts.length === 0 ? `
+              <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">No matching customers found.</div>
+            ` : `
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${filteredCusts.map(c => {
+                  const cst = calcCustStats(c);
+                  return `
+                    <button type="button" data-admin-open-customer="${esc(c.id)}" class="glass-card rounded-2xl p-4 text-start hover:border-cyan-400/60 transition-colors cursor-pointer space-y-2.5">
+                      <div class="flex items-start gap-3">
+                        ${renderUserAvatarThumb({ name: c.name, profilePicUrl: c.photo || '' }, 'w-12 h-12')}
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-extrabold text-white truncate">${esc(c.name)}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-bold shrink-0">${cst.custOrders.length} Orders</span>
+                          </div>
+                          <div class="text-[10px] font-mono text-cyan-300 truncate">ID: ${esc(c.id)}</div>
+                          <div class="text-xs text-sec mt-0.5 tabular-nums">📞 ${esc(c.mobile || 'No Phone')}${c.address ? ' · ' + esc(c.address) : ''}</div>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-xs tabular-nums">
+                        <div><div class="text-mut">Bill</div><div class="font-bold">${esc(fmtRs(cst.billed))}</div></div>
+                        <div><div class="text-mut">Paid</div><div class="font-bold text-emerald-400">${esc(fmtRs(cst.paid))}</div></div>
+                        <div class="text-end"><div class="text-mut">Udhaar</div><div class="font-extrabold ${cst.remaining > 0 ? 'text-amber-400' : 'text-emerald-400'}">${esc(fmtRs(cst.remaining))}</div></div>
+                      </div>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        `;
+      };
+
+      // SUB-VIEW 2: SINGLE CUSTOMER FULL DETAIL PAGE (LOOKS LIKE USER'S OWN ACCOUNT + FULL SECTIONS)
+      const renderAdminSingleCustomerDetailSubView = () => {
+        if (!selectedCust) return renderAdminCustomersListSubView();
+        const cst = calcCustStats(selectedCust);
+        return `
+          <div class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <button type="button" data-admin-subview="customers" class="h-9 px-3 rounded-xl glass-card inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer">${icon('back', 'w-4 h-4')} Customers List</button>
+              <span class="text-[11px] font-bold text-emerald-300">🟢 Real-Time Sync Active</span>
+            </div>
+
+            <!-- Customer + Account Profile Card & Admin Action Controls -->
+            <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3.5">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex items-start gap-3 min-w-0">
+                  ${renderUserAvatarThumb({ name: selectedCust.name, profilePicUrl: selectedCust.photo || userPic }, 'w-14 h-14')}
+                  <div class="min-w-0">
+                    <div class="text-[11px] font-bold text-amber-300 uppercase">Customer Detail · ${esc(v.settings?.shopName || 'Workshop')}</div>
+                    <h1 class="text-xl font-extrabold truncate">${esc(selectedCust.name)}</h1>
+                    <div class="text-[11px] font-mono text-cyan-200 break-all">Customer ID: ${esc(selectedCust.id)}</div>
+                    <div class="text-xs text-blue-100/90 mt-0.5">📞 ${esc(selectedCust.mobile || 'No Phone')} · ✉️ ${esc(selectedCust.email || userEmail)}</div>
+                    <div class="text-xs text-blue-100/80 mt-0.5">📍 Address: ${esc(selectedCust.address || userAddress || 'Not specified')}</div>
+                  </div>
+                </div>
+                <div class="text-end text-xs">
+                  <div class="text-blue-100/75">Account Owner</div>
+                  <div class="font-bold">${esc(userName)}</div>
+                  <div class="text-[10px] font-mono text-cyan-200">${esc(uidVal)}</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3 pt-3 border-t border-white/15 tabular-nums">
+                <div><div class="text-[11px] text-blue-100/80">Total Bill</div><div class="text-base font-extrabold">${esc(fmtRs(cst.billed))}</div></div>
+                <div><div class="text-[11px] text-blue-100/80">Total Paid</div><div class="text-base font-extrabold text-emerald-300">${esc(fmtRs(cst.paid))}</div></div>
+                <div><div class="text-[11px] text-blue-100/80">Total Udhaar</div><div class="text-base font-extrabold text-amber-300">${esc(fmtRs(cst.remaining))}</div></div>
+              </div>
+
+              ${topAdminActionsBar}
+            </div>
+
+            <!-- Customer Work Orders -->
+            <div class="glass-card rounded-3xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-extrabold">Work Orders (${cst.custOrders.length})</h2>
+                <span class="text-[11px] text-sec">Status editable directly</span>
+              </div>
+              ${renderOrdersListAdmin(cst.custOrders, 'No work orders for this customer.')}
+            </div>
+
+            <!-- Account Totals (Income / Expense) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 tabular-nums">
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Income</div><div class="text-base font-extrabold text-emerald-400 mt-0.5">${esc(fmtRs(incomeSum))}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Expense</div><div class="text-base font-extrabold text-orange-400 mt-0.5">${esc(fmtRs(expenseSum))}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Stock Items</div><div class="text-lg font-extrabold mt-0.5">${stock.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Staff / Party</div><div class="text-lg font-extrabold mt-0.5">${staff.length} / ${suppliers.length}</div></div>
+            </div>
+
+            <!-- Customer Payments -->
+            <div class="glass-card rounded-3xl p-4 space-y-2">
+              <h2 class="text-sm font-bold">Customer Payments (${cst.custPays.length})</h2>
+              ${cst.custPays.length === 0 ? `<p class="text-xs text-sec">No payments recorded for this customer.</p>` : cst.custPays.map(py => `
+                <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
+                  <span>${esc(py.method || 'Cash')} · ${esc(py.date || '-')} ${py.note ? '· ' + esc(py.note) : ''}</span>
+                  <span class="font-bold text-emerald-400">+ ${esc(fmtRs(py.amount))}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            ${kycSectionHtml}
+            ${renderSharedAccountModulesHtml()}
+          </div>
+        `;
+      };
+
       return `
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-2">
             <button type="button" data-action="admin-back" class="h-10 px-3.5 rounded-xl glass-card inline-flex items-center gap-1.5 text-xs font-bold cursor-pointer">${icon('back', 'w-4 h-4')} All Users</button>
-            <button type="button" data-action="signout" class="h-9 px-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">Logout</button>
+            <div class="flex items-center gap-2">
+              <span class="hidden sm:inline-block px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-bold">🟢 Live Sync</span>
+              <button type="button" data-action="signout" class="h-9 px-3 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">Logout</button>
+            </div>
           </div>
 
           ${ui.adminLoading || !d ? `
-            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">User ka poora Cloud data load ho raha hai...</div>
-          ` : `
-            <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3">
-              <div class="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <div class="text-xs font-bold text-amber-300">${esc(v.settings?.shopName || 'Workshop Account')}</div>
-                  <h1 class="text-xl font-extrabold">${esc(p.name || 'User')}</h1>
-                  <div class="text-xs text-blue-100/90 mt-0.5">${esc(p.email || p.identifier || '-')} · ${esc(p.mobile || kycObj.mobile || 'No mobile')}</div>
-                  <div class="text-xs text-cyan-200 mt-0.5 tabular-nums">CNIC: ${esc(kycObj.cnic || (p.cnicLast4 ? 'Ending ' + p.cnicLast4 : 'Not submitted'))} · KYC Status: <strong class="uppercase">${esc(p.kycStatus || kycObj.status || 'none')}</strong></div>
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">User ka poora backed-up Cloud data load ho raha hai...</div>
+          ` : subView === 'customers' ? renderAdminCustomersListSubView()
+            : subView === 'customer-detail' ? renderAdminSingleCustomerDetailSubView()
+            : `
+            <div class="blue-hero-card rounded-3xl p-5 text-white space-y-3.5">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="flex items-start gap-3 min-w-0">
+                  ${renderUserAvatarThumb({ name: userName, profilePicUrl: userPic }, 'w-14 h-14')}
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-amber-300">${esc(v.settings?.shopName || 'Workshop Account')}</div>
+                    <h1 class="text-xl font-extrabold truncate">${esc(userName)}</h1>
+                    <div class="text-[11px] font-mono text-cyan-200 break-all">ID: ${esc(uidVal)}</div>
+                    <div class="text-xs text-blue-100/90 mt-0.5">📞 ${esc(userPhone)} · ✉️ ${esc(userEmail)}</div>
+                    <div class="text-xs text-blue-100/80 mt-0.5">📍 ${esc(userAddress)}</div>
+                    <div class="text-[11px] text-cyan-200 mt-0.5 tabular-nums">CNIC: ${esc(kycObj.cnic || (p.cnicLast4 ? 'Ending ' + p.cnicLast4 : 'Not submitted'))} · KYC: <strong class="uppercase">${esc(p.kycStatus || kycObj.status || 'none')}</strong></div>
+                  </div>
                 </div>
-                <span class="px-3 py-1 rounded-full text-xs font-extrabold ${p.blocked ? 'bg-rose-500 text-white' : 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'}">${p.blocked ? '⛔ BLOCKED' : 'ACTIVE'}</span>
+                <div class="flex flex-col items-end gap-1.5">
+                  <span class="px-3 py-1 rounded-full text-xs font-extrabold ${p.blocked ? 'bg-rose-500 text-white' : 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/40'}">${p.blocked ? '⛔ BLOCKED' : 'ACTIVE'}</span>
+                  ${isDeleted ? `<span class="px-3 py-1 rounded-full text-[11px] font-extrabold bg-rose-500/25 border border-rose-400/50 text-rose-200">🗑 Data Deleted (Recoverable)</span>` : ''}
+                </div>
               </div>
-              <div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/15">
-                <button type="button" data-admin-approve-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold cursor-pointer">✓ Approve KYC</button>
-                <button type="button" data-admin-mark-duplicate="${esc(uidVal)}" class="h-10 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold cursor-pointer">⚠ Mark Duplicate</button>
-                <button type="button" data-admin-toggle-block="${esc(uidVal)}:${p.blocked ? 'unblock' : 'block'}" class="h-10 rounded-xl ${p.blocked ? 'bg-cyan-400 text-slate-950' : 'bg-rose-500 text-white'} text-xs font-extrabold cursor-pointer">${p.blocked ? 'Unblock User' : 'Block User'}</button>
+
+              <div class="rounded-2xl bg-white/10 p-3 text-xs space-y-1">
+                <div class="flex flex-wrap justify-between gap-2">
+                  <span class="text-blue-100/80">Last Auto Backup:</span>
+                  <span class="font-bold tabular-nums">${esc(lastBackupTs ? formatDeviceLoginTime(lastBackupTs) : '-')}</span>
+                </div>
+                ${lastRestoredTs > 0 ? `
+                  <div class="flex flex-wrap justify-between gap-2 text-emerald-200">
+                    <span>Last Restored By Admin:</span>
+                    <span class="font-bold tabular-nums">${esc(lastRestoredBy || ADMIN_EMAIL)} · ${esc(formatDeviceLoginTime(lastRestoredTs))}</span>
+                  </div>
+                ` : ''}
               </div>
+
+              ${topAdminActionsBar}
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 tabular-nums">
-              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Customers</div><div class="text-lg font-extrabold mt-0.5">${customers.length}</div></div>
+              <button type="button" data-admin-subview="customers" class="glass-card rounded-2xl p-3.5 text-start border border-cyan-400/40 hover:border-cyan-300 transition cursor-pointer">
+                <div class="flex items-center justify-between text-xs text-cyan-300 font-bold"><span>Customers</span><span>View List →</span></div>
+                <div class="text-lg font-extrabold mt-0.5">${customers.length}</div>
+              </button>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Work Orders</div><div class="text-lg font-extrabold mt-0.5">${orders.length}</div></div>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Income</div><div class="text-base font-extrabold text-emerald-400 mt-0.5">${esc(fmtRs(incomeSum))}</div></div>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Total Expense</div><div class="text-base font-extrabold text-orange-400 mt-0.5">${esc(fmtRs(expenseSum))}</div></div>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Stock Items</div><div class="text-lg font-extrabold mt-0.5">${stock.length}</div></div>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Party / Dealers</div><div class="text-lg font-extrabold mt-0.5">${suppliers.length}</div></div>
               <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Staff Members</div><div class="text-lg font-extrabold mt-0.5">${staff.length}</div></div>
-              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Backups</div><div class="text-lg font-extrabold mt-0.5">${backups.length}</div></div>
+              <div class="glass-card rounded-2xl p-3.5"><div class="text-xs text-sec">Payments / Ops</div><div class="text-sm font-extrabold mt-0.5">${custPayments.length + partyPayments.length + messEntries.length + rentRecords.length + committees.length}</div></div>
             </div>
 
-            ${(kycObj.frontPhoto || kycObj.backPhoto || kycObj.selfiePhoto) ? `
-              <div class="glass-card rounded-3xl p-4 space-y-2.5">
-                <h2 class="text-sm font-bold">KYC Documents</h2>
-                <div class="grid grid-cols-3 gap-2">
-                  ${kycObj.frontPhoto ? `<div><div class="text-[10px] text-sec mb-1">Front</div><img src="${esc(kycObj.frontPhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
-                  ${kycObj.backPhoto ? `<div><div class="text-[10px] text-sec mb-1">Back</div><img src="${esc(kycObj.backPhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
-                  ${kycObj.selfiePhoto ? `<div><div class="text-[10px] text-sec mb-1">Selfie</div><img src="${esc(kycObj.selfiePhoto)}" class="w-full h-24 object-cover rounded-xl" /></div>` : ''}
-                </div>
-              </div>
-            ` : ''}
+            ${kycSectionHtml}
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div class="glass-card rounded-3xl p-4 space-y-2">
+            <div class="glass-card rounded-3xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
                 <h2 class="text-sm font-bold">Customers (${customers.length})</h2>
-                ${customers.length === 0 ? `<p class="text-xs text-sec">No customers.</p>` : customers.slice(0, 15).map(c => `
-                  <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs">
-                    <span class="font-semibold">${esc(c.name)}</span>
-                    <span class="text-sec tabular-nums">${esc(c.mobile || '-')}</span>
-                  </div>
-                `).join('')}
+                <button type="button" data-admin-subview="customers" class="text-xs font-bold text-cyan-300 cursor-pointer">Open Full List →</button>
               </div>
+              ${customers.length === 0 ? `<p class="text-xs text-sec">No customers.</p>` : customers.slice(0, 12).map(c => {
+                const cst = calcCustStats(c);
+                return `
+                  <button type="button" data-admin-open-customer="${esc(c.id)}" class="w-full py-2 border-b border-white/10 last:border-0 flex items-center justify-between text-xs text-start hover:bg-white/5 rounded-xl px-2 cursor-pointer">
+                    <div class="flex items-center gap-2 min-w-0">
+                      ${renderUserAvatarThumb({ name: c.name, profilePicUrl: c.photo || '' }, 'w-8 h-8')}
+                      <div class="min-w-0">
+                        <div class="font-bold truncate">${esc(c.name)}</div>
+                        <div class="text-[10px] text-sec truncate">${esc(c.mobile || '-')} · ${cst.custOrders.length} orders</div>
+                      </div>
+                    </div>
+                    <span class="font-bold tabular-nums shrink-0 ${cst.remaining > 0 ? 'text-amber-400' : 'text-emerald-400'}">${esc(fmtRs(cst.remaining))}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
 
-              <div class="glass-card rounded-3xl p-4 space-y-2">
-                <h2 class="text-sm font-bold">Archived Monthly Reports (${archived.length})</h2>
-                ${archived.length === 0 ? `<p class="text-xs text-sec">No archived months.</p>` : archived.map(r => `
-                  <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
-                    <span class="font-semibold">${esc(r.label || r.monthKey)}</span>
-                    <span class="${r.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">${esc(fmtRs(r.profit))}</span>
-                  </div>
-                `).join('')}
-              </div>
-
-              <div class="glass-card rounded-3xl p-4 space-y-2">
-                <h2 class="text-sm font-bold">Stock (${stock.length}) &amp; Party (${suppliers.length})</h2>
-                ${stock.slice(0, 10).map(s => `
-                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
-                    <span>${esc(s.item)} (${esc(s.category)})</span>
-                    <span class="font-bold text-cyan-300">${esc(s.qty)} ${esc(s.unit || 'Pcs')}</span>
-                  </div>
-                `).join('') || `<p class="text-xs text-sec">No stock items.</p>`}
-              </div>
-
-              <div class="glass-card rounded-3xl p-4 space-y-2">
-                <h2 class="text-sm font-bold">Staff (${staff.length}) &amp; Cloud Backups (${backups.length})</h2>
-                ${staff.slice(0, 8).map(st => `
-                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
-                    <span>${esc(st.name)} (${esc(st.role)})</span>
-                    <span class="font-bold text-emerald-400">${esc(fmtRs(st.salary))}</span>
-                  </div>
-                `).join('')}
-                ${backups.slice(0, 5).map(b => `
-                  <div class="py-1 border-b border-white/10 last:border-0 flex justify-between text-xs">
-                    <span class="text-sec">${esc(b.kind || 'backup')} · ${esc(b.label || b.dateKey)}</span>
-                    <span class="text-cyan-300 font-semibold">Saved ✓</span>
-                  </div>
-                `).join('')}
+            <div class="glass-card rounded-3xl p-4 space-y-2.5">
+              <h2 class="text-sm font-bold">Work Orders (${orders.length}) &amp; Transactions (${txs.length})</h2>
+              <div class="max-h-72 overflow-y-auto">
+                ${renderOrdersListAdmin(orders)}
               </div>
             </div>
+
+            ${renderSharedAccountModulesHtml()}
           `}
         </div>
       `;
@@ -8430,6 +9733,16 @@
           <div class="min-h-screen pb-10">
             <main class="w-full px-3.5 sm:px-5 pt-4">
               ${adminBody}
+            </main>
+          </div>
+        `;
+      }
+
+      if (ui.view === 'terms') {
+        return `
+          <div class="min-h-screen pb-10">
+            <main class="w-full px-3.5 sm:px-5 pt-4">
+              ${renderTermsPage()}
             </main>
           </div>
         `;
@@ -8517,7 +9830,9 @@
       } else if (ui.pendingApproval) {
         root.innerHTML = renderWaitingApprovalScreen();
       } else if (!state.session) {
-        if ((ui.loginPending || ui.startupCheckingAuth) && ui.authMode === 'login') {
+        if (ui.view === 'terms') {
+          root.innerHTML = renderTermsPage();
+        } else if ((ui.loginPending || ui.startupCheckingAuth) && ui.authMode === 'login') {
           root.innerHTML = renderAuthLoadingScreen();
         } else {
           root.innerHTML = renderAuth();
@@ -9268,6 +10583,152 @@
             <div class="grid grid-cols-2 gap-3">
               <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('Cancel', 'إلغاء'))}</button>
               <button type="button" data-action="confirm-drive-restore" class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">${esc(L('Yes, Restore Data', 'نعم، استعادة البيانات'))}</button>
+            </div>
+          </div>`;
+      } else if (type === 'confirm-admin-restore') {
+        const targetName = String(extra.name || ui.adminRestoreTargetName || 'User');
+        title = 'Restore User Backup?';
+        content = `
+          <div class="space-y-4">
+            <p class="text-sm font-semibold text-white leading-relaxed">
+              Are you sure you want to restore all data for ${esc(targetName)}?
+            </p>
+            <p class="text-xs text-sec leading-relaxed">
+              All backed-up customers, orders, payments, stock, suppliers, staff, reports, and settings will be restored to this user's account and recorded in the Admin Activity Log.
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Cancel</button>
+              <button type="button" data-action="confirm-admin-restore" class="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold cursor-pointer">Yes, Restore Data</button>
+            </div>
+          </div>`;
+      } else if (type === 'print-report-preview') {
+        const info = getWorkshopSummaryPrintModel();
+        const m = info.m;
+        title = L('Financial Summary Print Preview', 'معاينة طباعة الملخص المالي');
+        content = `
+          <div class="space-y-4">
+            <div class="rounded-2xl bg-white text-slate-900 p-4 border-2 border-blue-500/40 shadow-inner space-y-3.5" dir="${isAr() ? 'rtl' : 'ltr'}">
+              <div class="flex items-center gap-3 border-b border-slate-200 pb-3">
+                <div class="w-12 h-12 rounded-xl bg-white border border-blue-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src="${esc(info.logoSrc)}" alt="${esc(info.shopName)}" class="w-full h-full object-contain rounded-lg" onerror="this.style.display='none'" />
+                </div>
+                <div class="min-w-0">
+                  <div class="text-base font-extrabold text-blue-950 truncate">${esc(info.shopName)}</div>
+                  <div class="text-[11px] text-slate-500 font-semibold">${esc(info.dateTimeLabel)}</div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-2 tabular-nums">
+                <div class="rounded-xl bg-blue-50 border border-blue-200 p-2.5">
+                  <div class="text-[10px] font-bold text-blue-800">${esc(L('Total Profit', 'إجمالي الأرباح'))}</div>
+                  <div class="text-xs sm:text-sm font-extrabold ${m.totalProfit >= 0 ? 'text-blue-700' : 'text-rose-600'} mt-0.5" dir="ltr">${esc(fmtRs(m.totalProfit))}</div>
+                </div>
+                <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-2.5">
+                  <div class="text-[10px] font-bold text-emerald-800">${esc(L('This Month Income', 'دخل هذا الشهر'))}</div>
+                  <div class="text-xs sm:text-sm font-extrabold text-emerald-700 mt-0.5" dir="ltr">${esc(fmtRs(m.monthIncome))}</div>
+                </div>
+                <div class="rounded-xl bg-orange-50 border border-orange-200 p-2.5">
+                  <div class="text-[10px] font-bold text-orange-800">${esc(L('This Month Expense', 'مصاريف هذا الشهر'))}</div>
+                  <div class="text-xs sm:text-sm font-extrabold text-orange-700 mt-0.5" dir="ltr">${esc(fmtRs(m.monthExpense))}</div>
+                </div>
+              </div>
+              <div class="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200">
+                <span>${esc(L('Customers', 'العملاء'))}: <strong>${state.customers.length}</strong></span>
+                <span>${esc(L('Udhaar', 'المتبقي'))}: <strong class="text-rose-600" dir="ltr">${esc(fmtRs(m.custBaqaya))}</strong></span>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" data-action="print-report-now" class="h-12 rounded-xl btn-primary-grad text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer">🖨️ ${esc(L('Print / Download PDF', 'طباعة / تنزيل PDF'))}</button>
+              <button type="button" data-action="share-report-wa" class="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer">💬 ${esc(L('Share on WhatsApp', 'مشاركة عبر واتساب'))}</button>
+            </div>
+          </div>`;
+      } else if (type === 'record-detail') {
+        const rec = ui.selectedRecordItem;
+        if (!rec) { closeModal(); return; }
+        const isInc = rec.flowType === 'income';
+        title = L('Record Details', 'تفاصيل السجل');
+        content = `
+          <div class="space-y-4">
+            <div class="glass-card rounded-2xl p-4 space-y-2 border ${isInc ? 'border-emerald-400/35' : 'border-rose-400/35'}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <span class="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${isInc ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">${esc(rec.category)} · ${esc(rec.subCategory || '')}</span>
+                  <h4 class="text-sm font-extrabold text-white mt-1.5">${esc(rec.title)}</h4>
+                  <p class="text-xs text-sec mt-0.5">${esc(rec.subtitle || '')}</p>
+                </div>
+                <div class="text-end shrink-0">
+                  <div class="text-base font-extrabold tabular-nums ${isInc ? 'text-emerald-400' : 'text-rose-400'}" dir="ltr">${isInc ? '+' : '-'} ${esc(fmtRs(rec.amount))}</div>
+                  <div class="text-[10px] text-mut mt-0.5">${esc(isInc ? L('Income', 'دخل') : L('Expense', 'مصروف'))}</div>
+                </div>
+              </div>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 divide-y divide-white/10">
+              ${(rec.details || []).map(row => `
+                <div class="py-2 flex items-center justify-between gap-3 text-xs">
+                  <span class="text-sec">${esc(row.label)}</span>
+                  <span class="font-bold text-white text-end break-words">${esc(row.val)}</span>
+                </div>
+              `).join('')}
+            </div>
+            <button type="button" data-close-modal class="w-full h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('Close', 'إغلاق'))}</button>
+          </div>`;
+      } else if (type === 'admin-zoom-img') {
+        title = extra.title || 'KYC Document Preview';
+        content = `
+          <div class="space-y-3.5">
+            <div class="rounded-2xl overflow-hidden bg-black/50 border border-white/15 flex items-center justify-center p-2">
+              <img src="${esc(extra.src || '')}" alt="${esc(title)}" class="w-full max-h-[65vh] object-contain rounded-xl" />
+            </div>
+            <button type="button" data-close-modal class="w-full h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Close Preview</button>
+          </div>`;
+      } else if (type === 'admin-edit-data') {
+        if (!isAdminSession() || !ui.adminInspectData) { closeModal(); return; }
+        const d = ui.adminInspectData;
+        const p = d.profile || {};
+        const ab = d.adminBackup || {};
+        const v = d.vaultData || {};
+        const s = v.settings || {};
+        const custId = extra.customerId || '';
+        const cust = custId ? (Array.isArray(v.customers) ? v.customers : []).find(c => c.id === custId) : null;
+        title = cust ? `Edit Customer: ${cust.name}` : `Edit Account Data: ${p.name || ab.name || 'User'}`;
+        content = `
+          <form id="modal-admin-edit-form" class="space-y-3.5">
+            <input type="hidden" name="uid" value="${esc(ui.adminInspectUid)}" />
+            <input type="hidden" name="customerId" value="${esc(cust ? cust.id : '')}" />
+            ${cust ? `
+              <div class="rounded-2xl bg-cyan-500/10 border border-cyan-400/30 p-3 space-y-2.5">
+                <div class="text-xs font-extrabold text-cyan-300">Workshop Customer Details</div>
+                <div><label class="block text-[11px] text-sec mb-1">Customer Name *</label><input name="custName" required value="${esc(cust.name || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+                <div><label class="block text-[11px] text-sec mb-1">Customer Phone</label><input name="custMobile" value="${esc(cust.mobile || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+                <div><label class="block text-[11px] text-sec mb-1">Customer Address</label><input name="custAddress" value="${esc(cust.address || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+                <div><label class="block text-[11px] text-sec mb-1">Opening Balance (SAR)</label><input name="custOpeningBalance" type="number" min="0" step="1" value="${esc(String(cust.openingBalance || 0))}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+              </div>
+            ` : ''}
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2.5">
+              <div class="text-xs font-extrabold text-white">Account Owner &amp; Workshop Info</div>
+              <div><label class="block text-[11px] text-sec mb-1">Owner Name *</label><input name="accName" required value="${esc(p.name || ab.name || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+              <div class="grid grid-cols-2 gap-2.5">
+                <div><label class="block text-[11px] text-sec mb-1">Phone</label><input name="accMobile" value="${esc(p.mobile || ab.phone || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+                <div><label class="block text-[11px] text-sec mb-1">Email</label><input name="accEmail" type="email" value="${esc(p.email || ab.email || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+              </div>
+              <div><label class="block text-[11px] text-sec mb-1">Workshop Name</label><input name="shopName" value="${esc(s.shopName || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+              <div><label class="block text-[11px] text-sec mb-1">Workshop Address</label><input name="shopAddress" value="${esc(s.shopAddress || '')}" class="w-full h-10 px-3 rounded-xl glass-input text-sm" /></div>
+            </div>
+            <button type="submit" class="w-full h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs cursor-pointer">Save &amp; Sync Real-Time to User ✓</button>
+          </form>`;
+      } else if (type === 'confirm-admin-delete') {
+        const tgt = ui.adminDeleteTarget || {};
+        const isCustDel = Boolean(tgt.customerId);
+        title = isCustDel ? 'Delete This Customer?' : 'Delete User Workshop Data?';
+        content = `
+          <div class="space-y-4">
+            <p class="text-sm font-semibold text-white leading-relaxed">
+              ${isCustDel
+                ? `Are you sure you want to delete customer "${esc(tgt.label || 'Customer')}" and their linked orders/payments?`
+                : `Are you sure you want to delete all workshop data for "${esc(tgt.label || 'User')}"? Backup copy will remain preserved so you can Restore Data anytime.`}
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">Cancel</button>
+              <button type="button" data-action="confirm-admin-delete" class="h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold cursor-pointer">Yes, Delete</button>
             </div>
           </div>`;
       }
@@ -10033,10 +11494,27 @@
         return;
       }
 
+      const adminTabBtn = t.closest('[data-admin-tab]');
+      if (adminTabBtn) {
+        ui.adminTab = adminTabBtn.getAttribute('data-admin-tab') === 'logs' ? 'logs' : 'users';
+        render();
+        return;
+      }
+
       const adminFilterBtn = t.closest('[data-admin-filter]');
       if (adminFilterBtn) {
         ui.adminFilter = adminFilterBtn.getAttribute('data-admin-filter') || 'all';
         render();
+        return;
+      }
+
+      const adminRestorePromptBtn = t.closest('[data-admin-restore-prompt]');
+      if (adminRestorePromptBtn) {
+        const rUid = adminRestorePromptBtn.getAttribute('data-admin-restore-prompt') || '';
+        const rName = adminRestorePromptBtn.getAttribute('data-admin-restore-name') || 'User';
+        ui.adminRestoreTargetUid = rUid;
+        ui.adminRestoreTargetName = rName;
+        openModal('confirm-admin-restore', { uid: rUid, name: rName });
         return;
       }
 
@@ -10056,7 +11534,7 @@
           toast(L('User KYC Approved ✓', 'تمت الموافقة على هوية المستخدم ✓'), 'success');
           await loadAdminUsersList();
           if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
-            await openAdminInspectUser(targetUid);
+            await openAdminInspectUser(targetUid, { preserveSubView: true });
           }
         } catch (err) {
           toast(L('Approve failed: ', 'فشلت الموافقة: ') + (err.message || err), 'error');
@@ -10074,7 +11552,7 @@
           toast(L('User marked as KYC Duplicate ⚠', 'تم تعليم المستخدم كـ KYC مكرر ⚠'), 'info');
           await loadAdminUsersList();
           if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
-            await openAdminInspectUser(targetUid);
+            await openAdminInspectUser(targetUid, { preserveSubView: true });
           }
         } catch (err) {
           toast(L('Update failed: ', 'فشل التحديث: ') + (err.message || err), 'error');
@@ -10093,10 +11571,98 @@
           toast(willBlock ? L('User Account Blocked ⛔', 'تم حظر حساب المستخدم ⛔') : L('User Account Unblocked ✓', 'تم فك حظر حساب المستخدم ✓'), 'success');
           await loadAdminUsersList();
           if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
-            await openAdminInspectUser(targetUid);
+            await openAdminInspectUser(targetUid, { preserveSubView: true });
           }
         } catch (err) {
           toast(L('Status update failed: ', 'فشل تحديث الحالة: ') + (err.message || err), 'error');
+        }
+        return;
+      }
+
+      const adminSubBtn = t.closest('[data-admin-subview]');
+      if (adminSubBtn) {
+        ui.adminInspectSubView = adminSubBtn.getAttribute('data-admin-subview') || 'overview';
+        if (ui.adminInspectSubView !== 'customer-detail') ui.adminInspectCustomerId = '';
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const adminOpenCustBtn = t.closest('[data-admin-open-customer]');
+      if (adminOpenCustBtn) {
+        ui.adminInspectCustomerId = adminOpenCustBtn.getAttribute('data-admin-open-customer') || '';
+        ui.adminInspectSubView = 'customer-detail';
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const adminCustFilterBtn = t.closest('[data-admin-cust-filter]');
+      if (adminCustFilterBtn) {
+        ui.adminCustomerFilter = adminCustFilterBtn.getAttribute('data-admin-cust-filter') || 'all';
+        render();
+        return;
+      }
+
+      const adminZoomBtn = t.closest('[data-admin-zoom-img]');
+      if (adminZoomBtn) {
+        openModal('admin-zoom-img', {
+          src: adminZoomBtn.getAttribute('data-admin-zoom-img') || '',
+          title: adminZoomBtn.getAttribute('data-admin-zoom-title') || 'Document Preview'
+        });
+        return;
+      }
+
+      const adminEditBtn = t.closest('[data-admin-edit-data]');
+      if (adminEditBtn) {
+        if (!isAdminSession() || !ui.adminInspectUid) return;
+        openModal('admin-edit-data', { customerId: adminEditBtn.getAttribute('data-admin-edit-data') || '' });
+        return;
+      }
+
+      const adminDelPromptBtn = t.closest('[data-admin-delete-prompt]');
+      if (adminDelPromptBtn) {
+        if (!isAdminSession() || !ui.adminInspectUid || !ui.adminInspectData) return;
+        const cId = adminDelPromptBtn.getAttribute('data-admin-delete-prompt') || '';
+        const v = ui.adminInspectData.vaultData || {};
+        const p = ui.adminInspectData.profile || {};
+        const cust = cId ? (Array.isArray(v.customers) ? v.customers : []).find(c => c.id === cId) : null;
+        ui.adminDeleteTarget = {
+          uid: ui.adminInspectUid,
+          customerId: cust ? cust.id : '',
+          label: cust ? cust.name : (p.name || 'User')
+        };
+        openModal('confirm-admin-delete');
+        return;
+      }
+
+      const adminPrintBtn = t.closest('[data-admin-print-report]');
+      if (adminPrintBtn) {
+        printAdminCustomerOrAccountReport(ui.adminInspectUid, adminPrintBtn.getAttribute('data-admin-print-report') || '');
+        return;
+      }
+
+      const recTimeBtn = t.closest('[data-record-time-filter]');
+      if (recTimeBtn) {
+        ui.recordTimeFilter = recTimeBtn.getAttribute('data-record-time-filter') || 'all';
+        render();
+        return;
+      }
+
+      const recCatBtn = t.closest('[data-record-cat-filter]');
+      if (recCatBtn) {
+        ui.recordCatFilter = recCatBtn.getAttribute('data-record-cat-filter') || 'all';
+        render();
+        return;
+      }
+
+      const recDetailBtn = t.closest('[data-open-record-detail]');
+      if (recDetailBtn) {
+        const recId = recDetailBtn.getAttribute('data-open-record-detail');
+        const foundRec = buildUnifiedRecordsList().find(r => r.id === recId) || null;
+        if (foundRec) {
+          ui.selectedRecordItem = foundRec;
+          openModal('record-detail');
         }
         return;
       }
@@ -10323,7 +11889,10 @@
         if (pendingDriveAction?.fileId) await executeGoogleDriveRestore(pendingDriveAction.fileId);
       }
       else if (act === 'toggle-hide-balance') { state.settings.hideBalance = !state.settings.hideBalance; saveState(); render(); }
-      else if (act === 'print-summary') { printWorkshopReport(null); }
+      else if (act === 'print-summary') { openModal('print-report-preview'); }
+      else if (act === 'print-report-now') { closeModal(); await printWorkshopSummaryWithFallback(); }
+      else if (act === 'share-report-wa') { await shareWorkshopSummaryOnWhatsApp(); }
+      else if (act === 'print-records-pdf') { printRecordsListReport(); }
       else if (act === 'export-excel') { exportToExcel(); }
       else if (act === 'export-json') { exportJsonBackup(); }
       else if (act === 'trigger-logo-upload') {
@@ -10582,8 +12151,9 @@
         saveState(); render(); toast(L('Month snapshot saved ✓', 'تم حفظ نسخة الشهر ✓'), 'success');
       }
       else if (act === 'admin-refresh') { await loadAdminUsersList(); }
-      else if (act === 'admin-back') { ui.view = 'admin'; ui.adminInspectUid = ''; ui.adminInspectData = null; render(); }
+      else if (act === 'admin-back') { stopAdminLiveWatcher(); ui.view = 'admin'; ui.adminInspectUid = ''; ui.adminInspectData = null; ui.adminInspectSubView = 'overview'; ui.adminInspectCustomerId = ''; render(); }
       else if (act === 'signout') {
+        stopAdminLiveWatcher();
         stopSecurityWatchers();
         hydrateGeneration++;
         if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
@@ -10642,7 +12212,85 @@
         closeModal();
         render();
       }
+      else if (act === 'open-terms') {
+        ui.termsReturnView = state.session ? (ui.view || 'settings') : (ui.authMode || 'login');
+        ui.view = 'terms';
+        render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      else if (act === 'close-terms') {
+        if (state.session) {
+          ui.view = (ui.termsReturnView && ui.termsReturnView !== 'terms') ? ui.termsReturnView : 'settings';
+        } else {
+          ui.authMode = (ui.termsReturnView === 'signup' || ui.termsReturnView === 'forgot' || ui.termsReturnView === 'pin') ? ui.termsReturnView : 'login';
+          ui.view = 'login';
+        }
+        render();
+      }
+      else if (act === 'confirm-admin-restore') {
+        const cloud = getCloud();
+        const targetUid = ui.adminRestoreTargetUid;
+        if (!cloud || !isAdminSession() || !targetUid) return;
+        closeModal();
+        ui.adminRestoring = true;
+        render();
+        toast('Restoring backed-up data to user account...', 'info');
+        try {
+          const res = await cloud.adminRestoreUserBackup(targetUid);
+          ui.adminRestoring = false;
+          toast(`All data restored for ${res.userName} (${res.recordCount} records) ✓`, 'success');
+          await loadAdminUsersList();
+          if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
+            await openAdminInspectUser(targetUid);
+          }
+        } catch (err) {
+          ui.adminRestoring = false;
+          render();
+          toast('Restore failed: ' + (err.message || err), 'error');
+        }
+      }
+      else if (act === 'confirm-admin-delete') {
+        const cloud = getCloud();
+        const tgt = ui.adminDeleteTarget || {};
+        if (!cloud || !isAdminSession() || !tgt.uid || !ui.adminInspectData) return;
+        closeModal();
+        ui.adminLoading = true;
+        render();
+        try {
+          if (tgt.customerId) {
+            const v = ui.adminInspectData.vaultData || {};
+            const nextCustomers = (Array.isArray(v.customers) ? v.customers : []).filter(c => c.id !== tgt.customerId);
+            const nextOrders = (Array.isArray(v.orders) ? v.orders : []).filter(o => o.customerId !== tgt.customerId);
+            const nextPays = (Array.isArray(v.customerPayments) ? v.customerPayments : []).filter(py => py.customerId !== tgt.customerId);
+            await cloud.adminSaveUserAndCustomerData(
+              tgt.uid,
+              {},
+              { customers: nextCustomers, orders: nextOrders, customerPayments: nextPays },
+              `Admin deleted customer "${tgt.label || tgt.customerId}"`
+            );
+            ui.adminInspectCustomerId = '';
+            ui.adminInspectSubView = 'customers';
+            toast(`Customer "${tgt.label || ''}" deleted & synced ✓`, 'success');
+          } else {
+            await cloud.adminDeleteUserData(tgt.uid);
+            ui.adminInspectSubView = 'overview';
+            ui.adminInspectCustomerId = '';
+            toast('User data deleted (backup preserved for Restore) ✓', 'success');
+          }
+          await loadAdminUsersList();
+          await openAdminInspectUser(tgt.uid, { preserveSubView: true });
+        } catch (err) {
+          ui.adminLoading = false;
+          render();
+          toast('Delete failed: ' + (err.message || err), 'error');
+        }
+      }
       else if (act === 'confirm-clear-all') {
+        if (!isAdminSession()) {
+          closeModal();
+          toast(L('Data deletion is restricted to Admin. Please contact Admin.', 'مسح البيانات مقتصر على المسؤول فقط.'), 'error');
+          return;
+        }
         const keepSession = state.session;
         const keepCloud = state.cloudMeta;
         const keepPin = state.pinSecurity;
@@ -10654,7 +12302,11 @@
         state.pinSecurity = keepPin;
         state.kyc = keepKyc;
         state.rememberMe = keepRem;
-        saveState(); closeModal(); ui.view = isKycVerified() ? 'home' : 'kyc'; render();
+        saveState(true);
+        closeModal();
+        ui.view = isKycVerified() ? 'home' : 'kyc';
+        render();
+        flushCloudSync({ forceDataDeleted: true });
         toast(L('All workshop data cleared.', 'تم مسح جميع بيانات الورشة.'), 'info');
       }
     });
@@ -10910,6 +12562,11 @@
           render();
           return;
         }
+        const termsEl = document.getElementById('login-terms-agree');
+        if (termsEl && !termsEl.checked) {
+          toast('Please tick "I agree to Terms & Privacy Policy" first.', 'error');
+          return;
+        }
         const identifier = document.getElementById('login-email').value.trim();
         const pass = document.getElementById('login-password').value;
         const remember = document.getElementById('login-remember').checked;
@@ -10919,15 +12576,24 @@
 
       if (f.id === 'signup-step1-form') {
         const name = (document.getElementById('su-step-name')?.value || '').trim();
+        const agreedEl = document.getElementById('signup-terms-agree');
+        const agreed = Boolean(agreedEl ? agreedEl.checked : ui.signupData?.agreedTerms);
         const sd = ui.signupData || newSignupData();
         ui.signupData = sd;
+        sd.name = name;
+        sd.agreedTerms = agreed;
         if (!name) {
           sd.error = L('Please enter your Full Name.', 'يرجى إدخال اسمك الكامل.');
           render();
           document.getElementById('su-step-name')?.focus();
           return;
         }
-        sd.name = name;
+        if (!agreed) {
+          sd.error = 'Please agree to Terms & Privacy Policy to create an account.';
+          render();
+          toast('Please tick "I agree to Terms & Privacy Policy"', 'error');
+          return;
+        }
         sd.error = '';
         ui.signupStep = 2;
         render();
@@ -11017,7 +12683,15 @@
         const sd = ui.signupData || newSignupData();
         ui.signupData = sd;
         const conf = document.getElementById('su-step-confirm')?.value || '';
+        const agreedEl5 = document.getElementById('signup-terms-agree');
+        if (agreedEl5) sd.agreedTerms = Boolean(agreedEl5.checked);
         sd.confirmPassword = conf;
+        if (!sd.agreedTerms) {
+          sd.error = 'You must tick "I agree to Terms & Privacy Policy" before signing up.';
+          render();
+          toast('Please agree to Terms & Privacy Policy', 'error');
+          return;
+        }
         if (!sd.otpVerified || !sd.name || !sd.email) {
           sd.error = L('Please complete the signup steps again.', 'يرجى إكمال خطوات التسجيل مرة أخرى.');
           ui.signupStep = 1;
@@ -11044,7 +12718,7 @@
         sd.error = '';
         render();
         try {
-          const res = await cloud.signUp(sd.name, sd.email, sd.password);
+          const res = await cloud.signUp(sd.name, sd.email, sd.password, undefined, undefined, true);
           clearFailedPasswordAttempts();
           saveRememberMe({ email: sd.email, remember: true });
           state.rememberMe = loadRememberMe();
@@ -11059,6 +12733,13 @@
             mobile: '',
             authType: 'email'
           });
+          state.cloudMeta = {
+            ...(state.cloudMeta || {}),
+            uid: res.user.uid,
+            termsAccepted: true,
+            termsAcceptedAt: Date.now()
+          };
+          saveState(true);
           ui.signupStep = 1;
           ui.signupData = newSignupData();
           ui.view = 'kyc';
@@ -11765,6 +13446,61 @@
         return;
       }
 
+      if (f.id === 'modal-admin-edit-form') {
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !ui.adminInspectData) return;
+        const fd = new FormData(f);
+        const targetUid = String(fd.get('uid') || ui.adminInspectUid || '').trim();
+        const custId = String(fd.get('customerId') || '').trim();
+        if (!targetUid) return;
+        const accName = String(fd.get('accName') || '').trim();
+        const accMobile = String(fd.get('accMobile') || '').trim();
+        const accEmail = String(fd.get('accEmail') || '').trim();
+        const shopName = String(fd.get('shopName') || '').trim();
+        const shopAddress = String(fd.get('shopAddress') || '').trim();
+        const v = ui.adminInspectData.vaultData || {};
+        const nextSettings = {
+          ...(v.settings || {}),
+          ...(shopName ? { shopName } : {}),
+          shopAddress,
+          ...(accName ? { ownerName: accName } : {}),
+          ...(accMobile ? { ownerMobile: accMobile } : {}),
+          ...(accEmail ? { ownerEmail: accEmail } : {})
+        };
+        const vaultPatch = { settings: nextSettings };
+        let detailMsg = 'Admin updated user profile/shop info.';
+        if (custId) {
+          const custName = String(fd.get('custName') || '').trim();
+          const custMobile = String(fd.get('custMobile') || '').trim();
+          const custAddress = String(fd.get('custAddress') || '').trim();
+          const custOpeningBalance = Math.max(0, Number(fd.get('custOpeningBalance') || 0));
+          const curCustomers = Array.isArray(v.customers) ? v.customers : [];
+          vaultPatch.customers = curCustomers.map(c => c.id === custId ? {
+            ...c,
+            name: custName || c.name,
+            mobile: custMobile,
+            address: custAddress,
+            openingBalance: custOpeningBalance
+          } : c);
+          detailMsg = `Admin edited customer "${custName || custId}"`;
+        }
+        try {
+          closeModal();
+          await cloud.adminSaveUserAndCustomerData(
+            targetUid,
+            { name: accName, mobile: accMobile, email: accEmail },
+            vaultPatch,
+            detailMsg
+          );
+          toast('Changes saved & synced in real-time ✓', 'success');
+          await loadAdminUsersList();
+          await openAdminInspectUser(targetUid, { preserveSubView: true });
+        } catch (err) {
+          toast('Save failed: ' + (err.message || err), 'error');
+        }
+        return;
+      }
+
       if (f.id === 'kyc-form') {
         if (state.blocked || state.kyc?.status === 'approved' || state.kyc?.status === 'duplicate') return;
         const rawMobile = (document.getElementById('kyc-mobile')?.value || '').trim();
@@ -11976,6 +13712,14 @@
         if (el) { el.focus(); el.setSelectionRange(pos, pos); }
         return;
       }
+      if (t.id === 'admin-cust-search') {
+        ui.adminCustomerSearch = t.value;
+        const pos = t.selectionStart;
+        render();
+        const el = document.getElementById('admin-cust-search');
+        if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+        return;
+      }
       if (t.id === 'kyc-cnic') {
         t.value = String(t.value || '').replace(/[^\d-]/g, '').slice(0, 15);
         if (state.kyc) state.kyc.cnic = t.value;
@@ -12002,6 +13746,15 @@
           render();
           toast(nextInvLang === 'ar' ? L('Invoice language set to Arabic ✓', 'تم ضبط لغة الفاتورة على العربية ✓') : L('Invoice language set to English ✓', 'تم ضبط لغة الفاتورة على الإنجليزية ✓'), 'success');
         }
+        return;
+      }
+      if (t.id === 'signup-terms-agree') {
+        if (!ui.signupData) ui.signupData = newSignupData();
+        ui.signupData.agreedTerms = Boolean(t.checked);
+        return;
+      }
+      if (t.id === 'login-terms-agree') {
+        ui.loginTermsAgreed = Boolean(t.checked);
         return;
       }
       if (t.id === 'wo-cust') {
@@ -12106,7 +13859,38 @@
       if (t.hasAttribute('data-order-status')) {
         const oid = t.getAttribute('data-order-status');
         const o = state.orders.find(x => x.id === oid);
-        if (o) { o.status = t.value; saveState(); toast(L('Order status updated', 'تم تحديث حالة الطلب'), 'success'); }
+        if (o) {
+          o.status = t.value;
+          saveState();
+          render();
+          toast(L('Order status updated ✓', 'تم تحديث حالة الطلب ✓'), 'success');
+          await flushCloudSync();
+        }
+        return;
+      }
+      if (t.hasAttribute('data-admin-order-status')) {
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !ui.adminInspectData) return;
+        const [targetUid, oid] = String(t.getAttribute('data-admin-order-status') || '').split(':');
+        if (!targetUid || !oid) return;
+        const v = ui.adminInspectData.vaultData || {};
+        const curOrders = Array.isArray(v.orders) ? v.orders : [];
+        const targetOrd = curOrders.find(x => x.id === oid);
+        if (!targetOrd) return;
+        const nextStatus = t.value || 'Pending';
+        const nextOrders = curOrders.map(x => x.id === oid ? { ...x, status: nextStatus } : x);
+        try {
+          await cloud.adminSaveUserAndCustomerData(
+            targetUid,
+            {},
+            { orders: nextOrders },
+            `Admin changed order ${oid} status to ${nextStatus}`
+          );
+          toast(`Order status set to ${nextStatus} & synced ✓`, 'success');
+          await openAdminInspectUser(targetUid, { preserveSubView: true });
+        } catch (err) {
+          toast('Status update failed: ' + (err.message || err), 'error');
+        }
         return;
       }
       if (t.id === 'stk-cat-sel') {

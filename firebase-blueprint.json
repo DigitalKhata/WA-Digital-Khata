@@ -30,6 +30,10 @@
         "customerCount": { "type": "number", "description": "Cached customer count for Admin summary." },
         "lastSyncAt": { "type": "number", "description": "Epoch ms of last cloud sync." },
         "lastBackupAt": { "type": "number", "description": "Epoch ms of last cloud backup snapshot." },
+        "profilePicUrl": { "type": "string", "maxLength": 300000, "description": "User profile picture URL or bounded portrait data URI." },
+        "termsAccepted": { "type": "boolean", "description": "Explicit Terms & Privacy Policy consent recorded on signup/login." },
+        "termsAcceptedAt": { "type": "number", "description": "Epoch ms when user accepted Terms & Privacy Policy." },
+        "lastAdminRestoreAt": { "type": "number", "description": "Epoch ms of last Admin restore applied to this account." },
         "createdAt": { "type": "number", "description": "Epoch ms of account creation." },
         "updatedAt": { "type": "number", "description": "Epoch ms of last update." }
       },
@@ -143,6 +147,49 @@
         "createdAt": { "type": "number", "description": "Epoch ms when mobile was registered." }
       },
       "required": ["mobileHash", "uid", "createdAt"]
+    },
+    "AdminUserBackup": {
+      "title": "AdminUserBackup",
+      "description": "Per-user real-time auto-backup document under adminBackups/{userId} storing User ID, Name, Profile Pic URL, Phone, Email, full user data JSON, and preserved pre-deletion backup for Admin restore.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Unique Firebase Auth UID matching doc ID." },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Unique User ID displayed in Admin Panel." },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "User full name." },
+        "profilePicUrl": { "type": "string", "maxLength": 300000, "description": "User profile picture URL or bounded portrait image." },
+        "phone": { "type": "string", "maxLength": 40, "description": "User phone number." },
+        "email": { "type": "string", "maxLength": 160, "description": "User email address." },
+        "termsAccepted": { "type": "boolean", "description": "Whether user agreed to Terms & Privacy Policy." },
+        "termsAcceptedAt": { "type": "number", "description": "Epoch ms of consent." },
+        "recordCount": { "type": "number", "description": "Count of active workshop records in the snapshot." },
+        "isDataDeleted": { "type": "boolean", "description": "True when user deleted/cleared their data while backup remains preserved for Admin restore." },
+        "deletedAt": { "type": "number", "description": "Epoch ms when data deletion occurred." },
+        "allUserDataJson": { "type": "string", "maxLength": 450000, "description": "Latest synced user data JSON matching user account structure." },
+        "lastGoodBackupJson": { "type": "string", "maxLength": 450000, "description": "Last non-empty user data JSON preserved across deletions for exact Admin restore." },
+        "lastBackupAt": { "type": "number", "description": "Epoch ms of latest real-time auto-backup." },
+        "lastRestoredAt": { "type": "number", "description": "Epoch ms of last Admin restore." },
+        "lastRestoredBy": { "type": "string", "maxLength": 160, "description": "Admin email who restored the data." },
+        "updatedAt": { "type": "number", "description": "Epoch ms of latest update." }
+      },
+      "required": ["uid", "userId", "name", "isDataDeleted", "allUserDataJson", "lastGoodBackupJson", "updatedAt"]
+    },
+    "AdminActivityLog": {
+      "title": "AdminActivityLog",
+      "description": "Immutable audit trail of all auto-backup, data deletion, and Admin restore actions under adminActivityLogs/{logId}.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "minLength": 4, "maxLength": 128, "description": "Unique log entry ID matching doc ID." },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Target user UID affected by backup or restore." },
+        "userName": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Target user display name." },
+        "action": { "type": "string", "enum": ["AUTO_BACKUP", "MANUAL_BACKUP", "DATA_CLEARED", "RESTORE_USER_DATA"], "description": "Recorded action type." },
+        "performedBy": { "type": "string", "minLength": 1, "maxLength": 160, "description": "Email or identifier of user or Admin performing the action." },
+        "performedByRole": { "type": "string", "enum": ["user", "admin"], "description": "Actor role: user or admin." },
+        "details": { "type": "string", "maxLength": 300, "description": "Human-readable action details." },
+        "dateStr": { "type": "string", "maxLength": 32, "description": "Formatted YYYY-MM-DD date." },
+        "timeStr": { "type": "string", "maxLength": 32, "description": "Formatted hh:mm AM/PM time." },
+        "createdAt": { "type": "number", "description": "Epoch ms timestamp." }
+      },
+      "required": ["id", "uid", "userName", "action", "performedBy", "performedByRole", "createdAt"]
     }
   },
   "auth": {
@@ -158,7 +205,7 @@
       {
         "path": "/users/{userId}/vault/{docId}",
         "schema": { "$ref": "#/entities/UserVaultDoc" },
-        "description": "Domain-sharded workshop data (core, ledger, operations, kyc) scoped to userId == request.auth.uid or Admin read."
+        "description": "Domain-sharded workshop data (core, ledger, operations, kyc) scoped to userId == request.auth.uid or Admin."
       },
       {
         "path": "/users/{userId}/backups/{backupId}",
@@ -189,6 +236,16 @@
         "path": "/mobileRegistry/{mobileHash}",
         "schema": { "$ref": "#/entities/MobileClaim" },
         "description": "Single-account mobile hash claim enforcing 1 Mobile = 1 Account."
+      },
+      {
+        "path": "/adminBackups/{userId}",
+        "schema": { "$ref": "#/entities/AdminUserBackup" },
+        "description": "Per-user real-time Admin auto-backup and preserved pre-deletion snapshot; owner can write/read own doc only, Admin can list/read/restore all."
+      },
+      {
+        "path": "/adminActivityLogs/{logId}",
+        "schema": { "$ref": "#/entities/AdminActivityLog" },
+        "description": "Immutable Admin Activity Log for all backup & restore actions; Admin-only read/list."
       }
     ]
   }
