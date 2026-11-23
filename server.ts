@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
@@ -255,6 +256,7 @@ function buildDeviceEmailHtml(payload: {
 
 async function startServer() {
   const app = express();
+  const httpServer = http.createServer(app);
   app.set('trust proxy', true);
   app.use(express.json({ limit: '512kb' }));
 
@@ -378,7 +380,12 @@ async function startServer() {
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        ws: { server: httpServer },
+        hmr: false,
+        watch: null
+      },
       appType: 'spa'
     });
     app.use(vite.middlewares);
@@ -390,7 +397,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Digital Khata server listening on http://0.0.0.0:${PORT}`);
   });
 }
