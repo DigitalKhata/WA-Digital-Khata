@@ -2,7 +2,7 @@
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
-      "description": "Workshop owner account profile, sync metadata, and security preferences stored per Firebase UID.",
+      "description": "Workshop owner account profile, single-device binding metadata, and security preferences stored per Firebase UID.",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "description": "Firebase Auth UID matching document ID." },
@@ -19,6 +19,12 @@
         "kycStatus": { "type": "string", "enum": ["none", "verifying", "approved", "duplicate"], "description": "Authoritative KYC verification state." },
         "kycDuplicateOf": { "type": "string", "description": "Original UID if flagged as duplicate CNIC." },
         "blocked": { "type": "boolean", "description": "Admin block status." },
+        "activeDeviceId": { "type": "string", "maxLength": 128, "description": "Currently active bound mobile/device ID for single-device enforcement." },
+        "activeDeviceName": { "type": "string", "maxLength": 160, "description": "Display name of the currently active device." },
+        "activeSessionId": { "type": "string", "maxLength": 128, "description": "Active session ID; mismatch auto-logs out previous device." },
+        "activeDeviceCount": { "type": "number", "description": "Count of active sessions currently authorized (0 or 1)." },
+        "sessionVersion": { "type": "number", "description": "Monotonically incremented counter to revoke all active sessions immediately." },
+        "lastLoginAt": { "type": "number", "description": "Epoch ms of latest approved device login." },
         "totalKhataAmount": { "type": "number", "description": "Cached workshop total bill amount for Admin summary." },
         "totalPendingAmount": { "type": "number", "description": "Cached total pending balance for Admin summary." },
         "customerCount": { "type": "number", "description": "Cached customer count for Admin summary." },
@@ -56,6 +62,66 @@
       },
       "required": ["uid", "id", "kind", "dateKey", "payloadJson", "createdAt"]
     },
+    "UserDevice": {
+      "title": "UserDevice",
+      "description": "Trusted or revoked mobile/device record under users/{userId}/devices/{deviceId}.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Owner Firebase Auth UID." },
+        "deviceId": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "minLength": 4, "maxLength": 128, "description": "Unique persistent device ID matching doc ID." },
+        "deviceName": { "type": "string", "minLength": 1, "maxLength": 160, "description": "Human-readable mobile/device model name." },
+        "browserVersion": { "type": "string", "maxLength": 160, "description": "Browser and app version." },
+        "ip": { "type": "string", "maxLength": 64, "description": "Last seen IP address." },
+        "location": { "type": "string", "maxLength": 160, "description": "City, Country location string." },
+        "status": { "type": "string", "enum": ["approved", "revoked"], "description": "Device approval state." },
+        "isActive": { "type": "boolean", "description": "Whether this device currently holds the single active session." },
+        "sessionId": { "type": "string", "maxLength": 128, "description": "Current session identifier on this device." },
+        "approvedAt": { "type": "number", "description": "Epoch ms when owner approved this device." },
+        "lastSeenAt": { "type": "number", "description": "Epoch ms of latest device activity." }
+      },
+      "required": ["uid", "deviceId", "deviceName", "status", "isActive", "approvedAt", "lastSeenAt"]
+    },
+    "LoginHistoryEntry": {
+      "title": "LoginHistoryEntry",
+      "description": "Audit log of every Allowed or Blocked login attempt under users/{userId}/loginHistory/{entryId}.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Owner Firebase Auth UID." },
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9_\\-]+$", "minLength": 4, "maxLength": 128, "description": "Log entry ID matching doc ID." },
+        "deviceId": { "type": "string", "maxLength": 128, "description": "Device ID associated with this attempt." },
+        "deviceName": { "type": "string", "minLength": 1, "maxLength": 160, "description": "Detected device name or 'Unknown Device'." },
+        "isUnknown": { "type": "boolean", "description": "True when device name could not be identified." },
+        "ip": { "type": "string", "maxLength": 64, "description": "Detected IP address." },
+        "location": { "type": "string", "maxLength": 160, "description": "Detected City, Country." },
+        "browserVersion": { "type": "string", "maxLength": 160, "description": "Browser / App Version string." },
+        "status": { "type": "string", "enum": ["Allowed", "Blocked"], "description": "Login outcome: Allowed or Blocked." },
+        "dateStr": { "type": "string", "maxLength": 32, "description": "Formatted login date." },
+        "timeStr": { "type": "string", "maxLength": 32, "description": "Formatted login time." },
+        "createdAt": { "type": "number", "description": "Epoch ms timestamp." }
+      },
+      "required": ["uid", "id", "deviceName", "status", "createdAt"]
+    },
+    "DeviceApprovalLink": {
+      "title": "DeviceApprovalLink",
+      "description": "Indefinite owner email approval request for new/unrecognized devices under deviceApprovalLinks/{reqId}. No timeout expiry.",
+      "type": "object",
+      "properties": {
+        "reqId": { "type": "string", "pattern": "^req_[a-zA-Z0-9_\\-]{16,80}$", "minLength": 20, "maxLength": 84, "description": "Capability request ID." },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "description": "Owner Firebase Auth UID." },
+        "deviceId": { "type": "string", "minLength": 4, "maxLength": 128, "description": "Requesting device ID." },
+        "deviceName": { "type": "string", "minLength": 1, "maxLength": 160, "description": "Requesting device name." },
+        "ip": { "type": "string", "maxLength": 64, "description": "Requesting IP address." },
+        "location": { "type": "string", "maxLength": 160, "description": "Requesting location (City, Country)." },
+        "browserVersion": { "type": "string", "maxLength": 160, "description": "Requesting Browser / App version." },
+        "loginDateTime": { "type": "string", "maxLength": 100, "description": "Formatted login date and time." },
+        "decision": { "type": "string", "enum": ["pending", "allowed", "denied"], "description": "Approval state; remains pending until owner explicitly clicks ALLOW or NOT ALLOW." },
+        "tokenHash": { "type": "string", "format": "bytes", "description": "32-byte SHA-256 digest of the secret email action token." },
+        "approvalToken": { "type": "string", "maxLength": 128, "description": "Empty on create; populated with matching raw token when resolved via owner link." },
+        "createdAt": { "type": "number", "description": "Epoch ms when approval request was created." },
+        "decidedAt": { "type": "number", "description": "Epoch ms when owner decided (0 while pending)." }
+      },
+      "required": ["reqId", "uid", "deviceId", "deviceName", "decision", "tokenHash", "approvalToken", "createdAt", "decidedAt"]
+    },
     "CnicClaim": {
       "title": "CnicClaim",
       "description": "Global SHA-256 hashed 13-digit CNIC uniqueness lock ensuring strictly 1 CNIC = 1 Account without storing raw CNIC PII in shared lookup.",
@@ -87,7 +153,7 @@
       {
         "path": "/users/{userId}",
         "schema": { "$ref": "#/entities/UserProfile" },
-        "description": "Owner profile and security metadata scoped to userId == request.auth.uid or Admin."
+        "description": "Owner profile, active device binding, and security metadata scoped to userId == request.auth.uid or Admin."
       },
       {
         "path": "/users/{userId}/vault/{docId}",
@@ -97,7 +163,22 @@
       {
         "path": "/users/{userId}/backups/{backupId}",
         "schema": { "$ref": "#/entities/UserBackupSnapshot" },
-        "description": "Auto daily and manual cloud backup snapshots scoped to userId == request.auth.uid or Admin read."
+        "description": "Auto daily 12AM and manual cloud backup snapshots scoped to userId == request.auth.uid or Admin read."
+      },
+      {
+        "path": "/users/{userId}/devices/{deviceId}",
+        "schema": { "$ref": "#/entities/UserDevice" },
+        "description": "Approved/revoked device records for single-device binding scoped to userId == request.auth.uid or Admin."
+      },
+      {
+        "path": "/users/{userId}/loginHistory/{entryId}",
+        "schema": { "$ref": "#/entities/LoginHistoryEntry" },
+        "description": "Login attempt audit log (Allowed/Blocked) scoped to userId == request.auth.uid or Admin."
+      },
+      {
+        "path": "/deviceApprovalLinks/{reqId}",
+        "schema": { "$ref": "#/entities/DeviceApprovalLink" },
+        "description": "Capability-link approval documents verified via SHA-256 tokenHash for ALLOW / NOT ALLOW owner email links."
       },
       {
         "path": "/cnicRegistry/{cnicHash}",

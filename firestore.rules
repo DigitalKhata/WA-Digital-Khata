@@ -16,6 +16,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isValidId(val) {
+      return val is string && val.size() >= 4 && val.size() <= 128 && val.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidReqId(val) {
+      return val is string && val.size() >= 20 && val.size() <= 84 && val.matches('^req_[a-zA-Z0-9_\\-]+$');
+    }
+
     function isNonEmptyString(val, maxLen) {
       return val is string && val.size() > 0 && val.size() <= maxLen;
     }
@@ -38,6 +46,8 @@ service cloud.firestore {
           'uid', 'name', 'identifier', 'email', 'mobile', 'authType',
           'pinEnabled', 'pinHash', 'cnicHash', 'cnicLast4', 'mobileHash',
           'kycStatus', 'kycDuplicateOf', 'blocked',
+          'activeDeviceId', 'activeDeviceName', 'activeSessionId',
+          'activeDeviceCount', 'sessionVersion', 'lastLoginAt',
           'totalKhataAmount', 'totalPendingAmount', 'customerCount',
           'lastSyncAt', 'lastBackupAt', 'createdAt', 'updatedAt'
         ])
@@ -56,6 +66,12 @@ service cloud.firestore {
         && (!( 'kycStatus' in data ) || data.kycStatus in ['none', 'verifying', 'approved', 'duplicate'])
         && isOptionalString(data, 'kycDuplicateOf', 128)
         && isOptionalBool(data, 'blocked')
+        && isOptionalString(data, 'activeDeviceId', 128)
+        && isOptionalString(data, 'activeDeviceName', 160)
+        && isOptionalString(data, 'activeSessionId', 128)
+        && isOptionalNumber(data, 'activeDeviceCount')
+        && isOptionalNumber(data, 'sessionVersion')
+        && isOptionalNumber(data, 'lastLoginAt')
         && isOptionalNumber(data, 'totalKhataAmount')
         && isOptionalNumber(data, 'totalPendingAmount')
         && isOptionalNumber(data, 'customerCount')
@@ -114,6 +130,93 @@ service cloud.firestore {
         && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
     }
 
+    function isValidUserDevice(data, userId, deviceId) {
+      return isValidId(deviceId)
+        && data.keys().hasAll(['uid', 'deviceId', 'deviceName', 'status', 'isActive', 'approvedAt', 'lastSeenAt'])
+        && data.keys().hasOnly([
+          'uid', 'deviceId', 'deviceName', 'browserVersion', 'ip', 'location',
+          'status', 'isActive', 'sessionId', 'approvedAt', 'lastSeenAt'
+        ])
+        && data.uid == userId
+        && data.deviceId == deviceId
+        && isNonEmptyString(data.deviceName, 160)
+        && isOptionalString(data, 'browserVersion', 160)
+        && isOptionalString(data, 'ip', 64)
+        && isOptionalString(data, 'location', 160)
+        && data.status in ['approved', 'revoked']
+        && data.isActive is bool
+        && isOptionalString(data, 'sessionId', 128)
+        && (data.approvedAt is int || data.approvedAt is float) && data.approvedAt > 0
+        && (data.lastSeenAt is int || data.lastSeenAt is float) && data.lastSeenAt > 0;
+    }
+
+    function isValidLoginHistoryEntry(data, userId, entryId) {
+      return isValidId(entryId)
+        && data.keys().hasAll(['uid', 'id', 'deviceName', 'status', 'createdAt'])
+        && data.keys().hasOnly([
+          'uid', 'id', 'deviceId', 'deviceName', 'isUnknown',
+          'ip', 'location', 'browserVersion', 'status',
+          'dateStr', 'timeStr', 'createdAt'
+        ])
+        && data.uid == userId
+        && data.id == entryId
+        && isOptionalString(data, 'deviceId', 128)
+        && isNonEmptyString(data.deviceName, 160)
+        && isOptionalBool(data, 'isUnknown')
+        && isOptionalString(data, 'ip', 64)
+        && isOptionalString(data, 'location', 160)
+        && isOptionalString(data, 'browserVersion', 160)
+        && data.status in ['Allowed', 'Blocked']
+        && isOptionalString(data, 'dateStr', 32)
+        && isOptionalString(data, 'timeStr', 32)
+        && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
+    }
+
+    function isValidDeviceApprovalCreate(data, reqId) {
+      return isValidReqId(reqId)
+        && data.keys().hasAll([
+          'reqId', 'uid', 'deviceId', 'deviceName', 'decision',
+          'tokenHash', 'approvalToken', 'createdAt', 'decidedAt'
+        ])
+        && data.keys().hasOnly([
+          'reqId', 'uid', 'deviceId', 'deviceName', 'ip', 'location',
+          'browserVersion', 'loginDateTime', 'decision', 'tokenHash',
+          'approvalToken', 'createdAt', 'decidedAt'
+        ])
+        && data.reqId == reqId
+        && data.uid == request.auth.uid
+        && isValidId(data.deviceId)
+        && isNonEmptyString(data.deviceName, 160)
+        && isOptionalString(data, 'ip', 64)
+        && isOptionalString(data, 'location', 160)
+        && isOptionalString(data, 'browserVersion', 160)
+        && isOptionalString(data, 'loginDateTime', 100)
+        && data.decision == 'pending'
+        && data.tokenHash is bytes
+        && data.tokenHash.size() == 32
+        && data.approvalToken == ''
+        && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0
+        && data.decidedAt == 0;
+    }
+
+    function isValidDeviceApprovalUpdate(data, reqId) {
+      return isValidReqId(reqId)
+        && data.keys().hasAll([
+          'reqId', 'uid', 'deviceId', 'deviceName', 'decision',
+          'tokenHash', 'approvalToken', 'createdAt', 'decidedAt'
+        ])
+        && data.keys().hasOnly([
+          'reqId', 'uid', 'deviceId', 'deviceName', 'ip', 'location',
+          'browserVersion', 'loginDateTime', 'decision', 'tokenHash',
+          'approvalToken', 'createdAt', 'decidedAt'
+        ])
+        && data.decision in ['allowed', 'denied']
+        && data.approvalToken is string
+        && data.approvalToken.size() >= 16
+        && data.approvalToken.size() <= 128
+        && (data.decidedAt is int || data.decidedAt is float) && data.decidedAt > 0;
+    }
+
     function isValidCnicClaim(data, cnicHash) {
       return cnicHash.matches('^[a-f0-9]{64}$')
         && data.keys().hasAll(['cnicHash', 'uid', 'createdAt'])
@@ -130,6 +233,26 @@ service cloud.firestore {
         && data.mobileHash == mobileHash
         && data.uid == request.auth.uid
         && (data.createdAt is int || data.createdAt is float) && data.createdAt > 0;
+    }
+
+    match /deviceApprovalLinks/{reqId} {
+      allow get: if isValidReqId(reqId);
+      allow list: if false;
+      allow create: if isAuthenticated()
+        && isValidReqId(reqId)
+        && !exists(/databases/$(database)/documents/deviceApprovalLinks/$(reqId))
+        && isValidDeviceApprovalCreate(request.resource.data, reqId);
+      allow update: if isValidReqId(reqId)
+        && isValidDeviceApprovalUpdate(request.resource.data, reqId)
+        && resource.data.decision == 'pending'
+        && request.resource.data.reqId == resource.data.reqId
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.deviceId == resource.data.deviceId
+        && request.resource.data.tokenHash == resource.data.tokenHash
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['decision', 'decidedAt', 'approvalToken'])
+        && hashing.sha256(request.resource.data.approvalToken) == resource.data.tokenHash;
+      allow delete: if (isOwner(resource.data.uid) || isAdmin()) && isValidReqId(reqId);
     }
 
     match /cnicRegistry/{cnicHash} {
@@ -191,6 +314,30 @@ service cloud.firestore {
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.id == resource.data.id;
         allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /devices/{deviceId} {
+        allow get: if isValidId(deviceId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin())
+          && isValidUserDevice(request.resource.data, userId, deviceId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if (isOwner(userId) || isAdmin())
+          && isValidUserDevice(request.resource.data, userId, deviceId)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.deviceId == resource.data.deviceId
+          && request.resource.data.approvedAt == resource.data.approvedAt;
+        allow delete: if isValidId(deviceId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /loginHistory/{entryId} {
+        allow get: if isValidId(entryId) && (isOwner(userId) || isAdmin());
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) || isAdmin())
+          && isValidLoginHistoryEntry(request.resource.data, userId, entryId)
+          && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if false;
+        allow delete: if isValidId(entryId) && (isOwner(userId) || isAdmin());
       }
     }
 

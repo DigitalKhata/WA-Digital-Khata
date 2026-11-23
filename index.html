@@ -244,7 +244,7 @@
       animation: pageSlideFade 300ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    /* Smooth Colorful White Bottom Navigation Bar (Always Below Modals) */
+    /* Smooth Colorful Transparent Glass Bottom Navigation Bar (Always Below Modals) */
     .pill-navbar-wrap {
       position: fixed;
       bottom: 10px;
@@ -264,10 +264,19 @@
       scrollbar-width: none;
       -ms-overflow-style: none;
       padding: 8px 10px;
-      background: #ffffff;
-      border: 1px solid rgba(226, 232, 240, 0.95);
+      background: rgba(10, 22, 52, 0.56);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 26px;
-      box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.14), 0 12px 30px rgba(2, 6, 23, 0.25);
+      box-shadow: 0 -6px 24px rgba(2, 6, 23, 0.35), 0 12px 30px rgba(2, 6, 23, 0.40);
+    }
+    html[data-theme="light"] .pill-navbar {
+      background: rgba(234, 244, 255, 0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(37, 99, 235, 0.22);
+      box-shadow: 0 -6px 22px rgba(37, 99, 235, 0.14), 0 10px 28px rgba(15, 35, 64, 0.14);
     }
     .pill-navbar::-webkit-scrollbar {
       display: none;
@@ -290,7 +299,7 @@
       gap: 3px;
       border-radius: 18px;
       cursor: pointer;
-      color: #94a3b8;
+      color: #cbd5e1;
       background: transparent;
       transition: all 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
       padding: 4px 4px 5px;
@@ -298,9 +307,16 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .pill-nav-btn:hover {
-      background: rgba(15, 23, 42, 0.04);
+    html[data-theme="light"] .pill-nav-btn {
       color: #475569;
+    }
+    .pill-nav-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f8fafc;
+    }
+    html[data-theme="light"] .pill-nav-btn:hover {
+      background: rgba(37, 99, 235, 0.08);
+      color: #1e293b;
     }
     .pill-nav-btn:active {
       transform: scale(0.92);
@@ -339,12 +355,18 @@
       transform: scale(1);
     }
     /* Per-Tab Colorful Active States */
-    .pill-nav-btn[data-nav-tone="blue"].active { color: #2563EB; background: rgba(37, 99, 235, 0.08); }
-    .pill-nav-btn[data-nav-tone="green"].active { color: #16A34A; background: rgba(22, 163, 74, 0.08); }
-    .pill-nav-btn[data-nav-tone="teal"].active { color: #0891B2; background: rgba(8, 145, 178, 0.08); }
-    .pill-nav-btn[data-nav-tone="orange"].active { color: #EA580C; background: rgba(234, 88, 12, 0.08); }
-    .pill-nav-btn[data-nav-tone="purple"].active { color: #9333EA; background: rgba(147, 51, 234, 0.08); }
-    .pill-nav-btn[data-nav-tone="indigo"].active { color: #4F46E5; background: rgba(79, 70, 229, 0.08); }
+    .pill-nav-btn[data-nav-tone="blue"].active { color: #3b82f6; background: rgba(59, 130, 246, 0.16); }
+    .pill-nav-btn[data-nav-tone="green"].active { color: #22c55e; background: rgba(34, 197, 94, 0.16); }
+    .pill-nav-btn[data-nav-tone="teal"].active { color: #06b6d4; background: rgba(6, 182, 212, 0.16); }
+    .pill-nav-btn[data-nav-tone="orange"].active { color: #f97316; background: rgba(249, 115, 22, 0.16); }
+    .pill-nav-btn[data-nav-tone="purple"].active { color: #c084fc; background: rgba(192, 132, 252, 0.16); }
+    .pill-nav-btn[data-nav-tone="indigo"].active { color: #818cf8; background: rgba(129, 140, 248, 0.16); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="blue"].active { color: #2563EB; background: rgba(37, 99, 235, 0.12); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="green"].active { color: #16A34A; background: rgba(22, 163, 74, 0.12); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="teal"].active { color: #0891B2; background: rgba(8, 145, 178, 0.12); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="orange"].active { color: #EA580C; background: rgba(234, 88, 12, 0.12); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="purple"].active { color: #9333EA; background: rgba(147, 51, 234, 0.12); }
+    html[data-theme="light"] .pill-nav-btn[data-nav-tone="indigo"].active { color: #4F46E5; background: rgba(79, 70, 229, 0.12); }
 
     .modules-theme-section {
       background: var(--glass-bg);
@@ -575,6 +597,10 @@
     const EXPLICIT_SIGNOUT_KEY = 'dk_explicit_signout_v1';
     const PENDING_SYNC_KEY = 'dk_pending_sync_uid';
     const PIN_UNLOCK_SESSION_KEY = 'dk_pin_unlocked_uid';
+    const DK_DEVICE_ID_KEY = 'dk_device_id_v1';
+    const DK_SESSION_ID_KEY = 'dk_active_session_id_v1';
+    const DK_SESSION_VERSION_KEY = 'dk_session_version_v1';
+    const DK_AUTO_BACKUP_PREFIX = 'dk_auto_backup_json_';
     const APP_LANGUAGE_KEY = 'app-language';
     const INVOICE_LANGUAGE_KEY = 'invoice-language';
     const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
@@ -877,18 +903,13 @@
               name: 'Imran Ullah',
               dataUrl: '',
               rotation: 0,
-              size: 100
-            },
-            owner2: {
-              name: 'Haroon',
-              dataUrl: '',
-              rotation: 0,
-              size: 100
+              size: 100,
+              deleted: false
             }
           },
           whatsappQr: {
-            owner1Number: '',
-            owner2Number: ''
+            ownerNumber: '',
+            owner1Number: ''
           },
           invoiceSeq: 100
         },
@@ -1011,6 +1032,8 @@
       const rawSettings = parsed.settings || {};
       const mappedDefBank = LEGACY_BANK_NAME_MAP[rawSettings.defaultBank] || rawSettings.defaultBank || def.settings.defaultBank;
       const rawSigs = rawSettings.signatures || {};
+      const rawQr = rawSettings.whatsappQr || {};
+      const migratedQrNum = String(rawQr.ownerNumber || rawQr.owner1Number || '');
       return {
         ...def,
         ...parsed,
@@ -1023,12 +1046,15 @@
           defaultBank: mappedDefBank,
           bankAccounts: normalizeBankAccountsMap({ ...(def.settings.bankAccounts || {}), ...(rawSettings.bankAccounts || {}) }),
           signatures: {
-            owner1: { ...def.settings.signatures.owner1, ...(rawSigs.owner1 || {}) },
-            owner2: { ...def.settings.signatures.owner2, ...(rawSigs.owner2 || {}) }
+            owner1: {
+              ...def.settings.signatures.owner1,
+              ...(rawSigs.owner1 || {}),
+              deleted: Boolean(rawSigs.owner1?.deleted)
+            }
           },
           whatsappQr: {
-            ...def.settings.whatsappQr,
-            ...(rawSettings.whatsappQr || {})
+            ownerNumber: migratedQrNum,
+            owner1Number: migratedQrNum
           }
         },
         rememberMe: { ...def.rememberMe, ...(parsed.rememberMe || {}) },
@@ -1159,7 +1185,20 @@
       invoiceDraft: null,
       modalWorkItems: ['Aluminium Window'],
       qrCache: {},
-      lastRenderedView: ''
+      lastRenderedView: '',
+      graphRange: '6m',
+      graphCustomMonth: currentMonthKey(),
+      selectedGraphMonth: currentMonthKey(),
+      pendingApproval: null,
+      urlDeviceAction: null,
+      loginHistory: [],
+      loginHistoryLoading: false,
+      activeDeviceSummary: null,
+      apkDownloadProgress: 0,
+      apkDownloading: false,
+      apkDownloadDone: false,
+      apkBlobUrl: '',
+      apkDownloadError: ''
     };
 
     let cloudSyncTimer = null;
@@ -1167,6 +1206,9 @@
     let pendingCloudResync = false;
     let manualAuthFlow = false;
     let hydrateGeneration = 0;
+    let unsubDeviceApprovalWatch = null;
+    let unsubActiveSessionWatch = null;
+    let midnightBackupTimer = null;
 
     function updateSyncStatusBadgeDom() {
       const badge = document.getElementById('sync-status-pill');
@@ -1734,23 +1776,46 @@
       };
     }
 
-    function getLast6MonthsSeries() {
+    function getProfitGraphSeries(range = '6m', customMonth = '') {
       const now = new Date();
-      const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
-      const series = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-        let inc = 0, exp = 0;
+      const shortNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sept','Oct','Nov','Dec'];
+      const fullNames = isAr()
+        ? ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر']
+        : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const monthKeys = [];
+      if (range === 'custom' && /^\d{4}-\d{2}$/.test(String(customMonth || ''))) {
+        monthKeys.push(String(customMonth));
+      } else {
+        const count = range === '3m' ? 3 : (range === '12m' ? 12 : 6);
+        for (let i = count - 1; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          monthKeys.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+        }
+      }
+      return monthKeys.map(key => {
+        const [yrStr, moStr] = key.split('-');
+        const mIdx = Math.max(0, Math.min(11, Number(moStr) - 1));
+        let inc = 0;
+        let exp = 0;
         state.transactions.forEach(t => {
           if ((t.date || '').startsWith(key)) {
             if (t.type === 'income') inc += Number(t.amount || 0);
             else if (t.type === 'expense') exp += Number(t.amount || 0);
           }
         });
-        series.push({ key, label: labels[d.getMonth()], income: inc, expense: exp });
-      }
-      return series;
+        return {
+          key,
+          label: range === '12m' ? `${shortNames[mIdx]}` : `${shortNames[mIdx]}`,
+          fullLabel: `${fullNames[mIdx]} ${yrStr}`,
+          income: inc,
+          expense: exp,
+          profit: inc - exp
+        };
+      });
+    }
+
+    function getLast6MonthsSeries() {
+      return getProfitGraphSeries('6m');
     }
 
     async function hashPassword(pw) {
@@ -2300,6 +2365,12 @@
           state.kyc.fullName = state.session.name;
         }
         ui.view = isAdminSession() ? 'admin' : (isKycVerified() ? 'home' : 'kyc');
+        if (!isAdminSession() && isFbMatch && navigator.onLine && !localStorage.getItem(DK_SESSION_ID_KEY)) {
+          ui.authBusy = true;
+          render();
+          await hydrateFromFirebaseUser(fbUser, {}, { background: false });
+          return;
+        }
         saveState(true);
         render();
         toast(L(`Fingerprint Verified! Welcome, ${state.session.name} ✓`, `تم التحقق بالبصمة! أهلاً بك يا ${state.session.name} ✓`), 'success');
@@ -2489,20 +2560,72 @@
       }
     }
 
-    async function maybeRunAutoDailyBackup() {
-      const cloud = getCloud();
+    function saveLocalUnencryptedAutoBackup(uid, payloadObj) {
+      if (!uid || !payloadObj) return false;
+      try {
+        const plainJson = JSON.stringify(payloadObj, null, 2);
+        localStorage.setItem(DK_AUTO_BACKUP_PREFIX + uid, plainJson);
+        localStorage.setItem(DK_AUTO_BACKUP_PREFIX + 'latest', plainJson);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function loadLocalUnencryptedAutoBackup(uid) {
+      try {
+        const raw = (uid && localStorage.getItem(DK_AUTO_BACKUP_PREFIX + uid)) || localStorage.getItem(DK_AUTO_BACKUP_PREFIX + 'latest') || '';
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function scheduleMidnightAutoBackup() {
+      if (midnightBackupTimer) {
+        clearTimeout(midnightBackupTimer);
+        midnightBackupTimer = null;
+      }
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5, 0);
+      const msUntilMidnight = Math.max(5000, nextMidnight.getTime() - now.getTime());
+      midnightBackupTimer = setTimeout(() => {
+        maybeRunAutoDailyBackup(true);
+        scheduleMidnightAutoBackup();
+      }, msUntilMidnight);
+    }
+
+    async function maybeRunAutoDailyBackup(forceMidnightCheck = false) {
       const s = state.session;
-      if (!cloud || !s || !s.uid || !navigator.onLine) return;
-      if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== s.uid) return;
+      if (!s || isAdminSession()) return;
+      const uidVal = s.uid || s.cloudUid || s.id || '';
       const tDay = todayISO();
-      if (state.cloudMeta?.lastDailyBackupDate === tDay && state.cloudMeta?.lastBackupAt) return;
+      const alreadyDoneToday = state.cloudMeta?.lastDailyBackupDate === tDay && state.cloudMeta?.lastBackupAt;
+      if (alreadyDoneToday && !forceMidnightCheck) return;
+
+      const payloadObj = buildBackupPayload();
+      const savedLocal = saveLocalUnencryptedAutoBackup(uidVal, payloadObj);
+      if (savedLocal && !alreadyDoneToday) {
+        state.cloudMeta = {
+          ...(state.cloudMeta || {}),
+          uid: uidVal,
+          lastBackupAt: Date.now(),
+          lastDailyBackupDate: tDay
+        };
+        saveState(true);
+      }
+
+      const cloud = getCloud();
+      if (!cloud || !s.uid || !navigator.onLine) return;
+      if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== s.uid) return;
       try {
         const ts = await cloud.saveBackupSnapshot(
           s.uid,
           'daily',
           tDay,
           formatDateTime(tDay, nowTime()),
-          buildBackupPayload()
+          payloadObj
         );
         state.cloudMeta = {
           ...(state.cloudMeta || {}),
@@ -2518,17 +2641,21 @@
     async function manualCloudBackupNow() {
       const cloud = getCloud();
       const s = state.session;
-      if (!cloud || !s || !s.uid) { toast(L('Please sign in first.', 'يرجى تسجيل الدخول أولاً.'), 'error'); return; }
-      if (!navigator.onLine) { toast(L('Connect to internet for Cloud Backup.', 'اتصل بالإنترنت للنسخ الاحتياطي السحابي.'), 'error'); return; }
-      toast(L('Saving Cloud Backup...', 'جاري حفظ النسخة السحابية...'), 'info');
+      if (!s) { toast(L('Please sign in first.', 'يرجى تسجيل الدخول أولاً.'), 'error'); return; }
+      const uidVal = s.uid || s.cloudUid || s.id || '';
+      const payloadObj = buildBackupPayload();
+      saveLocalUnencryptedAutoBackup(uidVal, payloadObj);
+      if (!cloud || !s.uid) { toast(L('Local Simple JSON Auto Backup saved ✓', 'تم حفظ النسخة الاحتياطية محلياً ✓'), 'success'); return; }
+      if (!navigator.onLine) { toast(L('Saved locally in Simple JSON ✓ (Connect internet for Cloud)', 'تم الحفظ محلياً ✓ (اتصل بالإنترنت للسحابة)'), 'info'); return; }
+      toast(L('Saving Simple JSON Backup...', 'جاري حفظ النسخة الاحتياطية...'), 'info');
       try {
         await flushCloudSync();
         const tDay = todayISO();
-        const ts = await cloud.saveBackupSnapshot(s.uid, 'manual', tDay, formatDateTime(tDay, nowTime()), buildBackupPayload());
+        const ts = await cloud.saveBackupSnapshot(s.uid, 'manual', tDay, formatDateTime(tDay, nowTime()), payloadObj);
         state.cloudMeta = { ...(state.cloudMeta || {}), uid: s.uid, lastBackupAt: ts, lastDailyBackupDate: tDay };
         saveState(true);
         render();
-        toast(L('Cloud Backup saved ✓', 'تم حفظ النسخة السحابية ✓'), 'success');
+        toast(L('Simple JSON Backup saved ✓', 'تم حفظ النسخة الاحتياطية ✓'), 'success');
       } catch (err) {
         toast(L('Cloud Backup failed: ', 'فشل النسخ السحابي: ') + (err.message || err), 'error');
       }
@@ -2537,27 +2664,34 @@
     async function restoreFromCloudBackup() {
       const cloud = getCloud();
       const s = state.session;
-      if (!cloud || !s || !s.uid) { toast(L('Please sign in first.', 'يرجى تسجيل الدخول أولاً.'), 'error'); return; }
-      if (!cloud.auth?.currentUser || cloud.auth.currentUser.uid !== s.uid) { toast(L('Cloud session expired. Please sign in again.', 'انتهت الجلسة السحابية. يرجى تسجيل الدخول مجدداً.'), 'error'); return; }
-      if (!navigator.onLine) { toast(L('Connect to internet to restore data.', 'اتصل بالإنترنت لاستعادة البيانات.'), 'error'); return; }
-      toast(L('Restoring your data from Cloud...', 'جاري استعادة بياناتك من السحابة...'), 'info');
-      try {
-        const snap = await cloud.restoreLatestBackup(s.uid);
-        if (snap && snap.payload) {
-          applyBackupPayload(snap.payload);
-          toast(L(`Data restored (${snap.label || 'Cloud'}) ✓`, `تمت استعادة البيانات (${snap.label || 'السحابة'}) ✓`), 'success');
-          return;
+      const uidVal = s?.uid || s?.cloudUid || s?.id || '';
+      if (!s) { toast(L('Please sign in first.', 'يرجى تسجيل الدخول أولاً.'), 'error'); return; }
+      if (cloud && s.uid && navigator.onLine && cloud.auth?.currentUser?.uid === s.uid) {
+        toast(L('Restoring Auto Backup...', 'جاري استعادة النسخة الاحتياطية...'), 'info');
+        try {
+          const snap = await cloud.restoreLatestBackup(s.uid);
+          if (snap && snap.payload) {
+            applyBackupPayload(snap.payload);
+            toast(L(`Auto Backup restored (${snap.label || 'Cloud'}) ✓`, `تمت استعادة النسخة الاحتياطية (${snap.label || 'السحابة'}) ✓`), 'success');
+            return;
+          }
+          const bundle = await cloud.loadUserBundle(s.uid);
+          if (bundle.hasCloudData) {
+            applyBackupPayload({ data: bundle.vaultData });
+            toast(L('Cloud Vault data restored ✓', 'تمت استعادة بيانات السحابة ✓'), 'success');
+            return;
+          }
+        } catch (err) {
+          // Fallback to local auto backup
         }
-        const bundle = await cloud.loadUserBundle(s.uid);
-        if (bundle.hasCloudData) {
-          applyBackupPayload({ data: bundle.vaultData });
-          toast(L('Cloud Vault data restored ✓', 'تمت استعادة بيانات السحابة ✓'), 'success');
-          return;
-        }
-        toast(L('No saved cloud backup found yet.', 'لم يتم العثور على نسخة احتياطية سحابية بعد.'), 'info');
-      } catch (err) {
-        toast(L('Restore failed: ', 'فشلت الاستعادة: ') + (err.message || err), 'error');
       }
+      const localAuto = loadLocalUnencryptedAutoBackup(uidVal);
+      if (localAuto) {
+        applyBackupPayload(localAuto);
+        toast(L('Local Simple JSON Auto Backup restored ✓', 'تمت استعادة النسخة المحلية ✓'), 'success');
+        return;
+      }
+      toast(L('No saved auto backup found yet.', 'لم يتم العثور على نسخة احتياطية بعد.'), 'info');
     }
 
     function getDrive() {
@@ -2782,6 +2916,417 @@
       return otp;
     }
 
+    function getOrCreateDeviceId() {
+      let id = '';
+      try {
+        id = String(localStorage.getItem(DK_DEVICE_ID_KEY) || '').trim();
+      } catch (e) {}
+      if (!id || id.length < 10) {
+        const rand = (window.crypto && typeof crypto.randomUUID === 'function')
+          ? crypto.randomUUID().replace(/-/g, '')
+          : (Date.now().toString(36) + Math.random().toString(36).slice(2, 14));
+        id = 'dev_' + rand;
+        try { localStorage.setItem(DK_DEVICE_ID_KEY, id); } catch (e) {}
+      }
+      return id;
+    }
+
+    function formatDeviceLoginTime(ts = Date.now()) {
+      const d = new Date(ts);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const hrs = d.getHours();
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      const ampm = hrs >= 12 ? 'PM' : 'AM';
+      const h12 = String(hrs % 12 || 12).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd} ${h12}:${mins} ${ampm}`;
+    }
+
+    async function detectDeviceInfo() {
+      const ua = navigator.userAgent || '';
+      let deviceName = '';
+      let isUnknown = false;
+
+      // Try High Entropy User-Agent Client Hints first (gives real Android model even under UA-Reduction)
+      let uaModel = '';
+      let uaPlatform = '';
+      try {
+        if (navigator.userAgentData && typeof navigator.userAgentData.getHighEntropyValues === 'function') {
+          const hints = await navigator.userAgentData.getHighEntropyValues(['model', 'platform']);
+          uaModel = String(hints?.model || '').trim();
+          uaPlatform = String(hints?.platform || '').trim();
+        }
+      } catch (e) {}
+
+      if (uaModel && uaModel.toUpperCase() !== 'K' && uaModel.toLowerCase() !== 'unknown') {
+        deviceName = uaModel;
+      } else if (/iPhone/i.test(ua)) {
+        deviceName = 'iPhone';
+      } else if (/iPad/i.test(ua)) {
+        deviceName = 'iPad';
+      } else if (/Android/i.test(ua)) {
+        const match = ua.match(/Android[^;]*;\s*([^;)]+?)(?:\s*Build\/|\))/i);
+        const cand = match ? String(match[1] || '').trim() : '';
+        if (cand && cand.toUpperCase() !== 'K' && !/^(Linux|Mobile|Android|wv|U)$/i.test(cand)) {
+          deviceName = cand.replace(/^SAMSUNG\s+/i, 'Samsung ');
+        } else {
+          deviceName = 'Unknown Device';
+          isUnknown = true;
+        }
+      } else if (/Windows/i.test(ua) || uaPlatform === 'Windows') {
+        deviceName = 'Windows PC';
+      } else if (/Macintosh|Mac OS/i.test(ua) || uaPlatform === 'macOS') {
+        deviceName = 'Mac Desktop';
+      } else if (/CrOS/i.test(ua)) {
+        deviceName = 'Chromebook';
+      } else if (/Linux/i.test(ua)) {
+        deviceName = 'Linux Desktop';
+      } else {
+        deviceName = 'Unknown Device';
+        isUnknown = true;
+      }
+
+      let browserName = 'Browser';
+      let browserVer = '';
+      const edgeM = ua.match(/Edg(?:A|iOS)?\/([\d.]+)/i);
+      const chromeM = ua.match(/Chrome\/([\d.]+)/i);
+      const firefoxM = ua.match(/Firefox\/([\d.]+)/i);
+      const safariM = ua.match(/Version\/([\d.]+).*Safari/i);
+      if (edgeM) { browserName = 'Edge'; browserVer = edgeM[1].split('.')[0]; }
+      else if (chromeM) { browserName = 'Chrome'; browserVer = chromeM[1].split('.')[0]; }
+      else if (firefoxM) { browserName = 'Firefox'; browserVer = firefoxM[1].split('.')[0]; }
+      else if (safariM) { browserName = 'Safari'; browserVer = safariM[1].split('.')[0]; }
+      else if (/Safari/i.test(ua)) { browserName = 'Safari'; }
+
+      const browserVersion = `${browserName}${browserVer ? ' ' + browserVer : ''} / Digital Khata App v1.0`;
+      return { deviceName, isUnknown, browserVersion };
+    }
+
+    async function fetchNetworkMeta() {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => controller.abort(), 3500) : null;
+      try {
+        const res = await fetch('/api/device-meta', {
+          method: 'GET',
+          signal: controller ? controller.signal : undefined
+        });
+        if (timer) clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          return {
+            ip: String(data?.ip || 'Unknown').trim() || 'Unknown',
+            location: String(data?.locationText || 'Location Detected').trim() || 'Location Detected'
+          };
+        }
+      } catch (e) {
+        if (timer) clearTimeout(timer);
+      }
+      return { ip: 'Network IP', location: 'Location Detected' };
+    }
+
+    async function buildFullDeviceMeta(opts = {}) {
+      const deviceId = getOrCreateDeviceId();
+      const [devInfo, netMeta] = await Promise.all([detectDeviceInfo(), fetchNetworkMeta()]);
+      let localSessionId = '';
+      try { localSessionId = String(localStorage.getItem(DK_SESSION_ID_KEY) || ''); } catch (e) {}
+      return {
+        deviceId,
+        deviceName: devInfo.deviceName,
+        isUnknown: Boolean(devInfo.isUnknown || devInfo.deviceName === 'Unknown Device'),
+        browserVersion: devInfo.browserVersion,
+        ip: netMeta.ip,
+        location: netMeta.location,
+        loginDateTime: formatDeviceLoginTime(Date.now()),
+        recordHistory: opts.recordHistory !== false,
+        localSessionId
+      };
+    }
+
+    async function sendDeviceApprovalEmail(payload) {
+      const toEmail = String(payload?.toEmail || '').trim().toLowerCase();
+      if (!toEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+        return { ok: false, reason: 'NO_OWNER_EMAIL' };
+      }
+      const origin = window.location.origin;
+      const allowUrl = payload.reqId && payload.approvalToken
+        ? `${origin}/?deviceAction=allow&uid=${encodeURIComponent(payload.uid || '')}&reqId=${encodeURIComponent(payload.reqId)}&token=${encodeURIComponent(payload.approvalToken)}`
+        : '';
+      const denyUrl = payload.reqId && payload.approvalToken
+        ? `${origin}/?deviceAction=deny&uid=${encodeURIComponent(payload.uid || '')}&reqId=${encodeURIComponent(payload.reqId)}&token=${encodeURIComponent(payload.approvalToken)}`
+        : '';
+
+      let serverResult = null;
+      try {
+        const res = await fetch('/api/device-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: payload.kind === 'blocked-alert' ? 'blocked-alert' : 'approval-request',
+            toEmail,
+            ownerName: payload.ownerName || 'Workshop Owner',
+            deviceName: payload.deviceName || 'Unknown Device',
+            loginDateTime: payload.loginDateTime || formatDeviceLoginTime(Date.now()),
+            location: payload.location || 'Unknown Location',
+            ip: payload.ip || 'Unknown',
+            browserVersion: payload.browserVersion || 'Digital Khata App v1.0',
+            allowUrl,
+            denyUrl
+          })
+        });
+        if (res.ok) serverResult = await res.json();
+      } catch (e) {}
+
+      if (serverResult && serverResult.provider === 'resend') {
+        return { ok: true, provider: 'resend', allowUrl, denyUrl };
+      }
+
+      // Client EmailJS fallback (works even without RESEND_API_KEY)
+      const isAlert = payload.kind === 'blocked-alert';
+      const detailSummary = isAlert
+        ? [
+            'ALERT: Unauthorized Device Blocked (Owner ne Allow Nahi Kiya)',
+            `Device: ${payload.deviceName || 'Unknown Device'}`,
+            `Date & Time: ${payload.loginDateTime || ''}`,
+            `Location: ${payload.location || ''}`,
+            `IP Address: ${payload.ip || ''}`,
+            `Browser / App Version: ${payload.browserVersion || ''}`,
+            'Status: BLOCKED'
+          ].join(' | ')
+        : [
+            'Digital Khata - New Device Login Approval',
+            `Device: ${payload.deviceName || 'Unknown Device'}`,
+            `Date & Time: ${payload.loginDateTime || ''}`,
+            `Location: ${payload.location || ''}`,
+            `IP Address: ${payload.ip || ''}`,
+            `Browser / App Version: ${payload.browserVersion || ''}`,
+            `[ALLOW - Yes, Ye Mera Device Hai]: ${allowUrl}`,
+            `[NOT ALLOW - No, Ye Mera Device Nahi Hai]: ${denyUrl}`
+          ].join('\n');
+
+      try {
+        const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service_id: EMAILJS_SERVICE_ID,
+            template_id: EMAILJS_TEMPLATE_ID,
+            user_id: EMAILJS_PUBLIC_KEY,
+            template_params: {
+              to_email: toEmail,
+              owner_name: payload.ownerName || 'Owner',
+              device_name: payload.deviceName || 'Unknown Device',
+              login_time: payload.loginDateTime || '',
+              location: payload.location || '',
+              ip_address: payload.ip || '',
+              browser_version: payload.browserVersion || '',
+              allow_url: allowUrl,
+              deny_url: denyUrl,
+              passcode: detailSummary,
+              message: detailSummary
+            }
+          })
+        });
+        if (resp.ok) {
+          return { ok: true, provider: 'emailjs', allowUrl, denyUrl };
+        }
+      } catch (e) {}
+
+      return { ok: false, reason: 'EMAIL_SEND_FAILED', allowUrl, denyUrl };
+    }
+
+    function stopSecurityWatchers() {
+      if (typeof unsubDeviceApprovalWatch === 'function') {
+        try { unsubDeviceApprovalWatch(); } catch (e) {}
+        unsubDeviceApprovalWatch = null;
+      }
+      if (typeof unsubActiveSessionWatch === 'function') {
+        try { unsubActiveSessionWatch(); } catch (e) {}
+        unsubActiveSessionWatch = null;
+      }
+    }
+
+    function attachActiveSessionWatcher(uid, sessionId, localSessionVersion) {
+      if (typeof unsubActiveSessionWatch === 'function') {
+        try { unsubActiveSessionWatch(); } catch (e) {}
+        unsubActiveSessionWatch = null;
+      }
+      const cloud = getCloud();
+      if (!cloud || !uid || isAdminSession()) return;
+      const myDeviceId = getOrCreateDeviceId();
+      unsubActiveSessionWatch = cloud.watchUserActiveSession(
+        uid,
+        myDeviceId,
+        sessionId || '',
+        Number(localSessionVersion || 1),
+        async (reason) => {
+          stopSecurityWatchers();
+          hydrateGeneration++;
+          if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
+          try {
+            localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+            localStorage.removeItem(DK_SESSION_ID_KEY);
+            localStorage.removeItem(DK_SESSION_VERSION_KEY);
+            localStorage.removeItem(ACTIVE_UID_KEY);
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(PENDING_SYNC_KEY);
+          } catch (e) {}
+          sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
+          ui.cloudHydrating = false;
+          ui.loginPending = false;
+          ui.pendingApproval = null;
+          ui.pinLocked = false;
+          ui.pinEntry = '';
+          const remKeep = loadRememberMe();
+          state = defaultData();
+          state.rememberMe = remKeep;
+          ui.authMode = 'login';
+          ui.view = 'login';
+          closeModal();
+          try { await cloud.signOutUser(); } catch (e) {}
+          render();
+          if (reason === 'other_device') {
+            toast(L('Logged out because your account was signed in on another mobile/device.', 'تم تسجيل الخروج لأن حسابك تم فتحه على جهاز آخر.'), 'error');
+          } else if (reason === 'blocked') {
+            toast(L('Account is currently blocked.', 'الحساب محظور حالياً.'), 'error');
+          } else {
+            toast(L('Logged out from all devices by Owner.', 'تم تسجيل الخروج من جميع الأجهزة.'), 'info');
+          }
+        }
+      );
+    }
+
+    function startDeviceApprovalFlow(uid, devRes, devMeta, overrideInfo = {}, fbUser = null) {
+      stopSecurityWatchers();
+      const cloud = getCloud();
+      if (!cloud) return;
+      // Hold user strictly outside Dashboard / Cache until Owner clicks ALLOW
+      localStorage.removeItem(ACTIVE_UID_KEY);
+      localStorage.removeItem(DK_SESSION_ID_KEY);
+      state.session = null;
+      ui.loginPending = false;
+      ui.authLoading = false;
+      ui.cloudHydrating = false;
+      ui.startupCheckingAuth = false;
+
+      const approvalObj = {
+        uid,
+        reqId: devRes.reqId,
+        approvalToken: devRes.approvalToken,
+        ownerEmail: devRes.ownerEmail || '',
+        ownerName: devRes.ownerName || 'Workshop Owner',
+        deviceName: devMeta.deviceName || 'Unknown Device',
+        isUnknown: Boolean(devMeta.isUnknown),
+        loginDateTime: devMeta.loginDateTime || formatDeviceLoginTime(Date.now()),
+        location: devMeta.location || 'Location Detected',
+        ip: devMeta.ip || 'Unknown',
+        browserVersion: devMeta.browserVersion || 'Digital Khata App v1.0',
+        status: 'pending',
+        emailSent: false,
+        emailSending: true,
+        emailError: '',
+        devMeta,
+        overrideInfo
+      };
+      ui.pendingApproval = approvalObj;
+      render();
+
+      // Send Owner Email immediately (indefinite wait, NO 10-minute timeout)
+      sendDeviceApprovalEmail({
+        kind: 'approval-request',
+        uid,
+        reqId: devRes.reqId,
+        approvalToken: devRes.approvalToken,
+        toEmail: approvalObj.ownerEmail,
+        ownerName: approvalObj.ownerName,
+        deviceName: approvalObj.deviceName,
+        loginDateTime: approvalObj.loginDateTime,
+        location: approvalObj.location,
+        ip: approvalObj.ip,
+        browserVersion: approvalObj.browserVersion
+      }).then((mailRes) => {
+        if (ui.pendingApproval && ui.pendingApproval.reqId === devRes.reqId) {
+          ui.pendingApproval.emailSending = false;
+          ui.pendingApproval.emailSent = Boolean(mailRes?.ok);
+          if (!mailRes?.ok) {
+            ui.pendingApproval.emailError = approvalObj.ownerEmail
+              ? L('Approval email could not be sent cleanly. Tap Resend Email.', 'تعذر إرسال بريد الموافقة. اضغط إعادة الإرسال.')
+              : L('No owner email saved on this account to send approval mail.', 'لا يوجد بريد إلكتروني مسجل لإرسال رسالة الموافقة.');
+          }
+          render();
+        }
+      });
+
+      // Listen indefinitely via Firestore onSnapshot for Owner click on ALLOW / NOT ALLOW
+      unsubDeviceApprovalWatch = cloud.watchDeviceApprovalLink(devRes.reqId, async (update) => {
+        if (!ui.pendingApproval || ui.pendingApproval.reqId !== devRes.reqId) return;
+        if (update.decision === 'allowed') {
+          stopSecurityWatchers();
+          ui.pendingApproval.status = 'finalizing';
+          render();
+          try {
+            const curUser = cloud.auth?.currentUser || fbUser;
+            if (!curUser || curUser.uid !== uid) {
+              throw new Error('AUTH_SESSION_CHANGED');
+            }
+            const fin = await cloud.finalizeApprovedDeviceLogin(uid, devMeta);
+            try {
+              localStorage.setItem(DK_SESSION_ID_KEY, fin.sessionId);
+              localStorage.setItem(DK_SESSION_VERSION_KEY, String(fin.sessionVersion || 1));
+              localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
+            } catch (e) {}
+            ui.pendingApproval = null;
+            ui.loginPending = true;
+            ui.loginStageText = L('Device Approved! Opening Digital Khata...', 'تمت الموافقة على الجهاز! جاري الفتح...');
+            render();
+            await hydrateFromFirebaseUser(curUser, overrideInfo, { skipDeviceGate: true });
+            attachActiveSessionWatcher(uid, fin.sessionId, fin.sessionVersion);
+            ui.loginPending = false;
+            ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
+            render();
+            toast(L('Device Approved ✓ Welcome to Digital Khata!', 'تمت الموافقة على الجهاز ✓ أهلاً بك!'), 'success');
+          } catch (err) {
+            ui.loginPending = false;
+            if (ui.pendingApproval) ui.pendingApproval.status = 'pending';
+            render();
+            toast(L('Error activating approved device. Retry.', 'حدث خطأ أثناء تفعيل الجهاز.'), 'error');
+          }
+        } else if (update.decision === 'denied') {
+          stopSecurityWatchers();
+          try {
+            await cloud.recordBlockedLoginAttempt(uid, devMeta);
+          } catch (e) {}
+          // Send security alert email to Owner
+          sendDeviceApprovalEmail({
+            kind: 'blocked-alert',
+            uid,
+            toEmail: approvalObj.ownerEmail,
+            ownerName: approvalObj.ownerName,
+            deviceName: approvalObj.deviceName,
+            loginDateTime: approvalObj.loginDateTime,
+            location: approvalObj.location,
+            ip: approvalObj.ip,
+            browserVersion: approvalObj.browserVersion
+          }).catch(() => {});
+          try {
+            localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+            localStorage.removeItem(DK_SESSION_ID_KEY);
+            localStorage.removeItem(DK_SESSION_VERSION_KEY);
+            localStorage.removeItem(ACTIVE_UID_KEY);
+          } catch (e) {}
+          try { await cloud.signOutUser(); } catch (e) {}
+          state.session = null;
+          ui.loginPending = false;
+          ui.pendingApproval = {
+            ...approvalObj,
+            status: 'blocked'
+          };
+          render();
+          toast('Owner ne Is Device ko Allow Nahi Kiya', 'error');
+        }
+      });
+    }
+
     async function loadAdminUsersList() {
       const cloud = getCloud();
       if (!cloud || !isAdminSession()) return;
@@ -2864,7 +3409,35 @@
           saveState(true);
           render();
           loadAdminUsersList();
-          return;
+          return { ok: true };
+        }
+
+        // DEVICE BINDING + INDEFINITE NEW DEVICE APPROVAL GATE
+        if (!isNewSignup && !opts.skipDeviceGate && navigator.onLine) {
+          const devMeta = await buildFullDeviceMeta({ recordHistory: !isBg && Boolean(opts.recordLoginHistory) });
+          if (myGen !== hydrateGeneration || !cloud.auth?.currentUser || cloud.auth.currentUser.uid !== fbUser.uid) {
+            return { ok: false, reason: 'SUPERSEDED' };
+          }
+          const devRes = await cloud.registerOrCheckDeviceLogin(fbUser.uid, devMeta);
+          if (devRes.status === 'pending_approval') {
+            startDeviceApprovalFlow(fbUser.uid, devRes, devMeta, overrideInfo, fbUser);
+            return { ok: false, reason: 'PENDING_APPROVAL' };
+          }
+          if (devRes.status === 'approved') {
+            try {
+              localStorage.setItem(DK_SESSION_ID_KEY, devRes.sessionId);
+              localStorage.setItem(DK_SESSION_VERSION_KEY, String(devRes.sessionVersion || 1));
+            } catch (e) {}
+            attachActiveSessionWatcher(fbUser.uid, devRes.sessionId, devRes.sessionVersion);
+          }
+        } else if (!isNewSignup && navigator.onLine) {
+          let sid = '';
+          let sver = 1;
+          try {
+            sid = String(localStorage.getItem(DK_SESSION_ID_KEY) || '');
+            sver = Number(localStorage.getItem(DK_SESSION_VERSION_KEY) || 1);
+          } catch (e) {}
+          if (sid) attachActiveSessionWatcher(fbUser.uid, sid, sver);
         }
 
         // STRICT PER-ACCOUNT ISOLATION:
@@ -2896,7 +3469,16 @@
           localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
           saveState(true);
           await flushCloudSync();
-          return;
+          try {
+            const devMeta = await buildFullDeviceMeta({ recordHistory: true });
+            const devRes = await cloud.registerOrCheckDeviceLogin(fbUser.uid, devMeta);
+            if (devRes.status === 'approved') {
+              localStorage.setItem(DK_SESSION_ID_KEY, devRes.sessionId);
+              localStorage.setItem(DK_SESSION_VERSION_KEY, String(devRes.sessionVersion || 1));
+              attachActiveSessionWatcher(fbUser.uid, devRes.sessionId, devRes.sessionVersion);
+            }
+          } catch (e) {}
+          return { ok: true };
         }
 
         const bundle = await withTimeout(cloud.loadUserBundle(fbUser.uid), 22000, 'BUNDLE_TIMEOUT');
@@ -3001,17 +3583,19 @@
         if (myGen !== hydrateGeneration) return;
         ui.cloudHydrating = false;
         ui.startupCheckingAuth = false;
-        if (state.session) {
-          if (isAdminSession()) {
-            ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
-          } else if (state.blocked || !isKycVerified()) {
-            ui.view = 'kyc';
-            if (state.kyc?.status === 'verifying') startKycCountdownTimer();
-          } else {
-            ui.view = (ui.view === 'login' || ui.view === 'kyc') ? 'home' : ui.view;
+        if (!ui.pendingApproval) {
+          if (state.session) {
+            if (isAdminSession()) {
+              ui.view = ui.view === 'admin-inspect' ? 'admin-inspect' : 'admin';
+            } else if (state.blocked || !isKycVerified()) {
+              ui.view = 'kyc';
+              if (state.kyc?.status === 'verifying') startKycCountdownTimer();
+            } else {
+              ui.view = (ui.view === 'login' || ui.view === 'kyc') ? 'home' : ui.view;
+            }
+          } else if (!ui.loginPending) {
+            ui.view = 'login';
           }
-        } else if (!ui.loginPending) {
-          ui.view = 'login';
         }
         render();
       }
@@ -3066,18 +3650,23 @@
       if (d.settings) {
         const mappedBank = LEGACY_BANK_NAME_MAP[d.settings.defaultBank] || d.settings.defaultBank || def.settings.defaultBank;
         const dSigs = d.settings.signatures || {};
+        const dQr = d.settings.whatsappQr || {};
+        const migQr = String(dQr.ownerNumber || dQr.owner1Number || '');
         state.settings = {
           ...def.settings,
           ...d.settings,
           defaultBank: mappedBank,
           bankAccounts: normalizeBankAccountsMap({ ...(def.settings.bankAccounts || {}), ...(d.settings.bankAccounts || {}) }),
           signatures: {
-            owner1: { ...def.settings.signatures.owner1, ...(dSigs.owner1 || {}) },
-            owner2: { ...def.settings.signatures.owner2, ...(dSigs.owner2 || {}) }
+            owner1: {
+              ...def.settings.signatures.owner1,
+              ...(dSigs.owner1 || {}),
+              deleted: Boolean(dSigs.owner1?.deleted)
+            }
           },
           whatsappQr: {
-            ...def.settings.whatsappQr,
-            ...(d.settings.whatsappQr || {})
+            ownerNumber: migQr,
+            owner1Number: migQr
           }
         };
       }
@@ -3278,14 +3867,16 @@
       return [];
     }
 
-    function getSignatureConfig(slot) {
+    function getSignatureConfig(slot = 'owner1') {
       const sigs = (state.settings && state.settings.signatures) || {};
-      const defName = slot === 'owner1' ? 'Imran Ullah' : 'Haroon';
-      const raw = sigs[slot] || {};
-      const src = (raw.dataUrl || '').trim() || (slot === 'owner1' ? DEFAULT_OWNER1_SIGN_PATH : '');
+      const defName = 'Imran Ullah';
+      const raw = sigs.owner1 || {};
+      const isDeleted = Boolean(raw.deleted);
+      const src = isDeleted ? '' : ((raw.dataUrl || '').trim() || DEFAULT_OWNER1_SIGN_PATH);
       return {
         name: String(raw.name !== undefined ? raw.name : defName).trim() || defName,
         src,
+        deleted: isDeleted,
         rotation: Number(raw.rotation || 0),
         size: Math.min(160, Math.max(50, Number(raw.size || 100)))
       };
@@ -3347,32 +3938,20 @@
 
     function getWhatsAppQrConfig() {
       const qr = (state.settings && state.settings.whatsappQr) || {};
+      const num = normalizeWhatsAppQrNumber(qr.ownerNumber || qr.owner1Number || '', '+966');
       return {
-        owner1Number: normalizeWhatsAppQrNumber(qr.owner1Number || '', '+966'),
-        owner2Number: normalizeWhatsAppQrNumber(qr.owner2Number || '', '+92')
+        ownerNumber: num,
+        owner1Number: num
       };
     }
 
     function getActiveInvoiceQrTarget(inv) {
       if (!inv) return null;
+      if (!inv.useOwnerQr && !inv.useOwner1Qr) return null;
       const qrCfg = getWhatsAppQrConfig();
-      const order = Array.isArray(inv.qrOrder) ? inv.qrOrder : [];
-      const u1 = Boolean(inv.useOwner1Qr);
-      const u2 = Boolean(inv.useOwner2Qr);
-      const candidates = [];
-      order.forEach(slot => {
-        if ((slot === 'owner1' && u1) || (slot === 'owner2' && u2)) {
-          if (!candidates.includes(slot)) candidates.push(slot);
-        }
-      });
-      if (u1 && !candidates.includes('owner1')) candidates.push('owner1');
-      if (u2 && !candidates.includes('owner2')) candidates.push('owner2');
-      for (const slot of candidates) {
-        const num = slot === 'owner1' ? qrCfg.owner1Number : qrCfg.owner2Number;
-        const digits = String(num || '').replace(/\D/g, '');
-        if (digits.length >= 8) {
-          return { slot, number: num, digits };
-        }
+      const digits = String(qrCfg.ownerNumber || '').replace(/\D/g, '');
+      if (digits.length >= 8) {
+        return { slot: 'owner1', number: qrCfg.ownerNumber, digits };
       }
       return null;
     }
@@ -3617,8 +4196,7 @@
       const totalUdhaar = Math.max(0, Number(st.baqaya || remainingBalance));
 
       const selectedBanks = getInvoiceBanksList(overrides);
-      const owner1Cfg = getSignatureConfig('owner1');
-      const owner2Cfg = getSignatureConfig('owner2');
+      const ownerSignCfg = getSignatureConfig('owner1');
       const invNo = (overrides.invoiceNo || c.lastInvoiceNo || getNextInvoiceNumber(c)).trim();
       const invDate = overrides.invoiceDate || todayISO();
       const dueDate = overrides.dueDate || invDate;
@@ -3676,15 +4254,10 @@
         grandTotal,
         advancePaid,
         remainingBalance,
-        totalUdhaar,
         selectedBanks,
-        useOwner1Sign: Boolean(overrides.useOwner1Sign),
-        useOwner2Sign: Boolean(overrides.useOwner2Sign),
-        useOwner1Qr: Boolean(overrides.useOwner1Qr),
-        useOwner2Qr: Boolean(overrides.useOwner2Qr),
-        qrOrder: Array.isArray(overrides.qrOrder) ? [...overrides.qrOrder] : [],
-        owner1Sign: owner1Cfg,
-        owner2Sign: owner2Cfg,
+        useOwnerSign: Boolean(overrides.useOwnerSign ?? overrides.useOwner1Sign),
+        useOwnerQr: Boolean(overrides.useOwnerQr ?? overrides.useOwner1Qr),
+        ownerSign: ownerSignCfg,
         qrDataUrl: '',
         terms: resolvedTerms
       };
@@ -3714,9 +4287,8 @@
         : `<div style="margin-top:2px;">${esc(invL(invLang, 'Cash Payment / Direct Transfer', 'الدفع نقداً / تحويل بنكي مباشر'))}</div>`;
 
       const termsLines = esc(inv.terms).replace(/\n/g, '<br/>');
-      const sig1ImgH = Math.round((compact ? 28 : 42) * ((inv.owner1Sign?.size || 100) / 100));
-      const sig2ImgH = Math.round((compact ? 28 : 42) * ((inv.owner2Sign?.size || 100) / 100));
-      const showAnySign = (inv.useOwner1Sign && inv.owner1Sign?.src) || (inv.useOwner2Sign && inv.owner2Sign?.src);
+      const sigImgH = Math.round((compact ? 28 : 42) * ((inv.ownerSign?.size || 100) / 100));
+      const showOwnerSign = Boolean(inv.useOwnerSign && inv.ownerSign?.src);
 
       return `
         <div dir="${dir}" lang="${invLang}" style="font-family:${fontStack};background:#ffffff;color:#000000;padding:${pad};font-size:${baseFs};line-height:1.5;border:none;text-align:${alignStart};">
@@ -3803,7 +4375,7 @@
                 <span dir="ltr" style="font-weight:700;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.vatAmount))}</span>
               </div>
               <div style="display:flex;justify-content:space-between;gap:14px;padding:4px 0 2px;font-size:${compact ? '11.5px' : '13.5px'};">
-                <span style="font-weight:900;color:#000000;">${esc(invL(invLang, 'Total', 'الإجمالي'))}</span>
+                <span style="font-weight:900;color:#000000;">${esc(invL(invLang, 'Total Bill', 'إجمالي الفاتورة'))}</span>
                 <span dir="ltr" style="font-weight:900;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.grandTotal))}</span>
               </div>
               <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9px' : '10.5px'};">
@@ -3813,10 +4385,6 @@
               <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
                 <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'Remaining', 'المتبقي'))}</span>
                 <span dir="ltr" style="font-weight:800;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.remainingBalance))}</span>
-              </div>
-              <div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0;font-size:${compact ? '9.5px' : '11px'};">
-                <span style="font-weight:800;color:#000000;">${esc(invL(invLang, 'Total Udhaar', 'إجمالي الدين'))}</span>
-                <span dir="ltr" style="font-weight:800;color:#000000;unicode-bidi:isolate;">${esc(fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance))}</span>
               </div>
             </div>
           </div>
@@ -3837,24 +4405,14 @@
             </div>
           </div>
 
-          <!-- SIGNATURES + THANKS + BOTTOM SHOP ADDRESS -->
-          ${showAnySign ? `
-            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:${compact ? '20px' : '30px'};">
+          <!-- SINGLE OWNER SIGNATURE + THANK YOU & SATISFACTION PROMISE -->
+          ${showOwnerSign ? `
+            <div style="display:flex;justify-content:flex-start;align-items:flex-end;gap:16px;margin-top:${compact ? '20px' : '30px'};">
               <div style="min-width:110px;text-align:${alignStart};">
-                ${inv.useOwner1Sign && inv.owner1Sign?.src ? `
-                  <div style="height:${sig1ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-start;">
-                    <img src="${esc(inv.owner1Sign.src)}" alt="Owner 1 Sign" style="max-height:${sig1ImgH}px;width:auto;transform:rotate(${Number(inv.owner1Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
-                  </div>
-                  <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.owner1Sign.name)}</div>
-                ` : ''}
-              </div>
-              <div style="min-width:110px;text-align:${alignEnd};">
-                ${inv.useOwner2Sign && inv.owner2Sign?.src ? `
-                  <div style="height:${sig2ImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-end;">
-                    <img src="${esc(inv.owner2Sign.src)}" alt="Owner 2 Sign" style="max-height:${sig2ImgH}px;width:auto;transform:rotate(${Number(inv.owner2Sign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
-                  </div>
-                  <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.owner2Sign.name)}</div>
-                ` : ''}
+                <div style="height:${sigImgH + 6}px;display:flex;align-items:flex-end;justify-content:flex-start;">
+                  <img src="${esc(inv.ownerSign.src)}" alt="Owner Sign" style="max-height:${sigImgH}px;width:auto;transform:rotate(${Number(inv.ownerSign.rotation || 0)}deg);transform-origin:center center;" onerror="this.style.display='none'" />
+                </div>
+                <div style="font-size:${compact ? '9px' : '10.5px'};font-weight:800;color:#000000;margin-top:4px;">${esc(inv.ownerSign.name)}</div>
               </div>
             </div>
           ` : ''}
@@ -3862,11 +4420,9 @@
           <div style="text-align:center;margin-top:${compact ? '16px' : '24px'};font-size:${compact ? '10.5px' : '12.5px'};font-weight:800;color:#000000;">
             ${esc(invL(invLang, 'Thank You!', 'شكراً لك!'))}
           </div>
-          ${(inv.shopAddress || contactPhone) ? `
-            <div style="text-align:center;margin-top:${compact ? '6px' : '8px'};font-size:${compact ? '8.5px' : '10px'};color:#111827;">
-              ${inv.shopAddress ? `<span>${esc(inv.shopAddress)}</span>` : ''}${(inv.shopAddress && contactPhone) ? ' &nbsp;·&nbsp; ' : ''}${contactPhone ? `<span dir="ltr" style="unicode-bidi:isolate;">${esc(contactPhone)}</span>` : ''}
-            </div>
-          ` : ''}
+          <div style="text-align:center;margin-top:${compact ? '5px' : '7px'};font-size:${compact ? '9px' : '10.5px'};font-weight:600;color:#111827;">
+            ${esc(invL(invLang, 'Your Satisfaction is Our Promise - Thank You for Trusting Us!', 'رضاكم هو وعدنا - شكراً لثقتكم بنا!'))}
+          </div>
         </div>
       `;
     }
@@ -4108,10 +4664,9 @@
       };
       drawTotalRow(invL(invLang, 'SUBTOTAL', 'المجموع الفرعي'), fmtInvoiceMoney(inv.subTotal), true, 22);
       drawTotalRow(invL(invLang, 'TAX', 'الضريبة'), fmtInvoiceMoney(inv.vatAmount), true, 22);
-      drawTotalRow(invL(invLang, 'Total', 'الإجمالي'), fmtInvoiceMoney(inv.grandTotal), true, 26);
+      drawTotalRow(invL(invLang, 'Total Bill', 'إجمالي الفاتورة'), fmtInvoiceMoney(inv.grandTotal), true, 26);
       drawTotalRow(invL(invLang, 'Paid', 'المدفوع'), fmtInvoiceMoney(inv.advancePaid), false, 21);
       drawTotalRow(invL(invLang, 'Remaining', 'المتبقي'), fmtInvoiceMoney(inv.remainingBalance), true, 22);
-      drawTotalRow(invL(invLang, 'Total Udhaar', 'إجمالي الدين'), fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance), true, 22);
 
       y = Math.max(qy, ty) + 52;
 
@@ -4149,9 +4704,9 @@
 
       y = Math.max(py, trY) + 56;
 
-      // Bottom Signatures
+      // Single Owner Signature
       const sigBaseY = Math.min(1505, Math.max(y, 1365));
-      const drawSig = async (sigCfg, isEndSide) => {
+      const drawSig = async (sigCfg) => {
         const transformedUrl = await renderTransformedSignatureDataUrl(sigCfg.src, sigCfg.rotation || 0);
         if (!transformedUrl) return;
         const sImg = await loadImgForCanvas(transformedUrl);
@@ -4162,39 +4717,30 @@
         const fit = Math.min(maxW / (sImg.width || 240), maxH / (sImg.height || 100));
         const dw = Math.max(40, Math.round((sImg.width || 240) * fit));
         const dh = Math.max(30, Math.round((sImg.height || 100) * fit));
-        let drawX;
-        if (isInvAr) {
-          drawX = isEndSide ? endX : (startX - dw);
-        } else {
-          drawX = isEndSide ? (endX - dw) : startX;
-        }
+        const drawX = isInvAr ? (startX - dw) : startX;
         ctx.drawImage(sImg, drawX, sigBaseY - dh, dw, dh);
       };
 
       ctx.fillStyle = '#000000';
       ctx.font = `700 21px ${baseFont}`;
-      if (inv.useOwner1Sign && inv.owner1Sign?.src) {
-        await drawSig(inv.owner1Sign, false);
+      if (inv.useOwnerSign && inv.ownerSign?.src) {
+        await drawSig(inv.ownerSign);
         ctx.textAlign = startAlign;
-        ctx.fillText(String(inv.owner1Sign.name || invL(invLang, 'Owner 1', 'المالك 1')), startX, sigBaseY + 12);
-      }
-      if (inv.useOwner2Sign && inv.owner2Sign?.src) {
-        await drawSig(inv.owner2Sign, true);
-        ctx.textAlign = endAlign;
-        ctx.fillText(String(inv.owner2Sign.name || invL(invLang, 'Owner 2', 'المالك 2')), endX, sigBaseY + 12);
+        ctx.fillText(String(inv.ownerSign.name || invL(invLang, 'Owner', 'المالك')), startX, sigBaseY + 12);
       }
 
-      // Thank You & Bottom Contact Line
+      // Thank You & Satisfaction Promise
       ctx.fillStyle = '#000000';
       ctx.font = `800 27px ${baseFont}`;
       ctx.textAlign = 'center';
-      ctx.fillText(invL(invLang, 'Thank You!', 'شكراً لك!'), W / 2, 1605);
-      const footerLine = [inv.shopAddress, contactPhone].filter(Boolean).join('  ·  ');
-      if (footerLine) {
-        ctx.fillStyle = '#111827';
-        ctx.font = `400 20px ${baseFont}`;
-        ctx.fillText(footerLine.slice(0, 100), W / 2, 1656);
-      }
+      ctx.fillText(invL(invLang, 'Thank You!', 'شكراً لك!'), W / 2, 1598);
+      ctx.fillStyle = '#111827';
+      ctx.font = `600 20px ${baseFont}`;
+      ctx.fillText(
+        invL(invLang, 'Your Satisfaction is Our Promise - Thank You for Trusting Us!', 'رضاكم هو وعدنا - شكراً لثقتكم بنا!'),
+        W / 2,
+        1648
+      );
 
       const imgDataUrl = canvas.toDataURL('image/jpeg', 0.94);
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -4391,7 +4937,7 @@
       doc.text(fmtInvoiceMoney(inv.vatAmount), rightX, ty, { align: 'right' });
       ty += 7;
       doc.setFontSize(12);
-      doc.text('Total', totLabelX, ty, { align: 'right' });
+      doc.text('Total Bill', totLabelX, ty, { align: 'right' });
       doc.text(fmtInvoiceMoney(inv.grandTotal), rightX, ty, { align: 'right' });
       ty += 6.5;
       doc.setFont('helvetica', 'normal');
@@ -4402,9 +4948,6 @@
       doc.setFont('helvetica', 'bold');
       doc.text('Remaining', totLabelX, ty, { align: 'right' });
       doc.text(fmtInvoiceMoney(inv.remainingBalance), rightX, ty, { align: 'right' });
-      ty += 5.5;
-      doc.text('Total Udhaar', totLabelX, ty, { align: 'right' });
-      doc.text(fmtInvoiceMoney(inv.totalUdhaar ?? inv.remainingBalance), rightX, ty, { align: 'right' });
       ty += 5.5;
 
       y = Math.max(qy, ty) + 12;
@@ -4444,9 +4987,9 @@
 
       y = Math.max(py, trY) + 14;
 
-      // Bottom Signatures (Left = Owner 1, Right = Owner 2) ONLY if ticked!
+      // Single Owner Signature (Left) ONLY if ticked
       const sigBaseY = Math.min(256, Math.max(y, 232));
-      const addFittedSig = async (sigCfg, isRight) => {
+      const addFittedSig = async (sigCfg) => {
         const transformedUrl = await renderTransformedSignatureDataUrl(sigCfg.src, sigCfg.rotation || 0);
         if (!transformedUrl) return;
         const tImg = await loadImgForCanvas(transformedUrl);
@@ -4458,33 +5001,22 @@
         const fitScale = Math.min(maxW / natW, maxH / natH);
         const imgW = Math.max(8, Math.round(natW * fitScale));
         const imgH = Math.max(6, Math.round(natH * fitScale));
-        const drawX = isRight ? (rightX - imgW) : ml;
-        doc.addImage(transformedUrl, 'PNG', drawX, sigBaseY - imgH, imgW, imgH);
+        doc.addImage(transformedUrl, 'PNG', ml, sigBaseY - imgH, imgW, imgH);
       };
-      if (inv.useOwner1Sign && inv.owner1Sign?.src) {
-        await addFittedSig(inv.owner1Sign, false);
+      if (inv.useOwnerSign && inv.ownerSign?.src) {
+        await addFittedSig(inv.ownerSign);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9.5);
-        doc.text(String(inv.owner1Sign.name || 'Owner 1'), ml, sigBaseY + 5);
-      }
-      if (inv.useOwner2Sign && inv.owner2Sign?.src) {
-        await addFittedSig(inv.owner2Sign, true);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
-        doc.text(String(inv.owner2Sign.name || 'Owner 2'), rightX, sigBaseY + 5, { align: 'right' });
+        doc.text(String(inv.ownerSign.name || 'Owner'), ml, sigBaseY + 5);
       }
 
-      // Bottom Center: Thank You! + Shop Address & Phone
+      // Bottom Center: Thank You! + Satisfaction Promise
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('Thank You!', pageW / 2, 276, { align: 'center' });
-
-      const footerContact = [inv.shopAddress, qPhone].filter(Boolean).join(' · ');
-      if (footerContact) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(String(footerContact).slice(0, 95), pageW / 2, 284, { align: 'center' });
-      }
+      doc.text('Thank You!', pageW / 2, 274, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text('Your Satisfaction is Our Promise - Thank You for Trusting Us!', pageW / 2, 282, { align: 'center' });
 
       return doc.output('blob');
     }
@@ -4510,27 +5042,23 @@
 
     async function shareInvoiceOnWhatsApp(inv) {
       if (!inv) return;
+      const rawPhone = String(inv.custPhone || '').trim();
+      const phone = rawPhone.replace(/\D/g, '');
+      if (!phone || phone.length < 7) {
+        toast(L('Is Customer Ka Number Nahi Hai', 'لا يوجد رقم هاتف لهذا العميل'), 'error');
+        return;
+      }
+
       const isInvAr = inv.lang === 'ar';
       const shortMessage = isInvAr
         ? `السلام عليكم ${inv.custName}، إليكم الفاتورة رقم ${inv.invoiceNo} من ${inv.shopName}. شكراً لتعاملكم معنا!`
         : `Assalam-o-Alaikum ${inv.custName}, your Invoice (${inv.invoiceNo}) from ${inv.shopName} is ready. Thank you!`;
-      const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, '_');
+      const safeCust = String(inv.custName || 'Customer').replace(/[^a-zA-Z0-9\u0600-\u06FF]+/g, '_') || 'Customer';
       const fileName = `${inv.invoiceNo || 'Invoice'}_${safeCust}.pdf`;
 
       try {
-        toast(L('Generating Invoice PDF...', 'جاري إنشاء فاتورة PDF...'), 'info');
+        toast(L('Preparing Invoice PDF & WhatsApp...', 'جاري تجهيز الفاتورة وفتح واتساب...'), 'info');
         const pdfBlob = await generateInvoicePdfBlob(inv);
-        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: `${invL(inv.lang || 'en', 'Invoice', 'فاتورة')} ${inv.invoiceNo}`,
-            text: shortMessage
-          });
-          toast(L('Invoice PDF shared via WhatsApp ✓', 'تم إرسال الفاتورة PDF عبر واتساب ✓'), 'success');
-          return;
-        }
-        // Desktop / browser fallback: download Invoice PDF + open WhatsApp with short message ONLY
         const url = URL.createObjectURL(pdfBlob);
         const dl = document.createElement('a');
         dl.href = url;
@@ -4540,16 +5068,15 @@
         dl.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1500);
       } catch (e) {
-        if (e && e.name === 'AbortError') return;
+        toast(L('Error generating PDF: ', 'خطأ في إنشاء PDF: ') + (e?.message || e), 'error');
+        return;
       }
 
-      const phone = String(inv.custPhone || '').replace(/\D/g, '');
       let waPhone = phone;
+      if (waPhone.startsWith('00')) waPhone = waPhone.slice(2);
       if (waPhone.startsWith('0') && waPhone.length === 11) waPhone = '92' + waPhone.slice(1);
       else if (waPhone.startsWith('05') && waPhone.length === 10) waPhone = '966' + waPhone.slice(1);
-      const waUrl = waPhone
-        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(shortMessage)}`
-        : `https://wa.me/?text=${encodeURIComponent(shortMessage)}`;
+      const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(shortMessage)}`;
       const link = document.createElement('a');
       link.href = waUrl;
       link.target = '_blank';
@@ -4557,7 +5084,7 @@
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast(L('Invoice PDF downloaded and WhatsApp opened ✓', 'تم تنزيل الفاتورة وفتح واتساب ✓'), 'success');
+      toast(L('Invoice PDF downloaded & WhatsApp opened ✓', 'تم تنزيل الفاتورة وفتح واتساب ✓'), 'success');
     }
 
     async function printWorkshopReport(customerId = null, billOverrides = null) {
@@ -4991,6 +5518,140 @@
       `;
     }
 
+    function isOfficialApkAppInstalled() {
+      const pwa = window.__DK_PWA__;
+      if (pwa && pwa.isInstalled) return true;
+      if (window.navigator && window.navigator.standalone === true) return true;
+      if (/DigitalKhataApp|Android.*wv/i.test(navigator.userAgent || '')) return true;
+      if (window.ReactNativeWebView || window.AndroidInterface) return true;
+      return false;
+    }
+
+    function renderWaitingApprovalScreen() {
+      const p = ui.pendingApproval || {};
+      const isBlocked = p.status === 'blocked';
+      const isFinalizing = p.status === 'finalizing';
+      const isUnknownDev = Boolean(p.isUnknown || p.deviceName === 'Unknown Device');
+      return `
+        <div class="min-h-screen flex flex-col items-center justify-center px-5 py-8">
+          <div class="w-full max-w-[430px] glass-strong rounded-3xl p-6 space-y-5 shadow-2xl border ${isBlocked ? 'border-rose-500/60' : 'border-cyan-400/35'}">
+            <div class="flex flex-col items-center text-center">
+              <img src="${esc(DEFAULT_LOGO_PATH)}" alt="Digital Khata Logo" class="w-16 h-16 rounded-full object-cover border-2 ${isBlocked ? 'border-rose-500' : 'border-[#C9A227]'}" />
+              ${isBlocked ? `
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/50 text-rose-300 text-xs font-extrabold">
+                  ⛔ ${esc(L('Access Blocked', 'تم حظر الدخول'))}
+                </div>
+                <h1 class="mt-3 text-lg font-extrabold text-rose-300">Owner ne Is Device ko Allow Nahi Kiya</h1>
+                <p class="text-xs text-sec mt-1">${esc(L('Security alert has been sent to the Owner email.', 'تم إرسال تنبيه أمني إلى بريد المالك.'))}</p>
+              ` : `
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/45 text-amber-200 text-xs font-extrabold">
+                  ⏳ ${esc(isFinalizing ? L('Approved! Opening App...', 'تمت الموافقة! جاري فتح التطبيق...') : 'Waiting For Approval')}
+                </div>
+                <h1 class="mt-3 text-lg font-extrabold text-white">${esc(isFinalizing ? L('Device Approved ✓', 'تمت الموافقة على الجهاز ✓') : L('Waiting For Owner Approval', 'بانتظار موافقة المالك'))}</h1>
+                <p class="text-xs text-sec mt-1 leading-relaxed">
+                  ${esc(L('An approval email has been sent to the Owner. Login stays on hold until the Owner clicks "ALLOW - Yes, Ye Mera Device Hai".', 'تم إرسال بريد موافقة إلى المالك. سيبقى الدخول معلقاً حتى يضغط المالك على السماح.'))}
+                </p>
+              `}
+            </div>
+
+            <div class="rounded-2xl bg-white/5 border border-white/10 p-3.5 space-y-2 text-xs">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sec">${esc(L('New Device', 'الجهاز الجديد'))}</span>
+                <span class="${isUnknownDev ? 'text-rose-400 font-extrabold' : 'font-bold text-white'} text-end">${esc(p.deviceName || 'Unknown Device')}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sec">${esc(L('Date & Time', 'التاريخ والوقت'))}</span>
+                <span class="font-semibold tabular-nums text-end" dir="ltr">${esc(p.loginDateTime || '')}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sec">${esc(L('Location', 'الموقع'))}</span>
+                <span class="font-semibold text-end">${esc(p.location || 'Location Detected')}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sec">${esc(L('IP Address', 'عنوان IP'))}</span>
+                <span class="font-mono font-semibold text-end" dir="ltr">${esc(p.ip || 'Unknown')}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sec">${esc(L('Browser / App', 'المتصفح / التطبيق'))}</span>
+                <span class="font-semibold text-end">${esc(p.browserVersion || 'Digital Khata App v1.0')}</span>
+              </div>
+              ${p.ownerEmail ? `
+                <div class="flex items-center justify-between gap-2 pt-1.5 border-t border-white/10">
+                  <span class="text-sec">${esc(L('Owner Email', 'بريد المالك'))}</span>
+                  <span class="font-semibold text-cyan-300 text-end break-all" dir="ltr">${esc(p.ownerEmail)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            ${!isBlocked ? `
+              <div class="flex flex-col items-center gap-2.5 py-1">
+                <div class="w-9 h-9 rounded-full border-4 border-cyan-400/30 border-t-cyan-400 animate-spin"></div>
+                <div class="text-[11px] text-cyan-200 font-semibold text-center">
+                  ${p.emailSending
+                    ? esc(L('Sending approval email to Owner...', 'جاري إرسال بريد الموافقة إلى المالك...'))
+                    : (p.emailSent
+                        ? esc(L('Email Sent ✓ Waiting indefinitely until Owner taps ALLOW...', 'تم إرسال البريد ✓ بانتظار موافقة المالك...'))
+                        : esc(p.emailError || L('Check Owner email inbox & spam folder.', 'تحقق من صندوق الوارد والبريد العشوائي للمالك.')))}
+                </div>
+              </div>
+              <div class="space-y-2">
+                <button type="button" data-action="resend-device-approval" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${esc(L('Resend Approval Email', 'إعادة إرسال بريد الموافقة'))}</button>
+                <button type="button" data-action="cancel-device-approval" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-sec cursor-pointer">${esc(L('Cancel & Back to Login', 'إلغاء والعودة لتسجيل الدخول'))}</button>
+              </div>
+            ` : `
+              <button type="button" data-action="cancel-device-approval" class="w-full h-11 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold cursor-pointer">${esc(L('Back to Login', 'العودة لتسجيل الدخول'))}</button>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDeviceActionLanding() {
+      const st = ui.urlDeviceAction || {};
+      const status = st.status || 'loading';
+      const isOk = status === 'allowed' || status === 'already-allowed';
+      const isDenied = status === 'denied' || status === 'already-denied';
+      const isErr = status === 'error';
+      const info = st.info || {};
+      return `
+        <div class="min-h-screen flex flex-col items-center justify-center px-5 py-8">
+          <div class="w-full max-w-[430px] glass-strong rounded-3xl p-6 space-y-5 shadow-2xl border ${isOk ? 'border-emerald-400/50' : (isDenied || isErr ? 'border-rose-400/50' : 'border-cyan-400/35')}">
+            <div class="flex flex-col items-center text-center">
+              <img src="${esc(DEFAULT_LOGO_PATH)}" alt="Digital Khata Logo" class="w-16 h-16 rounded-full object-cover border-2 border-[#C9A227]" />
+              ${status === 'loading' ? `
+                <div class="w-10 h-10 mt-4 rounded-full border-4 border-cyan-400/30 border-t-cyan-400 animate-spin"></div>
+                <h1 class="mt-3 text-lg font-extrabold text-white">${esc(L('Processing Owner Decision...', 'جاري تنفيذ قرار المالك...'))}</h1>
+                <p class="text-xs text-sec mt-1">${esc(st.message || L('Verifying secure approval link...', 'جاري التحقق من رابط الموافقة...'))}</p>
+              ` : isOk ? `
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-extrabold">✓ ${esc(L('Device Approved', 'تمت الموافقة على الجهاز'))}</div>
+                <h1 class="mt-3 text-lg font-extrabold text-emerald-300">${esc(st.message || 'Yes, Ye Device Allow Ho Gaya Hai ✓')}</h1>
+                <p class="text-xs text-sec mt-1">${esc(L('The new mobile device will automatically sign in now.', 'سيتم تسجيل دخول الجهاز الجديد تلقائياً الآن.'))}</p>
+              ` : isDenied ? `
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-400/50 text-rose-300 text-xs font-extrabold">⛔ ${esc(L('Device Blocked', 'تم حظر الجهاز'))}</div>
+                <h1 class="mt-3 text-lg font-extrabold text-rose-300">${esc(st.message || 'Owner ne Is Device ko Allow Nahi Kiya')}</h1>
+                <p class="text-xs text-sec mt-1">${esc(L('Login on that device has been blocked and recorded in Login History.', 'تم حظر الدخول من ذلك الجهاز وتسجيله في سجل الدخول.'))}</p>
+              ` : `
+                <div class="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 text-xs font-extrabold">⚠ ${esc(L('Link Error', 'خطأ في الرابط'))}</div>
+                <h1 class="mt-3 text-lg font-extrabold text-amber-300">${esc(L('Could not process approval link', 'تعذر معالجة رابط الموافقة'))}</h1>
+                <p class="text-xs text-sec mt-1">${esc(st.message || L('Invalid or expired security token.', 'رمز الأمان غير صالح أو منتهي.'))}</p>
+              `}
+            </div>
+            ${(info.deviceName || info.ip || info.location) ? `
+              <div class="rounded-2xl bg-white/5 border border-white/10 p-3.5 space-y-1.5 text-xs">
+                ${info.deviceName ? `<div class="flex justify-between gap-2"><span class="text-sec">${esc(L('Device', 'الجهاز'))}</span><span class="${info.isUnknown || info.deviceName === 'Unknown Device' ? 'text-rose-400 font-extrabold' : 'font-bold text-white'}">${esc(info.deviceName)}</span></div>` : ''}
+                ${info.loginDateTime ? `<div class="flex justify-between gap-2"><span class="text-sec">${esc(L('Date & Time', 'التاريخ والوقت'))}</span><span dir="ltr">${esc(info.loginDateTime)}</span></div>` : ''}
+                ${info.location ? `<div class="flex justify-between gap-2"><span class="text-sec">${esc(L('Location', 'الموقع'))}</span><span>${esc(info.location)}</span></div>` : ''}
+                ${info.ip ? `<div class="flex justify-between gap-2"><span class="text-sec">${esc(L('IP Address', 'عنوان IP'))}</span><span class="font-mono" dir="ltr">${esc(info.ip)}</span></div>` : ''}
+              </div>
+            ` : ''}
+            ${status !== 'loading' ? `
+              <button type="button" data-action="clear-url-device-action" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${esc(L('Open Digital Khata', 'فتح الدفتر الرقمي'))}</button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
     function renderAuthLoadingScreen() {
       const retry = ui.loginRetry;
       return `
@@ -5058,11 +5719,14 @@
     // ========================
     function renderHome() {
       const m = getMetrics();
-      const series = getLast6MonthsSeries();
+      const gRange = ui.graphRange || '6m';
+      const gCustom = ui.graphCustomMonth || currentMonthKey();
+      const series = getProfitGraphSeries(gRange, gCustom);
       const maxVal = Math.max(100, ...series.map(s => Math.max(s.income, s.expense)));
-      const fullName = (state.session && state.session.name) ? state.session.name : L('User', 'مستخدم');
-      const firstName = fullName.split(' ')[0];
-      const dateText = formatDisplayDate(todayISO());
+      const selMonthItem = series.find(s => s.key === ui.selectedGraphMonth) || series[series.length - 1] || null;
+      const heroShopName = (isAr() && (state.settings?.shopNameAr || '').trim())
+        ? state.settings.shopNameAr.trim()
+        : ((state.settings?.shopName || '').trim() || 'Warsha Aluminium Workshop');
 
       const modules = [
         { id: 'customers', label: L('Customers', 'العملاء'), emoji: '👥' },
@@ -5115,22 +5779,11 @@
             </button>
           ` : ''}
 
-          <!-- 1) TOP DASHBOARD HEADER - UPGRADED BLUE CARD -->
+          <!-- 1) TOP DASHBOARD HEADER - ONLY CENTERED BIG SHOP NAME -->
           <section class="blue-hero-card rounded-3xl p-5 text-white">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-center gap-3 min-w-0">
-                ${renderLogoAvatar('w-12 h-12', 'ring-2 ring-amber-400')}
-                <div class="min-w-0">
-                  <h1 class="text-base font-bold tracking-tight truncate">${esc(L(`Welcome, ${firstName}`, `السلام عليكم، ${firstName}`))}</h1>
-                  <p class="text-[11px] text-blue-100/85 mt-0.5 truncate">${esc(L('Dashboard', 'لوحة التحكم'))} · ${esc(dateText)}</p>
-                  <div class="mt-1">
-                    <span id="sync-status-pill" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${ui.syncStatus === 'synced' ? 'bg-emerald-500/20 border border-emerald-400/40 text-emerald-200' : 'bg-amber-500/20 border border-amber-400/40 text-amber-200'} text-[10px] font-bold">
-                      ${esc(ui.syncStatus === 'synced' ? L('Synced ✅', 'متزامن ✅') : (ui.syncStatus === 'syncing' ? L('Syncing ⏳', 'جاري المزامنة ⏳') : L('Pending ⏳', 'قيد الانتظار ⏳')))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
+            <div class="relative flex items-center justify-center min-h-[44px]">
+              <h1 class="text-xl sm:text-2xl font-black text-center px-20 tracking-tight leading-snug break-words">${esc(heroShopName)}</h1>
+              <div class="absolute top-0 end-0 flex items-center gap-1.5">
                 <button type="button" data-modal="notifications" aria-label="${esc(L('Notifications', 'الإشعارات'))}" class="relative w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center transition-colors cursor-pointer">
                   ${icon('bell', 'w-5 h-5 text-white')}
                   ${lowItems.length > 0 ? `<span class="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-blue-900 tabular-nums">${lowItems.length}</span>` : ''}
@@ -5274,9 +5927,9 @@
             </button>
           </section>
 
-          <!-- 6) INCOME VS EXPENSE CHART -->
-          <section class="glass-card rounded-3xl p-5">
-            <div class="flex items-center justify-between mb-4">
+          <!-- 6) INCOME VS EXPENSE / PROFIT GRAPH -->
+          <section class="glass-card rounded-3xl p-5 space-y-3.5">
+            <div class="flex flex-wrap items-start justify-between gap-2.5">
               <div>
                 <h2 class="text-base font-bold">${esc(L('Income vs Expense', 'الدخل مقابل المصاريف'))}</h2>
                 <div class="flex items-center gap-4 text-xs text-sec mt-1">
@@ -5284,23 +5937,56 @@
                   <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-orange-500 inline-block"></span> ${esc(L('Expense', 'المصاريف'))}</span>
                 </div>
               </div>
-              <span class="text-xs text-sec">${esc(L('Last 6 months', 'آخر 6 أشهر'))}</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <select id="graph-range-select" class="h-8 px-2.5 rounded-xl glass-input text-[11px] font-bold cursor-pointer">
+                  <option value="3m" ${gRange === '3m' ? 'selected' : ''}>${esc(L('Last 3 Months', 'آخر 3 أشهر'))}</option>
+                  <option value="6m" ${gRange === '6m' ? 'selected' : ''}>${esc(L('Last 6 Months', 'آخر 6 أشهر'))}</option>
+                  <option value="12m" ${gRange === '12m' ? 'selected' : ''}>${esc(L('Last 12 Months', 'آخر 12 شهراً'))}</option>
+                  <option value="custom" ${gRange === 'custom' ? 'selected' : ''}>${esc(L('Custom Month', 'شهر مخصص'))}</option>
+                </select>
+                ${gRange === 'custom' ? `
+                  <input id="graph-custom-month" type="month" value="${esc(gCustom)}" class="h-8 px-2 rounded-xl glass-input text-[11px] font-bold tabular-nums" dir="ltr" />
+                ` : ''}
+              </div>
             </div>
-            <div class="grid grid-cols-6 gap-2 sm:gap-4 items-end h-44 pt-4 border-b border-white/10 pb-2">
+
+            <div class="grid ${series.length === 1 ? 'grid-cols-1 max-w-[160px] mx-auto' : (series.length === 3 ? 'grid-cols-3' : (series.length === 12 ? 'grid-cols-6 sm:grid-cols-12' : 'grid-cols-6'))} gap-1.5 sm:gap-3 items-end h-44 pt-4 border-b border-white/10 pb-2">
               ${series.map(item => {
-                const incH = Math.max(item.income > 0 ? 10 : 3, Math.round((item.income / maxVal) * 124));
-                const expH = Math.max(item.expense > 0 ? 10 : 3, Math.round((item.expense / maxVal) * 124));
+                const incH = Math.max(item.income > 0 ? 10 : 3, Math.round((item.income / maxVal) * 116));
+                const expH = Math.max(item.expense > 0 ? 10 : 3, Math.round((item.expense / maxVal) * 116));
+                const isSelected = selMonthItem && selMonthItem.key === item.key;
                 return `
-                  <div class="flex flex-col items-center justify-end h-full group" title="${esc(item.label)}: ${esc(L('Income', 'الدخل'))} ${esc(fmtRs(item.income))} | ${esc(L('Expense', 'المصاريف'))} ${esc(fmtRs(item.expense))}">
-                    <div class="flex items-end justify-center gap-1 sm:gap-1.5 w-full flex-1 pb-2">
-                      <div style="height:${incH}px" class="w-3 sm:w-4 rounded-t-md bg-emerald-500 transition-all"></div>
-                      <div style="height:${expH}px" class="w-3 sm:w-4 rounded-t-md bg-orange-500 transition-all"></div>
+                  <button type="button" data-graph-month="${esc(item.key)}" class="flex flex-col items-center justify-end h-full rounded-xl px-1 py-1 transition-all cursor-pointer ${isSelected ? 'bg-cyan-500/15 ring-1 ring-cyan-400/55' : 'hover:bg-white/5'}" title="${esc(item.fullLabel)}: ${esc(L('Profit', 'الربح'))} ${esc(fmtRs(item.profit))}">
+                    <div class="flex items-end justify-center gap-1 w-full flex-1 pb-1.5">
+                      <div style="height:${incH}px" class="${series.length >= 12 ? 'w-2 sm:w-3' : 'w-3 sm:w-4'} rounded-t-md bg-emerald-500 transition-all"></div>
+                      <div style="height:${expH}px" class="${series.length >= 12 ? 'w-2 sm:w-3' : 'w-3 sm:w-4'} rounded-t-md bg-orange-500 transition-all"></div>
                     </div>
-                    <span class="text-[11px] font-medium text-sec">${esc(item.label)}</span>
-                  </div>
+                    <span class="text-[10px] sm:text-[11px] font-bold ${isSelected ? 'text-cyan-300' : 'text-sec'}">${esc(item.label)}</span>
+                  </button>
                 `;
               }).join('')}
             </div>
+
+            ${selMonthItem ? `
+              <div class="rounded-2xl bg-white/5 border border-white/10 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div>
+                  <div class="text-[11px] text-sec font-semibold">${esc(selMonthItem.fullLabel)} · ${esc(L('Monthly Profit Summary', 'ملخص ربح الشهر'))}</div>
+                  <div class="text-base font-extrabold tabular-nums mt-0.5 ${selMonthItem.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${esc(L('Profit', 'صافي الربح'))}: ${esc(fmtRs(selMonthItem.profit, true))}
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 tabular-nums">
+                  <div class="text-end">
+                    <div class="text-[10px] text-sec">${esc(L('Income', 'الدخل'))}</div>
+                    <div class="font-bold text-emerald-400">${esc(fmtRs(selMonthItem.income, true))}</div>
+                  </div>
+                  <div class="text-end">
+                    <div class="text-[10px] text-sec">${esc(L('Expense', 'المصاريف'))}</div>
+                    <div class="font-bold text-orange-400">${esc(fmtRs(selMonthItem.expense, true))}</div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
           </section>
 
           <!-- 7) RECENT CUSTOMER KHATA -->
@@ -7189,78 +7875,68 @@
             `;
           })()}
 
-          <!-- Owner Signatures System -->
+          <!-- Single Owner Signature System -->
           ${(() => {
             const sig1 = getSignatureConfig('owner1');
-            const sig2 = getSignatureConfig('owner2');
-            const slots = [
-              { id: 'owner1', label: L('Owner 1 Signature', 'توقيع المالك 1'), cfg: sig1, hasDefault: true },
-              { id: 'owner2', label: L('Owner 2 Signature', 'توقيع المالك 2'), cfg: sig2, hasDefault: false }
-            ];
+            const previewH = Math.round(44 * (sig1.size / 100));
             return `
               <div class="glass-card rounded-3xl p-4 space-y-3.5">
                 <div>
-                  <h2 class="text-sm font-bold">${L('Owner Signatures (Invoice)', 'توقيعات الملاك (الفاتورة)')}</h2>
+                  <h2 class="text-sm font-bold">${L('Owner Signature (Invoice)', 'توقيع المالك (الفاتورة)')}</h2>
                   <p class="text-[11px] text-sec mt-0.5">${L('Uploading paper photo auto-removes background & lines.', 'عند رفع صورة توقيع، تتم إزالة الخلفية والخطوط تلقائياً.')}</p>
                 </div>
-                ${slots.map(sl => {
-                  const previewH = Math.round(44 * (sl.cfg.size / 100));
-                  return `
-                    <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2.5">
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="text-xs font-extrabold text-cyan-300">${esc(sl.label)}</span>
-                        <div class="flex items-center gap-1.5">
-                          <input id="sig-${sl.id}-file" type="file" accept="image/*" class="sr-only" />
-                          <button type="button" data-sig-upload="${sl.id}" class="px-3 h-8 rounded-xl btn-primary-grad text-[11px] font-bold cursor-pointer">${L('Upload Sign', 'رفع توقيع')}</button>
-                          ${(sl.cfg.src && !(sl.hasDefault && sl.cfg.src === DEFAULT_OWNER1_SIGN_PATH)) ? `
-                            <button type="button" data-sig-reset="${sl.id}" class="px-2.5 h-8 rounded-xl glass-card text-[11px] font-bold text-rose-300 cursor-pointer">${sl.hasDefault ? L('Reset', 'إعادة ضبط') : L('Clear', 'مسح')}</button>
-                          ` : ''}
-                        </div>
+                <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-extrabold text-cyan-300">${L('Owner Signature', 'توقيع المالك')}</span>
+                    <div class="flex items-center gap-1.5">
+                      <input id="sig-owner1-file" type="file" accept="image/*" class="sr-only" />
+                      <button type="button" data-sig-upload="owner1" class="px-3 h-8 rounded-xl btn-primary-grad text-[11px] font-bold cursor-pointer">${L('Upload Sign', 'رفع توقيع')}</button>
+                      ${sig1.src ? `
+                        <button type="button" data-sig-delete="owner1" class="px-2.5 h-8 rounded-xl bg-rose-600/20 border border-rose-500/35 text-[11px] font-bold text-rose-300 cursor-pointer">${L('Delete', 'حذف')}</button>
+                      ` : ''}
+                    </div>
+                  </div>
+                  <div class="bg-white rounded-xl p-3 flex items-center justify-center min-h-[78px] overflow-hidden">
+                    ${sig1.src ? `
+                      <img src="${esc(sig1.src)}" alt="${esc(L('Owner Signature', 'توقيع المالك'))}" style="max-height:${previewH}px;width:auto;transform:rotate(${sig1.rotation}deg);" />
+                    ` : `
+                      <span class="text-xs text-slate-500 font-semibold">${L('No signature uploaded — tap Upload Sign', 'لا يوجد توقيع — اضغط رفع توقيع')}</span>
+                    `}
+                  </div>
+                  <div>
+                    <label class="block text-[11px] text-sec mb-1">${L('Owner Name', 'اسم المالك')}</label>
+                    <input id="sig-owner1-name" type="text" value="${esc(sig1.name)}" placeholder="${L('Owner Name', 'اسم المالك')}" class="w-full h-9 px-3 rounded-xl glass-input text-xs font-semibold" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <div class="flex items-center justify-between text-[11px] text-sec mb-1">
+                        <span>${L('Rotate', 'تدوير')}</span>
+                        <span class="font-bold text-white tabular-nums">${sig1.rotation}°</span>
                       </div>
-                      <div class="bg-white rounded-xl p-3 flex items-center justify-center min-h-[78px] overflow-hidden">
-                        ${sl.cfg.src ? `
-                          <img src="${esc(sl.cfg.src)}" alt="${esc(sl.label)}" style="max-height:${previewH}px;width:auto;transform:rotate(${sl.cfg.rotation}deg);" />
-                        ` : `
-                          <span class="text-xs text-slate-400 font-semibold">${L('Owner 2 signature not uploaded yet', 'لم يتم رفع توقيع المالك 2 بعد')}</span>
-                        `}
-                      </div>
-                      <div>
-                        <label class="block text-[11px] text-sec mb-1">${L('Owner Name', 'اسم المالك')}</label>
-                        <input id="sig-${sl.id}-name" type="text" value="${esc(sl.cfg.name)}" placeholder="${L('Owner Name', 'اسم المالك')}" class="w-full h-9 px-3 rounded-xl glass-input text-xs font-semibold" />
-                      </div>
-                      <div class="grid grid-cols-2 gap-2.5">
-                        <div>
-                          <div class="flex items-center justify-between text-[11px] text-sec mb-1">
-                            <span>${L('Rotate', 'تدوير')}</span>
-                            <span class="font-bold text-white tabular-nums">${sl.cfg.rotation}°</span>
-                          </div>
-                          <div class="flex items-center gap-1" dir="ltr">
-                            <button type="button" data-sig-rotate="${sl.id}:-90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">-90°</button>
-                            <button type="button" data-sig-rotate="${sl.id}:0" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">0°</button>
-                            <button type="button" data-sig-rotate="${sl.id}:90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">+90°</button>
-                          </div>
-                        </div>
-                        <div>
-                          <div class="flex items-center justify-between text-[11px] text-sec mb-1">
-                            <span>${L('Size', 'الحجم')}</span>
-                            <span class="font-bold text-white tabular-nums">${sl.cfg.size}%</span>
-                          </div>
-                          <input id="sig-${sl.id}-size" data-sig-size="${sl.id}" type="range" min="55" max="155" step="5" value="${sl.cfg.size}" class="w-full h-8 accent-cyan-400 cursor-pointer" />
-                        </div>
+                      <div class="flex items-center gap-1" dir="ltr">
+                        <button type="button" data-sig-rotate="owner1:-90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">-90°</button>
+                        <button type="button" data-sig-rotate="owner1:0" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">0°</button>
+                        <button type="button" data-sig-rotate="owner1:90" class="flex-1 h-8 rounded-lg glass-card text-[11px] font-bold cursor-pointer">+90°</button>
                       </div>
                     </div>
-                  `;
-                }).join('')}
-                <button type="button" data-action="save-signatures" class="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer">${L('Save Signatures', 'حفظ التوقيعات')}</button>
+                    <div>
+                      <div class="flex items-center justify-between text-[11px] text-sec mb-1">
+                        <span>${L('Size', 'الحجم')}</span>
+                        <span class="font-bold text-white tabular-nums">${sig1.size}%</span>
+                      </div>
+                      <input id="sig-owner1-size" data-sig-size="owner1" type="range" min="55" max="155" step="5" value="${sig1.size}" class="w-full h-8 accent-cyan-400 cursor-pointer" />
+                    </div>
+                  </div>
+                </div>
+                <button type="button" data-action="save-signatures" class="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer">${L('Save Signature', 'حفظ التوقيع')}</button>
               </div>
             `;
           })()}
 
-          <!-- QR Code Settings (2 Owners WhatsApp QR) -->
+          <!-- Single Owner WhatsApp QR Setting -->
           ${(() => {
             const qrCfg = getWhatsAppQrConfig();
-            const o1Split = splitWhatsAppQrForInput(qrCfg.owner1Number, '+966');
-            const o2Split = splitWhatsAppQrForInput(qrCfg.owner2Number, '+92');
+            const oSplit = splitWhatsAppQrForInput(qrCfg.ownerNumber, '+966');
             const ccOptions = [
               { code: '+966', label: '+966 (' + L('Saudi', 'السعودية') + ')' },
               { code: '+92', label: '+92 (' + L('Pakistan', 'باكستان') + ')' },
@@ -7270,44 +7946,58 @@
               { code: '+973', label: '+973 (' + L('Bahrain', 'البحرين') + ')' },
               { code: '+968', label: '+968 (' + L('Oman', 'عُمان') + ')' }
             ];
-            const renderWaLinkPreview = (num) => {
-              const d = String(num || '').replace(/\D/g, '');
-              return d.length >= 8 ? `https://wa.me/${d}` : '';
-            };
+            const waDigits = String(qrCfg.ownerNumber || '').replace(/\D/g, '');
+            const waPreview = waDigits.length >= 8 ? `https://wa.me/${waDigits}` : '';
             return `
               <div class="glass-card rounded-3xl p-4 space-y-3.5">
                 <div>
                   <h2 class="text-sm font-bold">${L('QR Code (Owner WhatsApp QR)', 'رمز QR (واتساب المالك)')}</h2>
                   <p class="text-[11px] text-sec mt-0.5">${L('Customers scan the QR code on invoice to chat directly on Owner WhatsApp.', 'يمسح العميل الرمز من الفاتورة للتواصل مباشرة عبر واتساب المالك.')}</p>
                 </div>
-
                 <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
-                  <div class="text-xs font-extrabold text-cyan-300">${L('Option 1: Owner 1 WhatsApp QR', 'الخيار 1: واتساب المالك 1')}</div>
+                  <div class="text-xs font-extrabold text-cyan-300">${L('Owner WhatsApp Number', 'رقم واتساب المالك')}</div>
                   <div class="grid grid-cols-12 gap-2" dir="ltr">
-                    <select id="qr-owner1-cc" class="col-span-5 h-10 px-2 rounded-xl glass-input text-xs font-semibold">
-                      ${ccOptions.map(o => `<option value="${o.code}" ${o.code === o1Split.countryCode ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+                    <select id="qr-owner-cc" class="col-span-5 h-10 px-2 rounded-xl glass-input text-xs font-semibold">
+                      ${ccOptions.map(o => `<option value="${o.code}" ${o.code === oSplit.countryCode ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
                     </select>
-                    <input id="qr-owner1-num" type="tel" value="${esc(o1Split.number)}" placeholder="0552869405" class="col-span-7 h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
+                    <input id="qr-owner-num" type="tel" value="${esc(oSplit.number)}" placeholder="0552869405" class="col-span-7 h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
                   </div>
-                  ${renderWaLinkPreview(qrCfg.owner1Number) ? `
-                    <div class="text-[11px] text-emerald-300 font-semibold">${L('Saved', 'محفوظ')}: <span dir="ltr">${esc(qrCfg.owner1Number)} · ${esc(renderWaLinkPreview(qrCfg.owner1Number))}</span></div>
+                  ${waPreview ? `
+                    <div class="text-[11px] text-emerald-300 font-semibold">${L('Saved', 'محفوظ')}: <span dir="ltr">${esc(qrCfg.ownerNumber)} · ${esc(waPreview)}</span></div>
                   ` : `<div class="text-[11px] text-mut">${L('Enter number (e.g. 0552869405)', 'أدخل الرقم (مثال: 0552869405)')}</div>`}
                 </div>
+                <button type="button" data-action="save-qr-settings" class="w-full h-10 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold cursor-pointer">${L('Save WhatsApp QR Number', 'حفظ رقم واتساب QR')}</button>
+              </div>
+            `;
+          })()}
 
-                <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
-                  <div class="text-xs font-extrabold text-cyan-300">${L('Option 2: Owner 2 WhatsApp QR', 'الخيار 2: واتساب المالك 2')}</div>
-                  <div class="grid grid-cols-12 gap-2" dir="ltr">
-                    <select id="qr-owner2-cc" class="col-span-5 h-10 px-2 rounded-xl glass-input text-xs font-semibold">
-                      ${ccOptions.map(o => `<option value="${o.code}" ${o.code === o2Split.countryCode ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
-                    </select>
-                    <input id="qr-owner2-num" type="tel" value="${esc(o2Split.number)}" placeholder="0341xxxxxxx" class="col-span-7 h-10 px-3 rounded-xl glass-input text-xs tabular-nums" />
+          <!-- Active Session Control & Device Security (1 Account = 1 Mobile) -->
+          ${(() => {
+            const sum = ui.activeDeviceSummary || {};
+            const actCount = Number(sum.activeCount !== undefined ? sum.activeCount : (state.session ? 1 : 0));
+            const actName = sum.activeDeviceName || '';
+            return `
+              <div class="glass-card rounded-3xl p-4 space-y-3 border border-emerald-400/20">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <h2 class="text-sm font-extrabold">${L('Security · Active Session Control', 'الأمان · التحكم بالجلسات النشطة')}</h2>
+                    <p class="text-[11px] text-sec mt-0.5">${L('1 Account = 1 Mobile. New devices require Owner email approval.', 'حساب واحد = جهاز واحد. الأجهزة الجديدة تتطلب موافقة المالك بالبريد.')}</p>
                   </div>
-                  ${renderWaLinkPreview(qrCfg.owner2Number) ? `
-                    <div class="text-[11px] text-emerald-300 font-semibold">${L('Saved', 'محفوظ')}: <span dir="ltr">${esc(qrCfg.owner2Number)} · ${esc(renderWaLinkPreview(qrCfg.owner2Number))}</span></div>
-                  ` : `<div class="text-[11px] text-mut">${L('Enter number (e.g. 0341xxxxxxx)', 'أدخل الرقم (مثال: 0341xxxxxxx)')}</div>`}
+                  <button type="button" data-action="refresh-active-devices" class="px-2.5 h-8 rounded-xl glass-card text-[11px] font-bold text-cyan-300 shrink-0 cursor-pointer">${L('Refresh', 'تحديث')}</button>
                 </div>
-
-                <button type="button" data-action="save-qr-settings" class="w-full h-10 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold cursor-pointer">${L('Save QR WhatsApp Numbers', 'حفظ أرقام واتساب QR')}</button>
+                <div class="rounded-2xl bg-white/5 border border-white/10 p-3 flex items-center justify-between gap-2 text-xs">
+                  <div class="min-w-0">
+                    <div class="font-bold text-emerald-300 tabular-nums">${actCount} ${L(actCount === 1 ? 'Active Device' : 'Active Devices', 'جهاز نشط')}</div>
+                    ${actName ? `<div class="text-[11px] text-sec truncate mt-0.5">${esc(actName)}</div>` : ''}
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 shrink-0">
+                    ${L('Single Device Lock ✓', 'قفل جهاز واحد ✓')}
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <button type="button" data-action="logout-all-devices" class="h-10 rounded-xl bg-rose-600/25 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 text-xs font-extrabold cursor-pointer">${L('Sab Devices se Logout', 'تسجيل الخروج من جميع الأجهزة')}</button>
+                  <button type="button" data-nav="login-history" class="h-10 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${L('Login History', 'سجل الدخول')}</button>
+                </div>
               </div>
             `;
           })()}
@@ -7346,43 +8036,50 @@
             `}
           </div>
 
-          <!-- Cloud Backup, Export, WhatsApp -->
+          <!-- Auto Backup (Daily 12:00 AM · Simple Unencrypted JSON), Export & WhatsApp -->
           <div class="glass-card rounded-3xl p-4 space-y-2.5">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-bold">${L('Cloud Backup & Export', 'النسخ السحابي والتصدير')}</h2>
-              <span class="text-[11px] text-sec">${esc(formatLastBackupText())}</span>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-bold">${L('Auto Backup (Daily 12:00 AM · Simple JSON)', 'النسخ التلقائي (يومياً 12:00 ص · JSON بسيط)')}</h2>
+                <p class="text-[11px] text-sec mt-0.5">${L('Saves full data in readable JSON daily at 12:00 AM without encryption.', 'يحفظ جميع البيانات بصيغة JSON يومياً الساعة 12:00 منتصف الليل.')}</p>
+              </div>
+              <span class="text-[11px] text-cyan-300 font-semibold shrink-0">${esc(formatLastBackupText())}</span>
             </div>
             <div class="grid grid-cols-2 gap-2.5">
-              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Backup to Cloud', 'نسخ احتياطي للسحابة')}</button>
-              <button type="button" data-action="cloud-restore-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Restore My Data', 'استعادة بياناتي')}</button>
-              <button type="button" data-action="export-excel" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to Excel', 'تصدير إلى Excel')}</button>
-              <button type="button" data-action="print-summary" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to PDF', 'تصدير إلى PDF')}</button>
-              <button type="button" data-action="export-json" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export Backup', 'تصدير نسخة')}</button>
+              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Backup Now (JSON)', 'نسخ الآن (JSON)')}</button>
+              <button type="button" data-action="cloud-restore-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Restore Auto Backup', 'استعادة النسخة التلقائية')}</button>
+              <button type="button" data-action="export-json" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Download Simple JSON', 'تنزيل ملف JSON')}</button>
               <label class="h-11 rounded-xl glass-card text-xs font-bold flex items-center justify-center cursor-pointer">
-                <span>${L('Import Backup', 'استيراد نسخة')}</span>
+                <span>${L('Import JSON Backup', 'استيراد ملف JSON')}</span>
                 <input id="import-json-input" type="file" accept=".json,application/json" class="hidden" />
               </label>
+              <button type="button" data-action="export-excel" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to Excel', 'تصدير إلى Excel')}</button>
+              <button type="button" data-action="print-summary" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to PDF', 'تصدير إلى PDF')}</button>
             </div>
             <button type="button" data-share-wa="" class="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer">${L('WhatsApp Share Summary', 'مشاركة ملخص الحساب على واتساب')}</button>
           </div>
 
           ${renderGoogleDriveCard()}
 
+          <!-- Official Digital Khata APK Install Card -->
           ${(() => {
-            const pwa = window.__DK_PWA__;
-            if (!pwa || pwa.isInstalled || (!pwa.isInstallable && !pwa.isIOS)) return '';
+            const installed = isOfficialApkAppInstalled();
             return `
-              <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3">
+              <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3 border ${installed ? 'border-emerald-400/35' : 'border-amber-400/30'}">
                 <div class="flex items-center gap-3 min-w-0">
-                  <img src="/icon.png" alt="App Icon" class="w-10 h-10 rounded-xl object-cover shrink-0 border border-amber-400/40" />
+                  <img src="/icon.png" alt="Digital Khata" class="w-11 h-11 rounded-xl object-cover shrink-0 border border-amber-400/50" />
                   <div class="min-w-0">
-                    <h2 class="text-sm font-bold truncate">${L('Install App', 'تثبيت التطبيق')}</h2>
-                    <p class="text-[11px] text-sec truncate">${pwa.isIOS ? L('Add to iPhone / iPad Home Screen', 'أضفه إلى الشاشة الرئيسية للآيفون') : L('Install as app on phone or desktop', 'ثبّت التطبيق على الهاتف أو الكمبيوتر')}</p>
+                    <h2 class="text-sm font-extrabold truncate">${L('Digital Khata Official App (APK)', 'تطبيق الدفتر الرقمي الرسمي (APK)')}</h2>
+                    <p class="text-[11px] text-sec truncate">${installed ? L('Installed on your phone.', 'التطبيق مثبت على هاتفك.') : L('Download & install the Android APK package (v1.0).', 'تنزيل وتثبيت حزمة تطبيق أندرويد الرسمية.')}</p>
                   </div>
                 </div>
-                <button type="button" data-action="pwa-install" class="px-3.5 h-10 rounded-xl btn-primary-grad text-xs font-extrabold shrink-0 cursor-pointer">
-                  ${pwa.isIOS ? L('Install on iOS', 'تثبيت على iOS') : L('Install App', 'تثبيت التطبيق')}
-                </button>
+                ${installed ? `
+                  <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/45 text-emerald-300 text-xs font-extrabold shrink-0">App Already Installed ✓</span>
+                ` : `
+                  <button type="button" data-action="open-apk-install-modal" class="px-3.5 h-10 rounded-xl btn-primary-grad text-xs font-extrabold shrink-0 cursor-pointer">
+                    App Install Karein
+                  </button>
+                `}
               </div>
             `;
           })()}
@@ -7396,6 +8093,76 @@
               <button type="button" data-modal="confirm-clear" class="h-11 rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-300 text-[11px] font-bold cursor-pointer">${L('Clear Data', 'مسح البيانات')}</button>
             </div>
           </div>
+        </div>
+      `;
+    }
+
+    function renderLoginHistory() {
+      const list = Array.isArray(ui.loginHistory) ? ui.loginHistory : [];
+      return `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <button type="button" data-nav="settings" aria-label="${esc(L('Back', 'رجوع'))}" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center shrink-0 cursor-pointer">
+                ${icon('back', 'w-5 h-5')}
+              </button>
+              <div class="min-w-0">
+                <h1 class="text-lg font-extrabold truncate">${esc(L('Login History', 'سجل تسجيل الدخول'))}</h1>
+                <p class="text-[11px] text-sec truncate">${esc(L('All allowed & blocked device sign-in records', 'جميع سجلات الدخول المسموحة والمحظورة'))}</p>
+              </div>
+            </div>
+            <button type="button" data-action="refresh-login-history" class="px-3 h-9 rounded-xl glass-card text-xs font-bold text-cyan-300 shrink-0 cursor-pointer">${esc(L('Refresh', 'تحديث'))}</button>
+          </div>
+
+          ${ui.loginHistoryLoading ? `
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">${esc(L('Loading Login History...', 'جاري تحميل سجل الدخول...'))}</div>
+          ` : list.length === 0 ? `
+            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">${esc(L('No login history recorded yet.', 'لا توجد سجلات دخول بعد.'))}</div>
+          ` : `
+            <div class="space-y-2.5">
+              ${list.map(entry => {
+                const devName = String(entry.deviceName || 'Unknown Device');
+                const isUnknown = Boolean(entry.isUnknown || devName === 'Unknown Device');
+                const isBlocked = String(entry.status || '').toLowerCase() === 'blocked';
+                const ts = entry.createdAt ? formatDeviceLoginTime(entry.createdAt) : '';
+                const dateTimeLabel = (entry.dateStr && entry.timeStr)
+                  ? `${entry.dateStr} · ${entry.timeStr}`
+                  : (entry.loginDateTime || ts || '-');
+                return `
+                  <div class="glass-card rounded-2xl p-3.5 space-y-2 border ${isBlocked ? 'border-rose-500/40' : 'border-emerald-400/20'}">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="text-sm ${isUnknown ? 'text-rose-500 font-extrabold' : 'font-extrabold text-white'} truncate">
+                          ${esc(isUnknown ? 'Unknown Device' : devName)}
+                        </div>
+                        <div class="text-[11px] text-sec mt-0.5 tabular-nums" dir="ltr">${esc(dateTimeLabel)}</div>
+                      </div>
+                      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 border ${
+                        isBlocked
+                          ? 'bg-rose-500/20 border-rose-400/50 text-rose-300'
+                          : 'bg-emerald-500/20 border-emerald-400/45 text-emerald-300'
+                      }">
+                        ${esc(isBlocked ? L('Blocked', 'محظور') : L('Allowed', 'مسموح'))}
+                      </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/10 text-[11px]">
+                      <div class="min-w-0 truncate">
+                        <span class="text-mut">${esc(L('Location', 'الموقع'))}: </span>
+                        <span class="text-sec font-semibold">${esc(entry.location || 'Unknown')}</span>
+                      </div>
+                      <div class="min-w-0 truncate text-end" dir="ltr">
+                        <span class="text-mut">IP: </span>
+                        <span class="text-sec font-mono font-semibold">${esc(entry.ip || 'Unknown')}</span>
+                      </div>
+                    </div>
+                    ${entry.browserVersion ? `
+                      <div class="text-[10px] text-mut truncate">${esc(entry.browserVersion)}</div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
         </div>
       `;
     }
@@ -7690,6 +8457,7 @@
       else if (v === 'profile') bodyHtml = renderProfile();
       else if (v === 'kyc') bodyHtml = renderKyc();
       else if (v === 'settings') bodyHtml = renderSettings();
+      else if (v === 'login-history') bodyHtml = renderLoginHistory();
       else bodyHtml = renderHome();
 
       const navItems = [
@@ -7709,7 +8477,7 @@
                 || (n.id === 'customers' && (v === 'work' || v === 'customer-detail' || v === 'order-detail'))
                 || (n.id === 'stock' && v === 'stock-detail')
                 || (n.id === 'party' && v === 'supplier-detail')
-                || (n.id === 'profile' && (v === 'kyc' || v === 'settings'));
+                || (n.id === 'profile' && (v === 'kyc' || v === 'settings' || v === 'login-history'));
               return `
                 <button type="button" data-nav="${n.id}" data-nav-tone="${n.tone}" class="pill-nav-btn ${active ? 'active' : ''}">
                   <span class="nav-icon-wrap">${icon(n.icon, 'w-5 h-5 shrink-0')}</span>
@@ -7737,7 +8505,11 @@
       checkKycAutoApprove();
       const root = document.getElementById('app');
       if (!root) return;
-      if (!state.session) {
+      if (ui.urlDeviceAction) {
+        root.innerHTML = renderDeviceActionLanding();
+      } else if (ui.pendingApproval) {
+        root.innerHTML = renderWaitingApprovalScreen();
+      } else if (!state.session) {
         if ((ui.loginPending || ui.startupCheckingAuth) && ui.authMode === 'login') {
           root.innerHTML = renderAuthLoadingScreen();
         } else {
@@ -7873,21 +8645,16 @@
           bankName: initBank,
           vatEnabled: initVat,
           invoiceLanguage: getInvoiceLanguage(),
-          useOwner1Sign: false,
-          useOwner2Sign: false,
-          useOwner1Qr: false,
-          useOwner2Qr: false,
-          qrOrder: []
+          useOwnerSign: false,
+          useOwnerQr: false
         };
         const inv = buildCustomerInvoiceModel(custId, ui.invoiceDraft);
         const s1Cfg = getSignatureConfig('owner1');
-        const s2Cfg = getSignatureConfig('owner2');
         const qrCfg = getWhatsAppQrConfig();
         title = `${L('Invoice', 'الفاتورة')} · ${c.name}`;
         content = `
           <form id="modal-print-bill-form" class="space-y-3">
             <input type="hidden" name="customerId" value="${esc(custId)}" />
-            <input type="hidden" id="inv-qr-order" name="qrOrder" value="${esc(JSON.stringify(ui.invoiceDraft.qrOrder))}" />
             <input type="hidden" id="inv-lang-hidden" name="invoiceLanguage" value="${esc(inv.lang)}" />
             <div class="grid grid-cols-3 gap-2">
               <div><label class="block text-[11px] text-sec mb-1">${esc(L('Invoice No', 'رقم الفاتورة'))}</label><input id="inv-no-input" name="invoiceNo" type="text" dir="ltr" value="${esc(inv.invoiceNo)}" class="w-full h-10 px-2 rounded-xl glass-input text-xs font-bold" /></div>
@@ -7903,33 +8670,17 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
               <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
-                <input id="inv-sign1-toggle" name="useOwner1Sign" type="checkbox" ${inv.useOwner1Sign ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400 shrink-0" />
+                <input id="inv-sign1-toggle" name="useOwnerSign" type="checkbox" ${inv.useOwnerSign ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400 shrink-0" />
                 <div class="min-w-0">
-                  <div class="font-bold truncate">${esc(L('Owner 1 Sign', 'توقيع المالك 1'))}</div>
-                  <div class="text-[10px] text-sec truncate">${esc(s1Cfg.name)}</div>
+                  <div class="font-bold truncate">${esc(L('Owner Sign', 'توقيع المالك'))}</div>
+                  <div class="text-[10px] text-sec truncate">${esc(s1Cfg.src ? s1Cfg.name : L('Upload in Settings', 'ارفع من الإعدادات'))}</div>
                 </div>
               </label>
               <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
-                <input id="inv-sign2-toggle" name="useOwner2Sign" type="checkbox" ${inv.useOwner2Sign ? 'checked' : ''} class="w-4 h-4 rounded accent-cyan-400 shrink-0" />
+                <input id="inv-qr1-toggle" name="useOwnerQr" type="checkbox" ${inv.useOwnerQr ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
                 <div class="min-w-0">
-                  <div class="font-bold truncate">${esc(L('Owner 2 Sign', 'توقيع المالك 2'))}</div>
-                  <div class="text-[10px] text-sec truncate">${esc(s2Cfg.src ? s2Cfg.name : L('Upload in Settings', 'ارفع من الإعدادات'))}</div>
-                </div>
-              </label>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
-                <input id="inv-qr1-toggle" name="useOwner1Qr" type="checkbox" ${inv.useOwner1Qr ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
-                <div class="min-w-0">
-                  <div class="font-bold truncate">${esc(L('Owner 1 WhatsApp QR', 'رمز QR واتساب المالك 1'))}</div>
-                  <div class="text-[10px] text-sec truncate" dir="ltr">${esc(qrCfg.owner1Number || L('Set number in Settings', 'أضف الرقم في الإعدادات'))}</div>
-                </div>
-              </label>
-              <label class="flex items-center gap-2 px-3 py-2 rounded-xl glass-card text-xs cursor-pointer select-none">
-                <input id="inv-qr2-toggle" name="useOwner2Qr" type="checkbox" ${inv.useOwner2Qr ? 'checked' : ''} class="w-4 h-4 rounded accent-emerald-400 shrink-0" />
-                <div class="min-w-0">
-                  <div class="font-bold truncate">${esc(L('Owner 2 WhatsApp QR', 'رمز QR واتساب المالك 2'))}</div>
-                  <div class="text-[10px] text-sec truncate" dir="ltr">${esc(qrCfg.owner2Number || L('Set number in Settings', 'أضف الرقم في الإعدادات'))}</div>
+                  <div class="font-bold truncate">${esc(L('Owner WhatsApp QR', 'رمز QR واتساب المالك'))}</div>
+                  <div class="text-[10px] text-sec truncate" dir="ltr">${esc(qrCfg.ownerNumber || L('Set number in Settings', 'أضف الرقم في الإعدادات'))}</div>
                 </div>
               </label>
             </div>
@@ -7946,13 +8697,16 @@
             </div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
               <button type="submit" class="h-12 rounded-xl btn-primary-grad font-extrabold text-xs cursor-pointer flex items-center justify-center gap-1.5">🖨️ ${esc(L('Print Invoice', 'طباعة الفاتورة'))}</button>
-              <button type="button" data-action="invoice-wa-share" class="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs cursor-pointer flex items-center justify-center gap-1.5">💬 ${esc(L('WhatsApp Invoice', 'واتساب الفاتورة'))}</button>
+              <button type="button" data-action="invoice-wa-share" class="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs cursor-pointer flex items-center justify-center gap-1.5">💬 ${esc(L('Share on WhatsApp', 'مشاركة على واتساب'))}</button>
             </div>
             <button type="button" data-action="invoice-download-pdf" class="w-full h-11 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">📄 ${esc(L('Download Invoice PDF', 'تنزيل الفاتورة PDF'))}</button>
           </form>`;
         setTimeout(() => {
           ensureInvoiceQrDataUrl(inv).then(() => refreshInvoiceDraftPreview());
         }, 10);
+      } else if (type === 'apk-download') {
+        title = 'APK Download Karein?';
+        content = renderApkDownloadModalBody();
       } else if (type === 'pin-setup-prompt') {
         title = L('Set 4-Digit PIN?', 'تعيين رمز PIN من 4 أرقام؟');
         content = `
@@ -8578,6 +9332,228 @@
       }
     }
 
+    function renderApkDownloadModalBody() {
+      const pct = Math.min(100, Math.max(0, Number(ui.apkDownloadProgress || 0)));
+      return `
+        <div id="apk-modal-body" class="space-y-4">
+          <div class="flex items-center gap-3">
+            <img src="/icon.png" alt="Digital Khata" class="w-12 h-12 rounded-2xl object-cover border border-amber-400/50 shrink-0" />
+            <div class="min-w-0">
+              <div class="text-sm font-extrabold text-white">Digital Khata Official App</div>
+              <div class="text-[11px] text-sec" dir="ltr">Digital-Khata-v1.0.apk</div>
+            </div>
+          </div>
+
+          ${ui.apkDownloadError ? `
+            <div class="rounded-2xl bg-rose-500/20 border border-rose-400/45 p-3 text-xs text-rose-200 font-semibold">
+              ${esc(ui.apkDownloadError)}
+            </div>
+          ` : ''}
+
+          ${(ui.apkDownloading || ui.apkDownloadDone) ? `
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <span class="text-sec">${ui.apkDownloadDone ? 'Download Complete ✓' : 'Downloading APK...'}</span>
+                <span id="apk-dl-progress-text" class="text-cyan-300 tabular-nums">${pct}%</span>
+              </div>
+              <div class="w-full h-3 rounded-full bg-white/10 overflow-hidden">
+                <div id="apk-dl-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-150" style="width:${pct}%"></div>
+              </div>
+            </div>
+          ` : `
+            <p class="text-xs text-sec leading-relaxed">
+              ${esc(L('Download the official Digital Khata Android APK directly to install on your phone.', 'قم بتنزيل تطبيق الدفتر الرقمي الرسمي APK لتثبيته مباشرة على هاتفك.'))}
+            </p>
+          `}
+
+          ${ui.apkDownloadDone ? `
+            <div class="rounded-2xl bg-emerald-500/15 border border-emerald-400/40 p-3 space-y-1.5 text-xs">
+              <div class="font-extrabold text-emerald-300">${esc(L('Ready to Install!', 'جاهز للتثبيت!'))}</div>
+              <div class="text-[11px] text-emerald-100/90 leading-relaxed">
+                ${esc(L('If Android asks permission, enable Settings -> Unknown Sources / Install Unknown Apps -> Allow.', 'إذا طلب الأندرويد الإذن، فعّل: الإعدادات -> تثبيت التطبيقات غير المعروفة -> سماح.'))}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('Close', 'إغلاق'))}</button>
+              <button type="button" data-action="open-downloaded-apk" class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold cursor-pointer">Open File</button>
+            </div>
+          ` : `
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('Cancel', 'إلغاء'))}</button>
+              <button type="button" data-action="start-apk-download" ${ui.apkDownloading ? 'disabled' : ''} class="h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer disabled:opacity-50">
+                ${ui.apkDownloading ? `${pct}%...` : 'Download'}
+              </button>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function updateApkModalProgressDom() {
+      const box = document.getElementById('apk-modal-body');
+      if (box) box.outerHTML = renderApkDownloadModalBody();
+    }
+
+    async function downloadOfficialApkWithProgress() {
+      if (ui.apkDownloading) return;
+      ui.apkDownloading = true;
+      ui.apkDownloadDone = false;
+      ui.apkDownloadError = '';
+      ui.apkDownloadProgress = 0;
+      if (ui.apkBlobUrl) {
+        try { URL.revokeObjectURL(ui.apkBlobUrl); } catch (e) {}
+        ui.apkBlobUrl = '';
+      }
+      updateApkModalProgressDom();
+      try {
+        const resp = await fetch('/Digital-Khata-v1.0.apk', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const total = Number(resp.headers.get('content-length') || 0);
+        const chunks = [];
+        let loaded = 0;
+        if (resp.body && typeof resp.body.getReader === 'function') {
+          const reader = resp.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              chunks.push(value);
+              loaded += value.length;
+              if (total > 0) {
+                ui.apkDownloadProgress = Math.min(99, Math.round((loaded / total) * 100));
+              } else {
+                ui.apkDownloadProgress = Math.min(95, (ui.apkDownloadProgress || 5) + 18);
+              }
+              updateApkModalProgressDom();
+            }
+          }
+        } else {
+          const buf = await resp.arrayBuffer();
+          chunks.push(new Uint8Array(buf));
+          loaded = buf.byteLength;
+        }
+        const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+        ui.apkBlobUrl = URL.createObjectURL(blob);
+        ui.apkDownloadProgress = 100;
+        ui.apkDownloading = false;
+        ui.apkDownloadDone = true;
+        updateApkModalProgressDom();
+
+        const a = document.createElement('a');
+        a.href = ui.apkBlobUrl;
+        a.download = 'Digital-Khata-v1.0.apk';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        toast('Digital-Khata-v1.0.apk downloaded ✓', 'success');
+      } catch (err) {
+        ui.apkDownloading = false;
+        ui.apkDownloadDone = false;
+        ui.apkDownloadError = L('Download failed: ', 'فشل التنزيل: ') + (err?.message || err);
+        updateApkModalProgressDom();
+      }
+    }
+
+    async function loadLoginHistory() {
+      const cloud = getCloud();
+      const curUid = state.session?.uid || state.session?.cloudUid || state.session?.id || '';
+      if (!cloud || !curUid) return;
+      ui.loginHistoryLoading = true;
+      if (ui.view === 'login-history') render();
+      try {
+        ui.loginHistory = await cloud.listLoginHistory(curUid);
+      } catch (err) {
+        toast(L('Could not load login history: ', 'تعذر تحميل سجل الدخول: ') + (err?.message || err), 'error');
+      } finally {
+        ui.loginHistoryLoading = false;
+        if (ui.view === 'login-history') render();
+      }
+    }
+
+    async function loadActiveDeviceSummary() {
+      const cloud = getCloud();
+      const curUid = state.session?.uid || state.session?.cloudUid || state.session?.id || '';
+      if (!cloud || !curUid || isAdminSession()) return;
+      try {
+        ui.activeDeviceSummary = await cloud.getActiveDeviceSummary(curUid);
+        if (ui.view === 'settings') render();
+      } catch (e) {}
+    }
+
+    function captureInitialUrlDeviceAction() {
+      try {
+        const sp = new URLSearchParams(window.location.search || '');
+        const action = String(sp.get('deviceAction') || '').trim().toLowerCase();
+        const uid = String(sp.get('uid') || '').trim();
+        const reqId = String(sp.get('reqId') || '').trim();
+        const token = String(sp.get('token') || '').trim();
+        if ((action === 'allow' || action === 'deny') && reqId && token) {
+          ui.urlDeviceAction = {
+            status: 'loading',
+            started: false,
+            action,
+            uid,
+            reqId,
+            token,
+            message: L('Verifying approval link...', 'جاري التحقق من رابط الموافقة...'),
+            info: null
+          };
+          window.history.replaceState({}, '', window.location.pathname || '/');
+        }
+      } catch (e) {}
+    }
+
+    async function processUrlDeviceAction() {
+      const actObj = ui.urlDeviceAction;
+      if (!actObj || actObj.started || actObj.status !== 'loading') return;
+      const cloud = getCloud();
+      if (!cloud) return;
+      actObj.started = true;
+      render();
+      let preInfo = null;
+      try {
+        preInfo = await cloud.getDeviceApprovalInfo(actObj.reqId);
+      } catch (e) {}
+      try {
+        const decision = actObj.action === 'allow' ? 'allowed' : 'denied';
+        const res = await cloud.resolveDeviceApprovalLink(actObj.reqId, decision, actObj.token);
+        const info = res.data || preInfo || {};
+        if (res.decision === 'allowed') {
+          ui.urlDeviceAction = {
+            status: res.alreadyResolved ? 'already-allowed' : 'allowed',
+            message: res.alreadyResolved ? 'Ye device pehle hi allow ho chuka hai ✓' : 'Yes, Ye Device Allow Ho Gaya Hai ✓',
+            info
+          };
+        } else {
+          if (!res.alreadyResolved) {
+            sendDeviceApprovalEmail({
+              kind: 'blocked-alert',
+              uid: info.uid || actObj.uid || '',
+              toEmail: info.ownerEmail || '',
+              ownerName: info.ownerName || 'Owner',
+              deviceName: info.deviceName || 'Unknown Device',
+              loginDateTime: info.loginDateTime || formatDeviceLoginTime(Date.now()),
+              location: info.location || '',
+              ip: info.ip || '',
+              browserVersion: info.browserVersion || ''
+            }).catch(() => {});
+          }
+          ui.urlDeviceAction = {
+            status: res.alreadyResolved ? 'already-denied' : 'denied',
+            message: 'Owner ne Is Device ko Allow Nahi Kiya',
+            info
+          };
+        }
+      } catch (err) {
+        ui.urlDeviceAction = {
+          status: 'error',
+          message: err?.message || L('Invalid or expired approval link.', 'رابط الموافقة غير صالح أو منتهي.'),
+          info: preInfo
+        };
+      }
+      render();
+    }
+
     // ========================
     // GLOBAL EVENT DELEGATION
     // ========================
@@ -8585,6 +9561,13 @@
       const t = e.target;
       if (t.id === 'modal-backdrop' || t.closest('[data-close-modal]')) {
         closeModal();
+        return;
+      }
+
+      const graphBarBtn = t.closest('[data-graph-month]');
+      if (graphBarBtn) {
+        ui.selectedGraphMonth = graphBarBtn.getAttribute('data-graph-month') || currentMonthKey();
+        render();
         return;
       }
 
@@ -8612,6 +9595,8 @@
         ui.searchQuery = '';
         render();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (ui.view === 'login-history') loadLoginHistory();
+        else if (ui.view === 'settings') loadActiveDeviceSummary();
         return;
       }
 
@@ -8968,18 +9953,21 @@
         return;
       }
 
-      const sigResetBtn = t.closest('[data-sig-reset]');
-      if (sigResetBtn) {
-        const slot = sigResetBtn.getAttribute('data-sig-reset');
+      const sigDeleteBtn = t.closest('[data-sig-delete]');
+      if (sigDeleteBtn) {
         if (!state.settings.signatures) state.settings.signatures = {};
-        if (!state.settings.signatures[slot]) state.settings.signatures[slot] = {};
-        state.settings.signatures[slot].dataUrl = '';
-        state.settings.signatures[slot].rotation = 0;
-        state.settings.signatures[slot].size = 100;
+        const curName = getSignatureConfig('owner1').name;
+        state.settings.signatures.owner1 = {
+          name: curName,
+          dataUrl: '',
+          deleted: true,
+          rotation: 0,
+          size: 100
+        };
         saveState();
         await flushCloudSync();
         render();
-        toast(slot === 'owner1' ? L('Owner 1 signature reset to default', 'تمت إعادة تعيين توقيع المالك 1 إلى الافتراضي') : L('Owner 2 signature cleared', 'تم مسح توقيع المالك 2'), 'info');
+        toast(L('Owner signature deleted ✓', 'تم حذف توقيع المالك ✓'), 'info');
         return;
       }
 
@@ -9398,45 +10386,152 @@
       }
       else if (act === 'save-signatures') {
         if (!state.settings.signatures) state.settings.signatures = {};
-        ['owner1', 'owner2'].forEach(slot => {
-          const cur = getSignatureConfig(slot);
-          const nameInput = document.getElementById(`sig-${slot}-name`)?.value.trim();
-          const sizeInput = Number(document.getElementById(`sig-${slot}-size`)?.value || cur.size || 100);
-          state.settings.signatures[slot] = {
-            name: nameInput || cur.name,
-            dataUrl: state.settings.signatures[slot]?.dataUrl || '',
-            rotation: Number(state.settings.signatures[slot]?.rotation ?? cur.rotation ?? 0),
-            size: Math.min(160, Math.max(50, sizeInput))
-          };
-        });
-        saveState();
-        const synced = await flushCloudSync();
-        render();
-        toast(synced ? L('Owner signatures saved & synced to Cloud ✓', 'تم حفظ توقيعات المالكين ومزامنتها سحابياً ✓') : L('Owner signatures saved ✓', 'تم حفظ توقيعات المالكين ✓'), 'success');
-      }
-      else if (act === 'save-qr-settings') {
-        const cc1 = document.getElementById('qr-owner1-cc')?.value || '+966';
-        const raw1 = document.getElementById('qr-owner1-num')?.value || '';
-        const cc2 = document.getElementById('qr-owner2-cc')?.value || '+92';
-        const raw2 = document.getElementById('qr-owner2-num')?.value || '';
-        const norm1 = normalizeWhatsAppQrNumber(raw1, cc1);
-        const norm2 = normalizeWhatsAppQrNumber(raw2, cc2);
-        if (raw1.trim() && norm1.replace(/\D/g, '').length < 9) {
-          toast(L('Please enter a valid WhatsApp number for Owner 1.', 'يرجى إدخال رقم واتساب صحيح للمالك 1.'), 'error');
-          return;
-        }
-        if (raw2.trim() && norm2.replace(/\D/g, '').length < 9) {
-          toast(L('Please enter a valid WhatsApp number for Owner 2.', 'يرجى إدخال رقم واتساب صحيح للمالك 2.'), 'error');
-          return;
-        }
-        state.settings.whatsappQr = {
-          owner1Number: norm1,
-          owner2Number: norm2
+        const cur = getSignatureConfig('owner1');
+        const nameInput = document.getElementById('sig-owner1-name')?.value.trim();
+        const sizeInput = Number(document.getElementById('sig-owner1-size')?.value || cur.size || 100);
+        const existingRaw = state.settings.signatures.owner1 || {};
+        state.settings.signatures.owner1 = {
+          name: nameInput || cur.name,
+          dataUrl: existingRaw.dataUrl || '',
+          deleted: Boolean(existingRaw.deleted),
+          rotation: Number(existingRaw.rotation ?? cur.rotation ?? 0),
+          size: Math.min(160, Math.max(50, sizeInput))
         };
         saveState();
         const synced = await flushCloudSync();
         render();
-        toast(synced ? L('WhatsApp QR numbers saved & synced ✓', 'تم حفظ ومزامنة أرقام واتساب QR ✓') : L('WhatsApp QR numbers saved ✓', 'تم حفظ أرقام واتساب QR ✓'), 'success');
+        toast(synced ? L('Owner signature saved & synced ✓', 'تم حفظ ومزامنة توقيع المالك ✓') : L('Owner signature saved ✓', 'تم حفظ توقيع المالك ✓'), 'success');
+      }
+      else if (act === 'save-qr-settings') {
+        const cc = document.getElementById('qr-owner-cc')?.value || '+966';
+        const raw = document.getElementById('qr-owner-num')?.value || '';
+        const norm = normalizeWhatsAppQrNumber(raw, cc);
+        if (raw.trim() && norm.replace(/\D/g, '').length < 9) {
+          toast(L('Please enter a valid WhatsApp number.', 'يرجى إدخال رقم واتساب صحيح.'), 'error');
+          return;
+        }
+        state.settings.whatsappQr = {
+          ownerNumber: norm,
+          owner1Number: norm
+        };
+        saveState();
+        const synced = await flushCloudSync();
+        render();
+        toast(synced ? L('WhatsApp QR number saved & synced ✓', 'تم حفظ ومزامنة رقم واتساب QR ✓') : L('WhatsApp QR number saved ✓', 'تم حفظ رقم واتساب QR ✓'), 'success');
+      }
+      else if (act === 'refresh-active-devices') {
+        await loadActiveDeviceSummary();
+        toast(L('Device status updated ✓', 'تم تحديث حالة الأجهزة ✓'), 'info');
+      }
+      else if (act === 'refresh-login-history') {
+        await loadLoginHistory();
+      }
+      else if (act === 'logout-all-devices') {
+        const cloud = getCloud();
+        const curUid = state.session?.uid || state.session?.cloudUid || state.session?.id || '';
+        if (cloud && curUid) {
+          try {
+            await cloud.logoutAllUserDevices(curUid);
+          } catch (e) {}
+        }
+        stopSecurityWatchers();
+        hydrateGeneration++;
+        if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
+        localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+        localStorage.removeItem(DK_SESSION_ID_KEY);
+        localStorage.removeItem(DK_SESSION_VERSION_KEY);
+        localStorage.removeItem(ACTIVE_UID_KEY);
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(PENDING_SYNC_KEY);
+        sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
+        if (cloud) { try { await cloud.signOutUser(); } catch (e) {} }
+        const remKeep = loadRememberMe();
+        state = defaultData();
+        state.rememberMe = remKeep;
+        ui.cloudHydrating = false;
+        ui.loginPending = false;
+        ui.pendingApproval = null;
+        ui.pinLocked = false;
+        ui.authMode = 'login';
+        ui.view = 'login';
+        closeModal();
+        render();
+        toast(L('Logged out from all devices ✓', 'تم تسجيل الخروج من جميع الأجهزة ✓'), 'success');
+      }
+      else if (act === 'resend-device-approval') {
+        const p = ui.pendingApproval;
+        if (p && p.reqId && !p.emailSending) {
+          p.emailSending = true;
+          p.emailError = '';
+          render();
+          const mailRes = await sendDeviceApprovalEmail({
+            kind: 'approval-request',
+            uid: p.uid,
+            reqId: p.reqId,
+            approvalToken: p.approvalToken,
+            toEmail: p.ownerEmail,
+            ownerName: p.ownerName,
+            deviceName: p.deviceName,
+            loginDateTime: p.loginDateTime,
+            location: p.location,
+            ip: p.ip,
+            browserVersion: p.browserVersion
+          });
+          if (ui.pendingApproval && ui.pendingApproval.reqId === p.reqId) {
+            ui.pendingApproval.emailSending = false;
+            ui.pendingApproval.emailSent = Boolean(mailRes?.ok);
+            if (!mailRes?.ok) {
+              ui.pendingApproval.emailError = L('Could not send email. Please check internet.', 'تعذر إرسال البريد. تحقق من الإنترنت.');
+            }
+            render();
+            if (mailRes?.ok) toast(L('Approval email resent ✓', 'تمت إعادة إرسال بريد الموافقة ✓'), 'success');
+          }
+        }
+      }
+      else if (act === 'cancel-device-approval') {
+        stopSecurityWatchers();
+        ui.pendingApproval = null;
+        ui.loginPending = false;
+        ui.authLoading = false;
+        localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+        localStorage.removeItem(DK_SESSION_ID_KEY);
+        localStorage.removeItem(DK_SESSION_VERSION_KEY);
+        const cloud = getCloud();
+        if (cloud) { try { await cloud.signOutUser(); } catch (e) {} }
+        state.session = null;
+        ui.authMode = 'login';
+        ui.view = 'login';
+        render();
+      }
+      else if (act === 'clear-url-device-action') {
+        ui.urlDeviceAction = null;
+        render();
+      }
+      else if (act === 'open-apk-install-modal') {
+        if (isOfficialApkAppInstalled()) {
+          toast('App Already Installed ✓', 'info');
+          render();
+          return;
+        }
+        ui.apkDownloadProgress = 0;
+        ui.apkDownloading = false;
+        ui.apkDownloadDone = false;
+        ui.apkDownloadError = '';
+        openModal('apk-download');
+      }
+      else if (act === 'start-apk-download') {
+        await downloadOfficialApkWithProgress();
+      }
+      else if (act === 'open-downloaded-apk') {
+        if (ui.apkBlobUrl) {
+          const a = document.createElement('a');
+          a.href = ui.apkBlobUrl;
+          a.download = 'Digital-Khata-v1.0.apk';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          toast(L('Opening APK file... Enable "Install Unknown Apps" in Settings if prompted.', 'جاري فتح الملف... فعّل تثبيت التطبيقات غير المعروفة من الإعدادات إذا طُلب.'), 'info');
+        }
       }
       else if (act === 'pwa-install') {
         const pwa = window.__DK_PWA__;
@@ -9482,11 +10577,15 @@
       else if (act === 'admin-refresh') { await loadAdminUsersList(); }
       else if (act === 'admin-back') { ui.view = 'admin'; ui.adminInspectUid = ''; ui.adminInspectData = null; render(); }
       else if (act === 'signout') {
+        stopSecurityWatchers();
         hydrateGeneration++;
         if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
         localStorage.setItem(EXPLICIT_SIGNOUT_KEY, '1');
+        localStorage.removeItem(DK_SESSION_ID_KEY);
+        localStorage.removeItem(DK_SESSION_VERSION_KEY);
         ui.loginPending = false;
         ui.loginRetry = null;
+        ui.pendingApproval = null;
         ui.startupCheckingAuth = false;
         const curUid = state.session?.uid || state.session?.cloudUid || state.session?.id || state.cloudMeta?.uid || '';
         if (ui.kycTimer) { clearInterval(ui.kycTimer); ui.kycTimer = null; }
@@ -9577,7 +10676,11 @@
             sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, fbUser.uid);
             ui.authMode = 'login';
             ui.pinLocked = false;
-            await hydrateFromFirebaseUser(fbUser);
+            const hydRes = await hydrateFromFirebaseUser(fbUser, {}, { recordLoginHistory: true });
+            if (hydRes && hydRes.reason === 'PENDING_APPROVAL') {
+              render();
+              return;
+            }
             ui.view = isKycVerified() ? 'home' : 'kyc';
             render();
             toast(L('PIN Verified! Welcome ✓', 'تم التحقق من PIN! أهلاً بك ✓'), 'success');
@@ -9648,6 +10751,7 @@
       manualAuthFlow = true;
       ui.loginPending = true;
       ui.loginRetry = null;
+      ui.pendingApproval = null;
       ui.loginStageText = L('Verifying account...', 'جاري التحقق من الحساب...');
       ui.authLoading = true;
       render();
@@ -9659,7 +10763,7 @@
         state.rememberMe = loadRememberMe();
         sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, res.user.uid);
 
-        ui.loginStageText = L('Saving session...', 'جاري حفظ الجلسة...');
+        ui.loginStageText = L('Checking device security & loading session...', 'جاري التحقق من أمان الجهاز وتحميل الجلسة...');
         render();
         try {
           await withTimeout(res.user.getIdToken(), 12000, 'TOKEN_TIMEOUT');
@@ -9699,7 +10803,7 @@
             mobile: res.norm.mobile,
             authType: res.norm.authType
           };
-          if (cached) {
+          if (!navigator.onLine && cached && localStorage.getItem(DK_SESSION_ID_KEY)) {
             state = cached;
             state.rememberMe = loadRememberMe();
             state.session = {
@@ -9723,19 +10827,20 @@
             ui.loginRetry = null;
             render();
             toast(L(`Welcome, ${state.session?.name || 'User'} ✓`, `أهلاً بك، ${state.session?.name || 'User'} ✓`), 'success');
-            hydrateFromFirebaseUser(res.user, overrideInfo, { background: true });
           } else {
-            ui.loginStageText = L('Loading workshop data...', 'جاري تحميل بيانات الورشة...');
-            render();
-            await hydrateFromFirebaseUser(res.user, overrideInfo, { strictNetwork: true });
-            ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
+            const hydRes = await hydrateFromFirebaseUser(res.user, overrideInfo, { strictNetwork: true, recordLoginHistory: true });
             ui.loginPending = false;
             ui.authLoading = false;
             ui.loginRetry = null;
+            if (hydRes && hydRes.reason === 'PENDING_APPROVAL') {
+              render();
+              return;
+            }
+            ui.view = isAdminSession() ? 'admin' : ((state.blocked || !isKycVerified()) ? 'kyc' : 'home');
             render();
             toast(L(`Welcome, ${state.session?.name || 'User'} ✓`, `أهلاً بك، ${state.session?.name || 'User'} ✓`), 'success');
           }
-          if (!state.blocked && isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
+          if (!ui.pendingApproval && !state.blocked && isKycVerified() && (!state.pinSecurity?.enabled || !state.pinSecurity?.hash)) {
             if (ui.promptPinAfterLogin) {
               ui.promptPinAfterLogin = false;
               setTimeout(() => openModal('set-pin'), 250);
@@ -10181,8 +11286,6 @@
           c.email = custEmail;
           saveState();
         }
-        let qrOrder = [];
-        try { qrOrder = JSON.parse((fd.get('qrOrder') || '[]').toString()); } catch { qrOrder = []; }
         const overrides = {
           invoiceNo: (fd.get('invoiceNo') || '').toString().trim(),
           invoiceDate: (fd.get('invoiceDate') || '').toString() || todayISO(),
@@ -10190,11 +11293,8 @@
           custEmail,
           invoiceLanguage: (fd.get('invoiceLanguage') || getInvoiceLanguage()).toString(),
           vatEnabled: Boolean(fd.get('vatEnabled')),
-          useOwner1Sign: Boolean(fd.get('useOwner1Sign')),
-          useOwner2Sign: Boolean(fd.get('useOwner2Sign')),
-          useOwner1Qr: Boolean(fd.get('useOwner1Qr')),
-          useOwner2Qr: Boolean(fd.get('useOwner2Qr')),
-          qrOrder: Array.isArray(qrOrder) ? qrOrder : []
+          useOwnerSign: Boolean(fd.get('useOwnerSign')),
+          useOwnerQr: Boolean(fd.get('useOwnerQr'))
         };
         closeModal();
         printWorkshopReport(customerId, overrides);
@@ -10934,55 +12034,56 @@
         await flushCloudSync();
         return;
       }
-      if (t.id === 'inv-vat-toggle' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-sign1-toggle' || t.id === 'inv-sign2-toggle' || t.id === 'inv-qr1-toggle' || t.id === 'inv-qr2-toggle') {
+      if (t.id === 'graph-range-select') {
+        ui.graphRange = t.value || '6m';
+        const ser = getProfitGraphSeries(ui.graphRange, ui.graphCustomMonth);
+        ui.selectedGraphMonth = (ser[ser.length - 1] && ser[ser.length - 1].key) || currentMonthKey();
+        render();
+        return;
+      }
+      if (t.id === 'graph-custom-month') {
+        ui.graphCustomMonth = t.value || currentMonthKey();
+        ui.selectedGraphMonth = ui.graphCustomMonth;
+        render();
+        return;
+      }
+      if (t.id === 'inv-vat-toggle' || t.id === 'inv-date-input' || t.id === 'inv-due-input' || t.id === 'inv-sign1-toggle' || t.id === 'inv-qr1-toggle') {
         if (ui.invoiceDraft) {
           if (t.id === 'inv-vat-toggle') ui.invoiceDraft.vatEnabled = Boolean(t.checked);
           if (t.id === 'inv-date-input') ui.invoiceDraft.invoiceDate = t.value;
           if (t.id === 'inv-due-input') ui.invoiceDraft.dueDate = t.value;
-          if (t.id === 'inv-sign1-toggle') ui.invoiceDraft.useOwner1Sign = Boolean(t.checked);
-          if (t.id === 'inv-sign2-toggle') ui.invoiceDraft.useOwner2Sign = Boolean(t.checked);
-          if (t.id === 'inv-qr1-toggle' || t.id === 'inv-qr2-toggle') {
-            const slot = t.id === 'inv-qr1-toggle' ? 'owner1' : 'owner2';
+          if (t.id === 'inv-sign1-toggle') ui.invoiceDraft.useOwnerSign = Boolean(t.checked);
+          if (t.id === 'inv-qr1-toggle') {
             const checked = Boolean(t.checked);
-            if (slot === 'owner1') ui.invoiceDraft.useOwner1Qr = checked;
-            else ui.invoiceDraft.useOwner2Qr = checked;
-            const order = Array.isArray(ui.invoiceDraft.qrOrder) ? [...ui.invoiceDraft.qrOrder] : [];
+            ui.invoiceDraft.useOwnerQr = checked;
             if (checked) {
               const qrCfg = getWhatsAppQrConfig();
-              const num = slot === 'owner1' ? qrCfg.owner1Number : qrCfg.owner2Number;
-              if (!num || num.replace(/\D/g, '').length < 8) {
-                toast(slot === 'owner1' ? L('Please save Owner 1 WhatsApp Number in Settings first.', 'يرجى حفظ رقم واتساب المالك 1 في الإعدادات أولاً.') : L('Please save Owner 2 WhatsApp Number in Settings first.', 'يرجى حفظ رقم واتساب المالك 2 في الإعدادات أولاً.'), 'info');
+              if (!qrCfg.ownerNumber || qrCfg.ownerNumber.replace(/\D/g, '').length < 8) {
+                toast(L('Please save Owner WhatsApp Number in Settings first.', 'يرجى حفظ رقم واتساب المالك في الإعدادات أولاً.'), 'info');
               }
-              if (!order.includes(slot)) order.push(slot);
-            } else {
-              const idx = order.indexOf(slot);
-              if (idx >= 0) order.splice(idx, 1);
             }
-            ui.invoiceDraft.qrOrder = order;
-            const orderHidden = document.getElementById('inv-qr-order');
-            if (orderHidden) orderHidden.value = JSON.stringify(order);
           }
           refreshInvoiceDraftPreview();
         }
         return;
       }
-      if ((t.id === 'sig-owner1-file' || t.id === 'sig-owner2-file') && t.files && t.files[0]) {
-        const slot = t.id === 'sig-owner1-file' ? 'owner1' : 'owner2';
+      if (t.id === 'sig-owner1-file' && t.files && t.files[0]) {
         try {
           toast(L('Cleaning signature photo...', 'جاري تنظيف صورة التوقيع...'), 'info');
           const cleanDataUrl = await processUploadedSignatureFile(t.files[0]);
           if (!state.settings.signatures) state.settings.signatures = {};
-          const cur = getSignatureConfig(slot);
-          state.settings.signatures[slot] = {
+          const cur = getSignatureConfig('owner1');
+          state.settings.signatures.owner1 = {
             name: cur.name,
             dataUrl: cleanDataUrl,
-            rotation: Number(state.settings.signatures[slot]?.rotation || 0),
-            size: Number(state.settings.signatures[slot]?.size || 100)
+            deleted: false,
+            rotation: Number(state.settings.signatures.owner1?.rotation || 0),
+            size: Number(state.settings.signatures.owner1?.size || 100)
           };
           saveState();
           render();
           await flushCloudSync();
-          toast(slot === 'owner1' ? L('Owner 1 Signature cleaned & saved ✓', 'تم تنظيف وحفظ توقيع المالك 1 ✓') : L('Owner 2 Signature cleaned & saved ✓', 'تم تنظيف وحفظ توقيع المالك 2 ✓'), 'success');
+          toast(L('Owner Signature cleaned & saved ✓', 'تم تنظيف وحفظ توقيع المالك ✓'), 'success');
         } catch (err) {
           toast(L('Signature process error: ', 'خطأ في معالجة التوقيع: ') + (err?.message || err), 'error');
         } finally {
@@ -11051,6 +12152,9 @@
       const cloud = getCloud();
       if (!cloud || cloudBridgeBound) return;
       cloudBridgeBound = true;
+      if (ui.urlDeviceAction && ui.urlDeviceAction.status === 'loading') {
+        processUrlDeviceAction();
+      }
       if (cloud.auth && typeof cloud.auth.authStateReady === 'function') {
         cloud.auth.authStateReady().then(() => {
           if (ui.startupCheckingAuth && !cloud.auth.currentUser && !state.session && !ui.loginPending) {
@@ -11069,12 +12173,15 @@
           await hydrateFromFirebaseUser(fbUser);
         } else {
           ui.startupCheckingAuth = false;
+          stopSecurityWatchers();
           hydrateGeneration++;
           if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
           ui.cloudHydrating = false;
           // Never auto-logout unless user explicitly pressed Sign Out
           if (state.session && state.session.provider === 'firebase' && localStorage.getItem(EXPLICIT_SIGNOUT_KEY) === '1') {
             localStorage.removeItem(ACTIVE_UID_KEY);
+            localStorage.removeItem(DK_SESSION_ID_KEY);
+            localStorage.removeItem(DK_SESSION_VERSION_KEY);
             sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
             const remKeep = loadRememberMe();
             state = defaultData();
@@ -11116,12 +12223,18 @@
     });
 
     window.addEventListener('resize', positionPillSlider);
-    setInterval(() => checkAutoArchive(true), 30000);
+    setInterval(() => {
+      checkAutoArchive(true);
+      maybeRunAutoDailyBackup();
+    }, 30000);
 
     // Startup
+    captureInitialUrlDeviceAction();
     migrateLegacyData();
     checkAutoArchive();
     checkKycAutoApprove();
+    scheduleMidnightAutoBackup();
+    maybeRunAutoDailyBackup();
     if (state.kyc && state.kyc.status === 'verifying') {
       startKycCountdownTimer();
     }

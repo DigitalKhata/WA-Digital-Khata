@@ -23,6 +23,9 @@ import {
   setDoc,
   collection,
   getDocs,
+  updateDoc,
+  onSnapshot,
+  Bytes,
   query,
   orderBy,
   limit,
@@ -541,6 +544,12 @@ export const dkCloud = {
       kycStatus: 'none' as const,
       kycDuplicateOf: '',
       blocked: false,
+      activeDeviceId: '',
+      activeDeviceName: '',
+      activeSessionId: '',
+      activeDeviceCount: 0,
+      sessionVersion: 1,
+      lastLoginAt: now,
       totalKhataAmount: 0,
       totalPendingAmount: 0,
       customerCount: 0,
@@ -712,6 +721,12 @@ export const dkCloud = {
       kycStatus: effectiveKycStatus,
       kycDuplicateOf: String(meta.kycDuplicateOf ?? existingData?.kycDuplicateOf ?? '').slice(0, 128),
       blocked: Boolean(existingData?.blocked ?? false),
+      activeDeviceId: String(existingData?.activeDeviceId ?? '').slice(0, 128),
+      activeDeviceName: String(existingData?.activeDeviceName ?? '').slice(0, 160),
+      activeSessionId: String(existingData?.activeSessionId ?? '').slice(0, 128),
+      activeDeviceCount: Number(existingData?.activeDeviceCount ?? 0),
+      sessionVersion: Number(existingData?.sessionVersion ?? 1),
+      lastLoginAt: Number(existingData?.lastLoginAt ?? 0),
       totalKhataAmount: summary.totalKhataAmount,
       totalPendingAmount: summary.totalPendingAmount,
       customerCount: summary.customerCount,
@@ -870,6 +885,611 @@ export const dkCloud = {
       if (!auth.currentUser || auth.currentUser.uid !== uid) return null;
       handleFirestoreError(err, OperationType.LIST, backupsPath);
     }
+  },
+
+  // ---------------- SINGLE DEVICE BINDING, APPROVAL & LOGIN HISTORY ----------------
+  async _sha256Bytes(rawText: string): Promise<Bytes> {
+    const encoded = new TextEncoder().encode(String(rawText || ''));
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    return Bytes.fromUint8Array(new Uint8Array(digest));
+  },
+
+  _randomSafeId(prefix: string, len = 24): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+    const arr = new Uint8Array(len);
+    crypto.getRandomValues(arr);
+    let out = prefix;
+    for (let i = 0; i < len; i++) {
+      out += chars[arr[i] % chars.length];
+    }
+    return out;
+  },
+
+  _formatDateTimeParts(ts: number): { dateStr: string; timeStr: string; fullStr: string } {
+    const d = new Date(ts);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hours = d.getHours();
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const h12 = String(hours % 12 || 12).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const timeStr = `${h12}:${mins} ${ampm}`;
+    return { dateStr, timeStr, fullStr: `${dateStr} ${timeStr}` };
+  },
+
+  async _ensureUserProfileDoc(
+    uid: string,
+    fallbackName?: string
+  ): Promise<Record<string, unknown>> {
+    const userRef = doc(db, 'users', uid);
+    let snap = null;
+    try {
+      snap = await getDocFromServer(userRef);
+    } catch {
+      try {
+        snap = await getDoc(userRef);
+      } catch {
+        snap = null;
+      }
+    }
+    if (snap && snap.exists()) {
+      return snap.data();
+    }
+    const now = Date.now();
+    const email = String(auth.currentUser?.email || '');
+    const isSyntheticMobile = email.endsWith('@mobile.digitalkhata.app');
+    const baseProfile = {
+      uid,
+      name: String(fallbackName || auth.currentUser?.displayName || 'Workshop Owner').slice(0, 120),
+      identifier: email.slice(0, 160),
+      email: isSyntheticMobile ? '' : email.slice(0, 160),
+      mobile: '',
+      authType: isSyntheticMobile ? 'mobile' : 'email',
+      pinEnabled: false,
+      pinHash: '',
+      cnicHash: '',
+      cnicLast4: '',
+      mobileHash: '',
+      kycStatus: 'none',
+      kycDuplicateOf: '',
+      blocked: false,
+      activeDeviceId: '',
+      activeDeviceName: '',
+      activeSessionId: '',
+      activeDeviceCount: 0,
+      sessionVersion: 1,
+      lastLoginAt: 0,
+      totalKhataAmount: 0,
+      totalPendingAmount: 0,
+      customerCount: 0,
+      lastSyncAt: now,
+      lastBackupAt: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    try {
+      await setDoc(userRef, baseProfile);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `users/${uid}`);
+    }
+    return baseProfile;
+  },
+
+  async _appendLoginHistory(
+    uid: string,
+    meta: {
+      deviceId: string;
+      deviceName: string;
+      isUnknown?: boolean;
+      ip: string;
+      location: string;
+      browserVersion: string;
+    },
+    status: 'Allowed' | 'Blocked'
+  ): Promise<void> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+    const now = Date.now();
+    const entryId = this._randomSafeId('lh_', 18);
+    const { dateStr, timeStr } = this._formatDateTimeParts(now);
+    const displayName = meta.isUnknown || !meta.deviceName || meta.deviceName === 'Unknown Device'
+      ? 'Unknown Device'
+      : String(meta.deviceName).slice(0, 160);
+    const path = `users/${uid}/loginHistory/${entryId}`;
+    try {
+      await setDoc(doc(db, 'users', uid, 'loginHistory', entryId), {
+        uid,
+        id: entryId,
+        deviceId: String(meta.deviceId || '').slice(0, 128),
+        deviceName: displayName,
+        isUnknown: Boolean(meta.isUnknown || displayName === 'Unknown Device'),
+        ip: String(meta.ip || 'Unknown').slice(0, 64),
+        location: String(meta.location || 'Unknown Location').slice(0, 160),
+        browserVersion: String(meta.browserVersion || 'Digital Khata Web v1.0').slice(0, 160),
+        status,
+        dateStr,
+        timeStr,
+        createdAt: now
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, path);
+    }
+  },
+
+  async _bindApprovedDeviceAsSoleActive(
+    uid: string,
+    profileData: Record<string, unknown>,
+    deviceMeta: {
+      deviceId: string;
+      deviceName: string;
+      isUnknown?: boolean;
+      ip: string;
+      location: string;
+      browserVersion: string;
+    },
+    existingDevices: Array<Record<string, unknown>>,
+    recordHistory: boolean
+  ): Promise<{ sessionId: string; sessionVersion: number }> {
+    const now = Date.now();
+    const sessionId = this._randomSafeId('sess_', 20);
+    const sessionVersion = Number(profileData?.sessionVersion || 1);
+    const displayName = deviceMeta.isUnknown || !deviceMeta.deviceName
+      ? 'Unknown Device'
+      : String(deviceMeta.deviceName).slice(0, 160);
+
+    // Deactivate all other devices so strictly 1 mobile/device is active at a time
+    for (const d of existingDevices) {
+      const otherId = String(d.deviceId || '');
+      if (!otherId || otherId === deviceMeta.deviceId) continue;
+      if (d.isActive || d.sessionId) {
+        try {
+          await setDoc(doc(db, 'users', uid, 'devices', otherId), {
+            uid,
+            deviceId: otherId,
+            deviceName: String(d.deviceName || 'Unknown Device').slice(0, 160),
+            browserVersion: String(d.browserVersion || '').slice(0, 160),
+            ip: String(d.ip || '').slice(0, 64),
+            location: String(d.location || '').slice(0, 160),
+            status: d.status === 'revoked' ? 'revoked' : 'approved',
+            isActive: false,
+            sessionId: '',
+            approvedAt: Number(d.approvedAt || now),
+            lastSeenAt: Number(d.lastSeenAt || now)
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `users/${uid}/devices/${otherId}`);
+        }
+      }
+    }
+
+    const myExisting = existingDevices.find((d) => String(d.deviceId || '') === deviceMeta.deviceId);
+    const devPath = `users/${uid}/devices/${deviceMeta.deviceId}`;
+    try {
+      await setDoc(doc(db, 'users', uid, 'devices', deviceMeta.deviceId), {
+        uid,
+        deviceId: deviceMeta.deviceId,
+        deviceName: displayName,
+        browserVersion: String(deviceMeta.browserVersion || '').slice(0, 160),
+        ip: String(deviceMeta.ip || '').slice(0, 64),
+        location: String(deviceMeta.location || '').slice(0, 160),
+        status: 'approved',
+        isActive: true,
+        sessionId,
+        approvedAt: Number(myExisting?.approvedAt || now),
+        lastSeenAt: now
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, devPath);
+    }
+
+    try {
+      await setDoc(doc(db, 'users', uid), {
+        ...profileData,
+        uid,
+        activeDeviceId: deviceMeta.deviceId,
+        activeDeviceName: displayName,
+        activeSessionId: sessionId,
+        activeDeviceCount: 1,
+        sessionVersion,
+        lastLoginAt: now,
+        updatedAt: now
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+    }
+
+    if (recordHistory) {
+      await this._appendLoginHistory(uid, deviceMeta, 'Allowed');
+    }
+
+    return { sessionId, sessionVersion };
+  },
+
+  async registerOrCheckDeviceLogin(
+    uid: string,
+    deviceMeta: {
+      deviceId: string;
+      deviceName: string;
+      isUnknown?: boolean;
+      ip: string;
+      location: string;
+      browserVersion: string;
+      loginDateTime: string;
+      recordHistory?: boolean;
+      localSessionId?: string;
+    }
+  ): Promise<
+    | {
+        status: 'approved';
+        sessionId: string;
+        sessionVersion: number;
+        isFirstDevice: boolean;
+      }
+    | {
+        status: 'pending_approval';
+        reqId: string;
+        approvalToken: string;
+        ownerEmail: string;
+        ownerName: string;
+      }
+  > {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      throw new Error('AUTH_SESSION_CHANGED');
+    }
+    const profileData = await this._ensureUserProfileDoc(uid);
+
+    if (profileData.blocked === true && !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('ACCOUNT_BLOCKED');
+    }
+
+    let existingDevices: Array<Record<string, unknown>> = [];
+    try {
+      const snaps = await getDocs(collection(db, 'users', uid, 'devices'));
+      existingDevices = snaps.docs.map((s) => s.data());
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `users/${uid}/devices`);
+    }
+
+    const myDevice = existingDevices.find((d) => String(d.deviceId || '') === deviceMeta.deviceId);
+    const hasAnyApprovedDevice = existingDevices.some((d) => d.status === 'approved');
+    const profileHasActiveBinding = Boolean(String(profileData.activeDeviceId || '').trim());
+
+    // Same device reopening app with matching active binding OR previously approved (not revoked) device
+    if (
+      (myDevice && myDevice.status === 'approved') ||
+      (!hasAnyApprovedDevice && !profileHasActiveBinding)
+    ) {
+      const isFirstDevice = !hasAnyApprovedDevice && !profileHasActiveBinding;
+      // Preserve existing active sessionId if this is just an app reopen on the already-active device
+      if (
+        !isFirstDevice &&
+        deviceMeta.recordHistory === false &&
+        String(profileData.activeDeviceId || '') === deviceMeta.deviceId &&
+        String(profileData.activeSessionId || '') &&
+        (!deviceMeta.localSessionId || deviceMeta.localSessionId === String(profileData.activeSessionId || ''))
+      ) {
+        return {
+          status: 'approved',
+          sessionId: String(profileData.activeSessionId),
+          sessionVersion: Number(profileData.sessionVersion || 1),
+          isFirstDevice: false
+        };
+      }
+      const { sessionId, sessionVersion } = await this._bindApprovedDeviceAsSoleActive(
+        uid,
+        profileData,
+        deviceMeta,
+        existingDevices,
+        deviceMeta.recordHistory !== false
+      );
+      return { status: 'approved', sessionId, sessionVersion, isFirstDevice };
+    }
+
+    // New, unknown, or previously revoked device -> MUST wait indefinitely for Owner Email ALLOW / NOT ALLOW
+    const reqId = this._randomSafeId('req_', 26);
+    const approvalToken = this._randomSafeId('tok_', 28);
+    const tokenHash = await this._sha256Bytes(approvalToken);
+    const now = Date.now();
+    const linkPath = `deviceApprovalLinks/${reqId}`;
+
+    try {
+      await setDoc(doc(db, 'deviceApprovalLinks', reqId), {
+        reqId,
+        uid,
+        deviceId: deviceMeta.deviceId,
+        deviceName: (deviceMeta.isUnknown || !deviceMeta.deviceName ? 'Unknown Device' : deviceMeta.deviceName).slice(0, 160),
+        ip: String(deviceMeta.ip || 'Unknown').slice(0, 64),
+        location: String(deviceMeta.location || 'Unknown Location').slice(0, 160),
+        browserVersion: String(deviceMeta.browserVersion || 'Digital Khata Web v1.0').slice(0, 160),
+        loginDateTime: String(deviceMeta.loginDateTime || this._formatDateTimeParts(now).fullStr).slice(0, 100),
+        decision: 'pending',
+        tokenHash,
+        approvalToken: '',
+        createdAt: now,
+        decidedAt: 0
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, linkPath);
+    }
+
+    const ownerEmail =
+      String(profileData.email || '').trim() ||
+      (auth.currentUser.email && !auth.currentUser.email.endsWith('@mobile.digitalkhata.app')
+        ? auth.currentUser.email
+        : '');
+    const ownerName = String(profileData.name || auth.currentUser.displayName || 'Workshop Owner');
+
+    return {
+      status: 'pending_approval',
+      reqId,
+      approvalToken,
+      ownerEmail,
+      ownerName
+    };
+  },
+
+  watchDeviceApprovalLink(
+    reqId: string,
+    onUpdate: (info: { decision: 'pending' | 'allowed' | 'denied'; decidedAt: number; data: Record<string, unknown> }) => void,
+    onError?: (err: unknown) => void
+  ): () => void {
+    const path = `deviceApprovalLinks/${reqId}`;
+    return onSnapshot(
+      doc(db, 'deviceApprovalLinks', reqId),
+      (snap) => {
+        if (!snap.exists()) return;
+        const d = snap.data();
+        const rawDec = String(d.decision || 'pending');
+        const decision: 'pending' | 'allowed' | 'denied' =
+          rawDec === 'allowed' || rawDec === 'denied' ? rawDec : 'pending';
+        onUpdate({ decision, decidedAt: Number(d.decidedAt || 0), data: d });
+      },
+      (err) => {
+        if (onError) onError(err);
+        else handleFirestoreError(err, OperationType.GET, path);
+      }
+    );
+  },
+
+  async getDeviceApprovalInfo(reqId: string): Promise<Record<string, unknown> | null> {
+    const ref = doc(db, 'deviceApprovalLinks', reqId);
+    try {
+      const snap = await getDocFromServer(ref);
+      return snap.exists() ? snap.data() : null;
+    } catch {
+      try {
+        const snap = await getDoc(ref);
+        return snap.exists() ? snap.data() : null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `deviceApprovalLinks/${reqId}`);
+      }
+    }
+  },
+
+  async resolveDeviceApprovalLink(
+    reqId: string,
+    decision: 'allowed' | 'denied',
+    rawToken: string
+  ): Promise<{ alreadyResolved: boolean; decision: 'allowed' | 'denied' | 'pending'; data: Record<string, unknown> | null }> {
+    const ref = doc(db, 'deviceApprovalLinks', reqId);
+    const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+    if (!snap.exists()) {
+      throw new Error('Approval request not found.');
+    }
+    const current = snap.data();
+    if (current.decision === 'allowed' || current.decision === 'denied') {
+      return {
+        alreadyResolved: true,
+        decision: current.decision,
+        data: current
+      };
+    }
+    const cleanToken = String(rawToken || '').trim();
+    if (cleanToken.length < 16) {
+      throw new Error('Invalid security approval token.');
+    }
+    try {
+      await updateDoc(ref, {
+        decision,
+        decidedAt: Date.now(),
+        approvalToken: cleanToken
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `deviceApprovalLinks/${reqId}`);
+    }
+    const updated = { ...current, decision, decidedAt: Date.now() };
+    return { alreadyResolved: false, decision, data: updated };
+  },
+
+  async finalizeApprovedDeviceLogin(
+    uid: string,
+    deviceMeta: {
+      deviceId: string;
+      deviceName: string;
+      isUnknown?: boolean;
+      ip: string;
+      location: string;
+      browserVersion: string;
+    }
+  ): Promise<{ sessionId: string; sessionVersion: number }> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      throw new Error('AUTH_SESSION_CHANGED');
+    }
+    const profileData = await this._ensureUserProfileDoc(uid);
+    let existingDevices: Array<Record<string, unknown>> = [];
+    try {
+      const snaps = await getDocs(collection(db, 'users', uid, 'devices'));
+      existingDevices = snaps.docs.map((s) => s.data());
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `users/${uid}/devices`);
+    }
+    return this._bindApprovedDeviceAsSoleActive(uid, profileData, deviceMeta, existingDevices, true);
+  },
+
+  async recordBlockedLoginAttempt(
+    uid: string,
+    deviceMeta: {
+      deviceId: string;
+      deviceName: string;
+      isUnknown?: boolean;
+      ip: string;
+      location: string;
+      browserVersion: string;
+    }
+  ): Promise<void> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+    await this._ensureUserProfileDoc(uid);
+    await this._appendLoginHistory(uid, deviceMeta, 'Blocked');
+  },
+
+  watchUserActiveSession(
+    uid: string,
+    deviceId: string,
+    sessionId: string,
+    localSessionVersion: number,
+    onRevoked: (reason: 'other_device' | 'logout_all' | 'blocked' | 'revoked') => void
+  ): () => void {
+    const userPath = `users/${uid}`;
+    let fired = false;
+    return onSnapshot(
+      doc(db, 'users', uid),
+      (snap) => {
+        if (fired || !snap.exists()) return;
+        const d = snap.data();
+        if (d.blocked === true && !isAdminEmail(auth.currentUser?.email)) {
+          fired = true;
+          onRevoked('blocked');
+          return;
+        }
+        const remoteVersion = Number(d.sessionVersion || 1);
+        const remoteDeviceId = String(d.activeDeviceId || '');
+        const remoteSessionId = String(d.activeSessionId || '');
+        const activeCount = Number(d.activeDeviceCount ?? 1);
+
+        if (remoteVersion > Number(localSessionVersion || 1)) {
+          fired = true;
+          onRevoked('logout_all');
+          return;
+        }
+        if (activeCount === 0 && !remoteDeviceId && !remoteSessionId) {
+          fired = true;
+          onRevoked('logout_all');
+          return;
+        }
+        if (remoteDeviceId && remoteDeviceId !== deviceId) {
+          fired = true;
+          onRevoked('other_device');
+          return;
+        }
+        if (remoteSessionId && sessionId && remoteSessionId !== sessionId) {
+          fired = true;
+          onRevoked('other_device');
+        }
+      },
+      (err) => {
+        if (!auth.currentUser || auth.currentUser.uid !== uid) return;
+        console.warn('Session watcher warning:', userPath, err);
+      }
+    );
+  },
+
+  async logoutAllUserDevices(uid: string): Promise<void> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      throw new Error('Not signed in.');
+    }
+    const now = Date.now();
+    const profileData = await this._ensureUserProfileDoc(uid);
+    const nextVersion = Number(profileData.sessionVersion || 1) + 1;
+
+    try {
+      const devSnaps = await getDocs(collection(db, 'users', uid, 'devices'));
+      for (const s of devSnaps.docs) {
+        const d = s.data();
+        const dId = String(d.deviceId || s.id);
+        await setDoc(doc(db, 'users', uid, 'devices', dId), {
+          uid,
+          deviceId: dId,
+          deviceName: String(d.deviceName || 'Unknown Device').slice(0, 160),
+          browserVersion: String(d.browserVersion || '').slice(0, 160),
+          ip: String(d.ip || '').slice(0, 64),
+          location: String(d.location || '').slice(0, 160),
+          status: 'revoked',
+          isActive: false,
+          sessionId: '',
+          approvedAt: Number(d.approvedAt || now),
+          lastSeenAt: now
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${uid}/devices`);
+    }
+
+    try {
+      await setDoc(doc(db, 'users', uid), {
+        ...profileData,
+        uid,
+        activeDeviceId: '',
+        activeDeviceName: '',
+        activeSessionId: '',
+        activeDeviceCount: 0,
+        sessionVersion: nextVersion,
+        updatedAt: now
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
+    }
+  },
+
+  async listLoginHistory(uid: string): Promise<Array<Record<string, unknown>>> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) return [];
+    const path = `users/${uid}/loginHistory`;
+    try {
+      const q = query(collection(db, 'users', uid, 'loginHistory'), orderBy('createdAt', 'desc'), limit(100));
+      const snaps = await getDocs(q);
+      return snaps.docs.map((d) => d.data());
+    } catch (err) {
+      if (!auth.currentUser || auth.currentUser.uid !== uid) return [];
+      handleFirestoreError(err, OperationType.LIST, path);
+    }
+  },
+
+  async getActiveDeviceSummary(uid: string): Promise<{
+    activeCount: number;
+    activeDeviceName: string;
+    activeDeviceId: string;
+    lastLoginAt: number;
+    devices: Array<Record<string, unknown>>;
+  }> {
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      return { activeCount: 0, activeDeviceName: '', activeDeviceId: '', lastLoginAt: 0, devices: [] };
+    }
+    let profile: Record<string, unknown> = {};
+    try {
+      const pSnap = await getDocFromServer(doc(db, 'users', uid)).catch(() => getDoc(doc(db, 'users', uid)));
+      if (pSnap.exists()) profile = pSnap.data();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, `users/${uid}`);
+    }
+    let devices: Array<Record<string, unknown>> = [];
+    try {
+      const dSnaps = await getDocs(collection(db, 'users', uid, 'devices'));
+      devices = dSnaps.docs.map((s) => s.data());
+    } catch (err) {
+      handleFirestoreError(err, OperationType.LIST, `users/${uid}/devices`);
+    }
+    const activeDevices = devices.filter((d) => d.isActive === true && d.status === 'approved');
+    const activeCount = Math.max(
+      activeDevices.length,
+      Number(profile.activeDeviceCount || (profile.activeDeviceId ? 1 : 0))
+    );
+    return {
+      activeCount,
+      activeDeviceName: String(profile.activeDeviceName || activeDevices[0]?.deviceName || ''),
+      activeDeviceId: String(profile.activeDeviceId || activeDevices[0]?.deviceId || ''),
+      lastLoginAt: Number(profile.lastLoginAt || 0),
+      devices
+    };
   },
 
   // ---------------- ADMIN PANEL OPERATIONS ----------------
