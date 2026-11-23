@@ -3,28 +3,34 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged,
   signOut,
   type User
 } from 'firebase/auth';
+import { firebaseConfig } from './firebase';
 
 export const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 
-const DRIVE_OAUTH_CONFIG = {
-  projectId: 'gen-lang-client-0907590760',
-  appId: '1:991961350277:web:fe017f7bb7cc8bcce129ec',
-  apiKey: 'AIzaSyBTzmbYeh3yZ8SAbxQJ8Zo-igNzHx9_Dko',
-  authDomain: 'gen-lang-client-0907590760.firebaseapp.com',
-  storageBucket: 'gen-lang-client-0907590760.firebasestorage.app',
-  messagingSenderId: '991961350277',
-  oAuthClientId: '991961350277-igus1a49h4u4nm11qh3stoa6fntm8l24.apps.googleusercontent.com'
+const envMeta = (import.meta as unknown as { env?: Record<string, string | undefined> }).env || {};
+const useSelfHostedAuth =
+  String(envMeta.VITE_FIREBASE_SELF_HOSTED_AUTH || '').trim() === 'true' &&
+  typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  !window.location.hostname.endsWith('.firebaseapp.com') &&
+  !window.location.hostname.endsWith('.web.app');
+
+const DRIVE_FIREBASE_CONFIG = {
+  ...firebaseConfig,
+  ...(useSelfHostedAuth && typeof window !== 'undefined' ? { authDomain: window.location.host } : {})
 };
 
 const BACKUP_FILE_NAME = 'DigitalKhata_Warsha_Backup.json';
 
 const driveApp =
   getApps().find((a) => a.name === 'google-drive-oauth') ||
-  initializeApp(DRIVE_OAUTH_CONFIG, 'google-drive-oauth');
+  initializeApp(DRIVE_FIREBASE_CONFIG, 'google-drive-oauth');
 
 const driveAuth = getAuth(driveApp);
 const driveProvider = new GoogleAuthProvider();
@@ -41,6 +47,24 @@ let currentDriveUser: { email: string; name: string; photo: string } | null = nu
 function notifyDriveState() {
   window.dispatchEvent(new CustomEvent('dk-drive-state'));
 }
+
+void getRedirectResult(driveAuth)
+  .then((result) => {
+    if (!result) return;
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential?.accessToken) {
+      cachedAccessToken = credential.accessToken;
+      currentDriveUser = {
+        email: result.user.email || '',
+        name: result.user.displayName || 'Google User',
+        photo: result.user.photoURL || ''
+      };
+      notifyDriveState();
+    }
+  })
+  .catch((err) => {
+    console.warn('[Drive OAuth] redirect result error:', err?.code || err?.message || err);
+  });
 
 onAuthStateChanged(driveAuth, (user: User | null) => {
   if (user) {
@@ -81,6 +105,8 @@ export const dkDrive = {
     user: { email: string; name: string; photo: string };
     accessToken: string;
   }> {
+    console.log(window.location.hostname);
+    console.log(firebaseConfig.projectId);
     isSigningIn = true;
     try {
       const result = await signInWithPopup(driveAuth, driveProvider);
@@ -96,6 +122,19 @@ export const dkDrive = {
       };
       notifyDriveState();
       return { user: currentDriveUser, accessToken: cachedAccessToken };
+    } catch (err: unknown) {
+      const code = String((err as { code?: string })?.code || '');
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        await signInWithRedirect(driveAuth, driveProvider);
+      }
+      if (code === 'auth/unauthorized-domain') {
+        console.error('[Drive OAuth] auth/unauthorized-domain', {
+          hostname: window.location.hostname,
+          projectId: DRIVE_FIREBASE_CONFIG.projectId,
+          authDomain: DRIVE_FIREBASE_CONFIG.authDomain
+        });
+      }
+      throw err;
     } finally {
       isSigningIn = false;
     }

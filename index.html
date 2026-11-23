@@ -2719,6 +2719,10 @@
     }
 
     async function connectGoogleDriveAccount() {
+      const cloud = getCloud();
+      const firebaseConfig = cloud?.firebaseConfig || {};
+      console.log(window.location.hostname);
+      console.log(firebaseConfig.projectId);
       const drive = getDrive();
       if (!drive) { toast(L('Google Drive module is loading, try again shortly.', 'جاري تحميل Google Drive، حاول بعد قليل.'), 'error'); return; }
       if (!navigator.onLine) { toast(L('Internet is required to connect Google Drive.', 'الإنترنت مطلوب لربط Google Drive.'), 'error'); return; }
@@ -2729,8 +2733,11 @@
         toast(L(`Google Drive connected (${res.user.email || 'Google'}) ✓`, `تم ربط Google Drive (${res.user.email || 'Google'}) ✓`), 'success');
       } catch (err) {
         const msg = String(err?.message || err || '');
+        const code = String(err?.code || '');
         if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) {
           toast(L('Google Sign-In cancelled.', 'تم إلغاء تسجيل الدخول بحساب Google.'), 'info');
+        } else if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+          toast(`Domain ${window.location.hostname} is not authorized on active Firebase project "${firebaseConfig.projectId || 'unknown'}".`, 'error');
         } else {
           toast(L('Google Drive connect error: ', 'خطأ في ربط Google Drive: ') + msg, 'error');
         }

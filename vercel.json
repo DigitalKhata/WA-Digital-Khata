@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://digital-khata-85b3a.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://digital-khata-85b3a.firebaseapp.com/__/firebase/:path*"
+    }
+  ]
+}

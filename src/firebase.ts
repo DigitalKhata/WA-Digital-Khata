@@ -31,7 +31,39 @@ import {
   limit,
   type Firestore
 } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import appletFirebaseConfig from '../firebase-applet-config.json';
+
+const envMeta = (import.meta as unknown as { env?: Record<string, string | undefined> }).env || {};
+const envProjectId = String(envMeta.VITE_FIREBASE_PROJECT_ID || '').trim();
+const envAuthDomain = String(envMeta.VITE_FIREBASE_AUTH_DOMAIN || '').trim();
+
+export const firebaseConfig = {
+  ...appletFirebaseConfig,
+  ...(envMeta.VITE_FIREBASE_API_KEY ? { apiKey: envMeta.VITE_FIREBASE_API_KEY.trim() } : {}),
+  ...(envProjectId ? { projectId: envProjectId } : {}),
+  ...(envAuthDomain
+    ? { authDomain: envAuthDomain }
+    : envProjectId
+      ? { authDomain: `${envProjectId}.firebaseapp.com` }
+      : {}),
+  ...(envMeta.VITE_FIREBASE_STORAGE_BUCKET
+    ? { storageBucket: envMeta.VITE_FIREBASE_STORAGE_BUCKET.trim() }
+    : envProjectId
+      ? { storageBucket: `${envProjectId}.firebasestorage.app` }
+      : {}),
+  ...(envMeta.VITE_FIREBASE_MESSAGING_SENDER_ID
+    ? { messagingSenderId: envMeta.VITE_FIREBASE_MESSAGING_SENDER_ID.trim() }
+    : {}),
+  ...(envMeta.VITE_FIREBASE_APP_ID ? { appId: envMeta.VITE_FIREBASE_APP_ID.trim() } : {}),
+  ...(envMeta.VITE_FIREBASE_DATABASE_ID !== undefined
+    ? { firestoreDatabaseId: envMeta.VITE_FIREBASE_DATABASE_ID.trim() || '(default)' }
+    : envProjectId && envProjectId !== appletFirebaseConfig.projectId
+      ? { firestoreDatabaseId: '(default)' }
+      : {}),
+  ...(envMeta.VITE_GOOGLE_OAUTH_CLIENT_ID
+    ? { oAuthClientId: envMeta.VITE_GOOGLE_OAUTH_CLIENT_ID.trim() }
+    : {})
+};
 
 export const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
 
@@ -481,6 +513,7 @@ function computeSummaryStats(appState: Record<string, unknown>): {
 }
 
 export const dkCloud = {
+  firebaseConfig,
   auth,
   db,
   ADMIN_EMAIL,
