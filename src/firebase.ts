@@ -9,6 +9,10 @@ import {
   updateProfile,
   deleteUser,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   type User
 } from 'firebase/auth';
 import {
@@ -169,31 +173,22 @@ export async function testConnection(): Promise<boolean> {
     return false;
   }
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    await getDoc(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error || '');
+    const code = String((error as { code?: string })?.code || '');
     const isOfflineErr =
+      code === 'unavailable' ||
       msg.includes('the client is offline') ||
       msg.includes('Could not reach Cloud Firestore backend');
     if (isOfflineErr) {
       try {
         await enableNetwork(db);
-        await new Promise((r) => setTimeout(r, 1200));
-        await getDocFromServer(doc(db, 'test', 'connection'));
-        return true;
-      } catch (retryErr) {
-        const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr || '');
-        if (
-          (typeof navigator === 'undefined' || navigator.onLine !== false) &&
-          (retryMsg.includes('the client is offline') ||
-            retryMsg.includes('Could not reach Cloud Firestore backend'))
-        ) {
-          console.error('Please check your Firebase configuration. Firestore client is offline.');
-          return false;
-        }
-        return true;
+      } catch {
+        // ignore transient offline retry error
       }
+      return false;
     }
     return true;
   }
@@ -758,8 +753,146 @@ export const dkCloud = {
     await signOut(auth);
   },
 
+  async signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.file');
+    provider.addScope('openid');
+    provider.addScope('email');
+    provider.addScope('profile');
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const cred = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = cred?.accessToken || '';
+      const isNewUser = await this._ensureGoogleUserRecords(result.user);
+      return { user: result.user, accessToken, isNewUser };
+    } catch (err: unknown) {
+      const code = String((err as { code?: string })?.code || '');
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        await signInWithRedirect(auth, provider);
+        return { user: null, accessToken: '', isNewUser: false, redirected: true };
+      }
+      throw err;
+    }
+  },
+
+  async consumeGoogleRedirectResult() {
+    try {
+      const result = await getRedirectResult(auth);
+      if (!result || !result.user) return null;
+      const cred = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = cred?.accessToken || '';
+      const isNewUser = await this._ensureGoogleUserRecords(result.user);
+      return { user: result.user, accessToken, isNewUser };
+    } catch (err) {
+      console.warn('Google redirect result warning:', err);
+      return null;
+    }
+  },
+
+  async _ensureGoogleUserRecords(fbUser: User): Promise<boolean> {
+    const uid = fbUser.uid;
+    const now = Date.now();
+    const existingSnap = await getDoc(doc(db, 'users', uid)).catch(() => null);
+    if (existingSnap && existingSnap.exists()) {
+      return false;
+    }
+    const cleanEmail = String(fbUser.email || '').trim().toLowerCase().slice(0, 160);
+    const emailPrefix = cleanEmail.includes('@') ? cleanEmail.split('@')[0] : '';
+    const cleanName = String(
+      fbUser.displayName ||
+      (emailPrefix ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1) : 'Workshop Owner')
+    ).trim().slice(0, 120);
+    const photoUrl = String(fbUser.photoURL || '').slice(0, PROFILE_PIC_MAX);
+
+    const profileDoc = {
+      uid,
+      name: cleanName,
+      identifier: cleanEmail,
+      email: cleanEmail,
+      mobile: String(fbUser.phoneNumber || '').slice(0, 40),
+      authType: 'email' as const,
+      pinEnabled: false,
+      pinHash: '',
+      cnicHash: '',
+      cnicLast4: '',
+      mobileHash: '',
+      kycStatus: 'none' as const,
+      kycDuplicateOf: '',
+      blocked: false,
+      activeDeviceId: '',
+      activeDeviceName: '',
+      activeSessionId: '',
+      activeDeviceCount: 0,
+      sessionVersion: 1,
+      lastLoginAt: now,
+      totalKhataAmount: 0,
+      totalPendingAmount: 0,
+      customerCount: 0,
+      lastSyncAt: now,
+      lastBackupAt: 0,
+      profilePicUrl: photoUrl,
+      termsAccepted: true,
+      termsAcceptedAt: now,
+      lastAdminRestoreAt: 0,
+      createdAt: now,
+      updatedAt: now
+    };
+    try {
+      await setDoc(doc(db, 'users', uid), profileDoc);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `users/${uid}`);
+    }
+    try {
+      const emptySnapJson = JSON.stringify({ customers: [], orders: [], transactions: [] });
+      await setDoc(doc(db, 'adminBackups', uid), {
+        uid,
+        userId: uid,
+        name: cleanName,
+        profilePicUrl: photoUrl,
+        phone: '',
+        email: cleanEmail,
+        termsAccepted: true,
+        termsAcceptedAt: now,
+        recordCount: 0,
+        isDataDeleted: false,
+        deletedAt: 0,
+        allUserDataJson: emptySnapJson,
+        lastGoodBackupJson: emptySnapJson,
+        lastBackupAt: now,
+        lastRestoredAt: 0,
+        lastRestoredBy: '',
+        updatedAt: now
+      });
+    } catch {
+      /* non-fatal */
+    }
+    return true;
+  },
+
+  async adminSendPasswordReset(email: string) {
+    if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
+      throw new Error('Admin authorization required.');
+    }
+    const clean = String(email || '').trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      throw new Error('User does not have a valid email address for password reset.');
+    }
+    await sendPasswordResetEmail(auth, clean);
+  },
+
   async loadUserBundle(uid: string): Promise<CloudUserBundle> {
     const emptyBundle: CloudUserBundle = { profile: null, vaultData: {}, hasCloudData: false, latestBackup: null };
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      return emptyBundle;
+    }
+
+    // Ensure Firebase ID token is attached before Firestore queries (prevents permission race on restore/reload)
+    try {
+      await auth.currentUser.getIdToken();
+    } catch {
+      // continue to local cache / offline Firestore if offline
+    }
     if (!auth.currentUser || auth.currentUser.uid !== uid) {
       return emptyBundle;
     }
@@ -771,6 +904,11 @@ export const dkCloud = {
       if (snap.exists()) profile = snap.data();
     } catch (err) {
       if (!auth.currentUser || auth.currentUser.uid !== uid) return emptyBundle;
+      const code = String((err as { code?: string })?.code || '');
+      if (code === 'unavailable' || code === 'permission-denied') {
+        console.warn('loadUserBundle profile read warning:', code);
+        return emptyBundle;
+      }
       handleFirestoreError(err, OperationType.GET, userPath);
     }
 
@@ -795,6 +933,11 @@ export const dkCloud = {
         }
       } catch (err) {
         if (!auth.currentUser || auth.currentUser.uid !== uid) return emptyBundle;
+        const code = String((err as { code?: string })?.code || '');
+        if (code === 'unavailable' || code === 'permission-denied') {
+          console.warn('loadUserBundle shard read warning:', shardPath, code);
+          continue;
+        }
         handleFirestoreError(err, OperationType.GET, shardPath);
       }
     }
@@ -812,8 +955,8 @@ export const dkCloud = {
         latestBackup = snaps.docs[0].data();
       }
     } catch (err) {
-      if (!auth.currentUser || auth.currentUser.uid !== uid) return emptyBundle;
-      handleFirestoreError(err, OperationType.LIST, backupsPath);
+      // Backup metadata query is optional fallback; never crash hydration on transient auth/network errors
+      console.warn('loadUserBundle backups list skipped:', backupsPath, (err as { code?: string })?.code || err);
     }
 
     return { profile, vaultData, hasCloudData, latestBackup };
@@ -1846,17 +1989,17 @@ export const dkCloud = {
     }
     let profile: Record<string, unknown> = {};
     try {
-      const pSnap = await getDocFromServer(doc(db, 'users', uid)).catch(() => getDoc(doc(db, 'users', uid)));
+      const pSnap = await getDoc(doc(db, 'users', uid));
       if (pSnap.exists()) profile = pSnap.data();
     } catch (err) {
-      handleFirestoreError(err, OperationType.GET, `users/${uid}`);
+      console.warn('getActiveDeviceSummary profile warning:', (err as { code?: string })?.code || err);
     }
     let devices: Array<Record<string, unknown>> = [];
     try {
       const dSnaps = await getDocs(collection(db, 'users', uid, 'devices'));
       devices = dSnaps.docs.map((s) => s.data());
     } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, `users/${uid}/devices`);
+      console.warn('getActiveDeviceSummary devices warning:', (err as { code?: string })?.code || err);
     }
     const activeDevices = devices.filter((d) => d.isActive === true && d.status === 'approved');
     const activeCount = Math.max(
