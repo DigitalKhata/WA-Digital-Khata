@@ -134,12 +134,15 @@ export const dkDrive = {
 
   setSessionToken(
     token: string | null,
-    user?: { email?: string; name?: string; photo?: string } | null
+    user?: { email?: string; name?: string; photo?: string } | null,
+    opts?: { scopeDenied?: boolean }
   ): void {
     cachedAccessToken = token || null;
     cachedFolderId = null;
     if (token) {
       scopeMissing = false;
+    } else if (opts?.scopeDenied) {
+      scopeMissing = true;
     }
     if (user && (user.email || user.name)) {
       currentDriveUser = {

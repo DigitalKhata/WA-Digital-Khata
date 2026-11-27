@@ -34,14 +34,14 @@
       --bg-canvas: #04091a;
       --bg-glow-1: rgba(37, 99, 235, 0.24);
       --bg-glow-2: rgba(6, 182, 212, 0.14);
-      --glass-bg: rgba(12, 23, 52, 0.72);
-      --glass-bg-strong: rgba(10, 19, 44, 0.90);
-      --glass-border: rgba(148, 163, 184, 0.16);
-      --input-bg: rgba(7, 14, 33, 0.75);
+      --glass-bg: rgba(15, 31, 68, 0.56);
+      --glass-bg-strong: rgba(10, 19, 44, 0.88);
+      --glass-border: rgba(255, 255, 255, 0.30);
+      --input-bg: rgba(7, 14, 33, 0.72);
       --text-primary: #f8fafc;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --nav-bg: rgba(15, 25, 55, 0.55);
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --nav-bg: rgba(15, 31, 68, 0.56);
       --accent: #38bdf8;
       --accent-soft: rgba(56, 189, 248, 0.14);
     }
@@ -64,14 +64,14 @@
       --bg-canvas: #0e0720;
       --bg-glow-1: rgba(168, 85, 247, 0.25);
       --bg-glow-2: rgba(236, 72, 153, 0.14);
-      --glass-bg: rgba(30, 16, 62, 0.72);
-      --glass-bg-strong: rgba(20, 10, 44, 0.92);
-      --glass-border: rgba(216, 180, 254, 0.18);
+      --glass-bg: rgba(38, 20, 76, 0.62);
+      --glass-bg-strong: rgba(20, 10, 44, 0.90);
+      --glass-border: rgba(255, 255, 255, 0.30);
       --input-bg: rgba(16, 9, 36, 0.78);
       --text-primary: #faf5ff;
-      --text-secondary: #d8b4fe;
-      --text-muted: #a78bfa;
-      --nav-bg: rgba(20, 10, 44, 0.85);
+      --text-secondary: #e9d5ff;
+      --text-muted: #c4b5fd;
+      --nav-bg: rgba(28, 14, 58, 0.62);
       --accent: #c084fc;
       --accent-soft: rgba(192, 132, 252, 0.16);
     }
@@ -79,14 +79,14 @@
       --bg-canvas: #050507;
       --bg-glow-1: rgba(59, 130, 246, 0.14);
       --bg-glow-2: rgba(148, 163, 184, 0.08);
-      --glass-bg: rgba(18, 19, 24, 0.80);
-      --glass-bg-strong: rgba(14, 15, 19, 0.95);
-      --glass-border: rgba(255, 255, 255, 0.11);
-      --input-bg: rgba(10, 11, 14, 0.85);
+      --glass-bg: rgba(18, 19, 24, 0.68);
+      --glass-bg-strong: rgba(14, 15, 19, 0.92);
+      --glass-border: rgba(255, 255, 255, 0.30);
+      --input-bg: rgba(10, 11, 14, 0.82);
       --text-primary: #f8fafc;
-      --text-secondary: #a1a1aa;
-      --text-muted: #71717a;
-      --nav-bg: rgba(14, 15, 20, 0.85);
+      --text-secondary: #d4d4d8;
+      --text-muted: #a1a1aa;
+      --nav-bg: rgba(18, 19, 24, 0.68);
       --accent: #60a5fa;
       --accent-soft: rgba(96, 165, 250, 0.14);
     }
@@ -101,6 +101,10 @@
       background-image:
         radial-gradient(65% 45% at 15% 0%, var(--bg-glow-1), transparent 70%),
         radial-gradient(55% 40% at 90% 18%, var(--bg-glow-2), transparent 70%);
+    }
+    #app-bg-layer.bg-photo-active {
+      background-color: #030712;
+      background-image: none;
     }
     #app-bg-photo {
       position: absolute;
@@ -161,7 +165,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0, 0, 0, var(--pill-overlay, 0.25));
       pointer-events: none;
     }
     .dk-notif-pill > * {
@@ -254,9 +258,11 @@
     .text-sec { color: var(--text-secondary); }
     .text-mut { color: var(--text-muted); }
     .blue-hero-card {
-      background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 52%, #0f172a 100%);
-      border: 1px solid rgba(147, 197, 253, 0.25);
-      box-shadow: 0 18px 45px -16px rgba(29, 78, 216, 0.55);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 18px 45px -16px rgba(2, 6, 23, 0.55);
     }
     html[data-theme="light"] .blue-hero-card {
       background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 55%, #1E40AF 100%);
@@ -339,10 +345,10 @@
       scrollbar-width: none;
       -ms-overflow-style: none;
       padding: 8px 10px;
-      background: rgba(10, 22, 52, 0.56);
+      background: var(--nav-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.30);
       border-radius: 26px;
       box-shadow: 0 -6px 24px rgba(2, 6, 23, 0.35), 0 12px 30px rgba(2, 6, 23, 0.40);
     }
@@ -450,9 +456,11 @@
       -webkit-backdrop-filter: blur(20px);
     }
     .module-theme-card {
-      background: rgba(15, 31, 68, 0.72);
+      background: rgba(15, 31, 68, 0.56);
       color: var(--text-primary);
-      border: 1px solid var(--glass-border);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       box-shadow: 0 6px 18px -6px rgba(2, 6, 23, 0.45);
       transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
     }
@@ -462,10 +470,10 @@
       box-shadow: 0 6px 16px -6px rgba(37, 99, 235, 0.16);
     }
     html[data-theme="purple"] .module-theme-card {
-      background: rgba(38, 20, 76, 0.78);
+      background: rgba(38, 20, 76, 0.62);
     }
     html[data-theme="black"] .module-theme-card {
-      background: rgba(24, 25, 31, 0.88);
+      background: rgba(24, 25, 31, 0.68);
     }
     .module-theme-card:hover { transform: translateY(-2px); border-color: var(--accent); }
     .module-theme-card:active { transform: scale(0.97); }
@@ -705,6 +713,7 @@
     const INVOICE_LANGUAGE_KEY = 'invoice-language';
     const ADMIN_EMAIL = 'haroonirfan086@gmail.com';
     const DEFAULT_LOGO_PATH = '/assets/aistudio/logo_5d9f834e.png';
+    const DEFAULT_WORKSHOP_BG_PATH = '/workshop-bg.jpg';
     const DEFAULT_OWNER1_SIGN_PATH = '/assets/aistudio/owner1_signature.png';
     const KYC_VERIFY_DURATION_MS = 5 * 60 * 1000;
     const EMAILJS_PUBLIC_KEY = 'WyRcd-PQ5UkXjB_Sk';
@@ -1017,10 +1026,11 @@
           invoiceSeq: 100,
           driveAutoBackup: true,
           appBackground: {
-            mode: 'theme',
-            imageDataUrl: '',
-            blur: 0,
-            overlay: 0.25
+            mode: 'workshop',
+            imageUrl: '',
+            fit: 'cover',
+            blur: 14,
+            overlay: 45
           },
           notifications: {
             master: true,
@@ -1177,10 +1187,7 @@
             owner1Number: migratedQrNum
           },
           driveAutoBackup: rawSettings.driveAutoBackup !== undefined ? Boolean(rawSettings.driveAutoBackup) : true,
-          appBackground: {
-            ...def.settings.appBackground,
-            ...(rawSettings.appBackground || {})
-          },
+          appBackground: normalizeAppBackground(rawSettings.appBackground),
           notifications: {
             ...def.settings.notifications,
             ...(rawSettings.notifications || {})
@@ -1190,6 +1197,26 @@
         rememberMe: { ...def.rememberMe, ...(parsed.rememberMe || {}) },
         kyc: { ...def.kyc, ...(parsed.kyc || {}) }
       };
+    }
+
+    function normalizeAppBackground(raw) {
+      const r = raw && typeof raw === 'object' ? raw : {};
+      const img = String(r.imageUrl || r.imageDataUrl || '').trim();
+      let mode = String(r.mode || '').trim();
+      if (!['workshop', 'gallery', 'color'].includes(mode)) {
+        if (img) mode = 'gallery';
+        else if (r.mode === 'theme' && !img) mode = 'workshop';
+        else mode = 'workshop';
+      }
+      if (mode === 'gallery' && !img) mode = 'workshop';
+      const rawBlur = r.blur !== undefined ? Number(r.blur) : 14;
+      const blur = isNaN(rawBlur) ? 14 : Math.min(20, Math.max(0, Math.round(rawBlur)));
+      let rawOv = r.overlay !== undefined ? Number(r.overlay) : 45;
+      if (isNaN(rawOv)) rawOv = 45;
+      if (rawOv > 0 && rawOv <= 1) rawOv = Math.round(rawOv * 100);
+      const overlay = Math.min(70, Math.max(0, Math.round(rawOv)));
+      const fit = r.fit === 'contain' ? 'contain' : 'cover';
+      return { mode, imageUrl: img, fit, blur, overlay };
     }
 
     function loadUserCache(uid) {
@@ -1320,6 +1347,8 @@
       adminSearch: '',
       adminInspectUid: '',
       adminInspectData: null,
+      adminInspectCache: {},
+      adminInspectError: '',
       adminInspectSubView: 'overview',
       adminInspectCustomerId: '',
       adminCustomerSearch: '',
@@ -1350,6 +1379,7 @@
       appLocked: false,
       bioFailedCount: 0,
       pendingBgPreview: null,
+      pendingBgPreviewFit: 'cover',
       driveBackups: [],
       driveBackupsLoading: false,
       lastBackgroundedAt: 0
@@ -1414,34 +1444,51 @@
     }
 
     function applyAppBackground() {
-      const bgCfg = state.settings?.appBackground || { mode: 'theme', imageDataUrl: '', blur: 0, overlay: 0.25 };
+      const bgCfg = normalizeAppBackground(state.settings?.appBackground);
+      if (state.settings) state.settings.appBackground = bgCfg;
+      const bgLayer = document.getElementById('app-bg-layer');
       const photoEl = document.getElementById('app-bg-photo');
       const overlayEl = document.getElementById('app-bg-overlay');
       const rootStyle = document.documentElement.style;
-      const hasPhoto = Boolean(state.session && bgCfg.imageDataUrl);
-      const blurPx = Math.min(20, Math.max(0, Number(bgCfg.blur || 0)));
-      const overlayOp = Math.min(0.70, Math.max(0, Number(bgCfg.overlay ?? 0.25)));
+      const curTheme = state.settings?.theme || 'dark-blue';
+
+      let activeSrc = '';
+      if (bgCfg.mode === 'gallery' && state.session && bgCfg.imageUrl) {
+        activeSrc = bgCfg.imageUrl;
+      } else if (bgCfg.mode !== 'color') {
+        activeSrc = DEFAULT_WORKSHOP_BG_PATH;
+      }
+
+      const hasPhoto = Boolean(activeSrc);
+      const blurPx = Math.min(20, Math.max(0, Number(bgCfg.blur ?? 14)));
+      const overlayOp = Math.min(0.70, Math.max(0, Number(bgCfg.overlay ?? 45) / 100));
+
+      if (bgLayer) {
+        bgLayer.classList.toggle('bg-photo-active', hasPhoto);
+      }
 
       if (photoEl) {
         if (hasPhoto) {
-          photoEl.src = bgCfg.imageDataUrl;
+          photoEl.src = activeSrc;
           photoEl.classList.remove('hidden');
+          photoEl.style.objectFit = bgCfg.fit === 'contain' ? 'contain' : 'cover';
           photoEl.style.filter = blurPx > 0 ? `blur(${blurPx}px)` : 'none';
-          rootStyle.setProperty('--pill-bg-image', `url("${bgCfg.imageDataUrl.replace(/"/g, '\\"')}")`);
-          rootStyle.setProperty('--pill-bg', 'rgba(15, 23, 42, 0.50)');
+          rootStyle.setProperty('--pill-bg-image', `url("${activeSrc.replace(/"/g, '\\"')}")`);
+          rootStyle.setProperty('--pill-bg', 'rgba(15, 31, 68, 0.50)');
+          rootStyle.setProperty('--pill-overlay', '0.25');
         } else {
           photoEl.src = '';
           photoEl.classList.add('hidden');
           photoEl.style.filter = 'none';
           rootStyle.setProperty('--pill-bg-image', 'none');
-          const curTheme = state.settings?.theme || 'dark-blue';
           const pillThemeMap = {
-            'dark-blue': 'rgba(12, 26, 62, 0.72)',
-            'light': 'rgba(30, 58, 118, 0.78)',
+            'dark-blue': 'rgba(15, 31, 68, 0.65)',
+            'light': 'rgba(30, 58, 118, 0.80)',
             'purple': 'rgba(38, 20, 76, 0.76)',
             'black': 'rgba(18, 19, 24, 0.80)'
           };
-          rootStyle.setProperty('--pill-bg', pillThemeMap[curTheme] || 'rgba(15, 23, 42, 0.72)');
+          rootStyle.setProperty('--pill-bg', pillThemeMap[curTheme] || 'rgba(15, 31, 68, 0.68)');
+          rootStyle.setProperty('--pill-overlay', '0.18');
         }
       }
       if (overlayEl) {
@@ -1589,7 +1636,7 @@
       }
       const s = state.session || {};
       const cloudUser = getCloud()?.auth?.currentUser || null;
-      let rawName = String(state.settings?.ownerName || s.name || cloudUser?.displayName || '').trim();
+      let rawName = String(s.name || cloudUser?.displayName || state.settings?.ownerName || '').trim();
       if (!rawName || rawName.toLowerCase() === 'user' || rawName.toLowerCase() === 'workshop owner') {
         const emailSrc = String(s.email || cloudUser?.email || '').trim();
         if (emailSrc && emailSrc.includes('@')) {
@@ -1610,6 +1657,28 @@
       return list.filter(n => !n.read).length;
     }
 
+    function updateBellBadgeDom() {
+      const btn = document.getElementById('dashboard-bell-btn');
+      if (!btn) return;
+      const prefs = state.settings?.notifications || {};
+      const badgeTotal = prefs.master === false ? 0 : getUnreadNotificationCount();
+      const oldBadge = document.getElementById('dashboard-bell-badge');
+      if (badgeTotal > 0) {
+        const txt = badgeTotal > 99 ? '99+' : String(badgeTotal);
+        if (oldBadge) {
+          oldBadge.textContent = txt;
+        } else {
+          const span = document.createElement('span');
+          span.id = 'dashboard-bell-badge';
+          span.className = 'absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-slate-900 tabular-nums';
+          span.textContent = txt;
+          btn.appendChild(span);
+        }
+      } else if (oldBadge) {
+        oldBadge.remove();
+      }
+    }
+
     function markNotificationsRead() {
       if (!Array.isArray(state.notificationHistory)) return;
       let changed = false;
@@ -1617,6 +1686,7 @@
         if (!n.read) { n.read = true; changed = true; }
       });
       if (changed) saveState();
+      updateBellBadgeDom();
     }
 
     function playNotificationSoundAndVibrate() {
@@ -1696,8 +1766,10 @@
           state.notificationHistory = state.notificationHistory.slice(0, 100);
         }
         try { saveState(true); } catch (e) {}
+        updateBellBadgeDom();
       }
 
+      if (prefs.master === false && state.session && !opts.forceShow) return;
       if (!catEnabled && type !== 'error' && !opts.forceShow) return;
 
       const root = document.getElementById('toast-root');
@@ -1707,7 +1779,6 @@
 
       const logoSrc = (state.settings?.customLogo || '').trim() || DEFAULT_LOGO_PATH;
       const dateStr = formatNotifPillDate(Date.now());
-      const dotColor = type === 'error' ? 'bg-rose-400' : (type === 'success' ? 'bg-emerald-400' : 'bg-sky-300');
 
       const el = document.createElement('div');
       el.className = 'dk-notif-pill';
@@ -1718,9 +1789,8 @@
         <div class="w-6 h-6 rounded-full overflow-hidden shrink-0 ring-1 ring-white/40 bg-[#071330]">
           <img src="${esc(logoSrc)}" alt="WA" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.style.display='none'" />
         </div>
-        <span class="w-1.5 h-1.5 rounded-full ${dotColor} shrink-0"></span>
         <span class="flex-1 min-w-0 truncate text-[13px] font-semibold text-white leading-none">${esc(cleanMsg)}</span>
-        <span class="text-[10px] font-medium text-white/80 shrink-0 tabular-nums whitespace-nowrap">${esc(dateStr)}</span>
+        <span class="text-[10px] font-medium text-white/70 shrink-0 tabular-nums whitespace-nowrap">${esc(dateStr)}</span>
       `;
 
       let touchStartY = 0;
@@ -1745,7 +1815,7 @@
           setTimeout(() => el.remove(), 180);
         } else if (dy < -24) {
           moved = true;
-          openNotificationTarget(meta.targetView);
+          openModal('notifications');
           el.remove();
         }
       }, { passive: true });
@@ -1763,7 +1833,7 @@
           el.style.transform = 'translateY(14px)';
           setTimeout(() => { if (el.parentElement) el.remove(); }, 200);
         }
-      }, 4800);
+      }, 5000);
     }
 
     function openNotificationTarget(targetView) {
@@ -2808,7 +2878,8 @@
         }
         saveState(true);
         render();
-        toast(L(`Fingerprint Verified! Welcome, ${state.session.name} ✓`, `تم التحقق بالبصمة! أهلاً بك يا ${state.session.name} ✓`), 'success');
+        const bioLoginName = state.session?.name || state.settings?.ownerName || 'User';
+        toast(L(`Welcome ${bioLoginName} • Fingerprint Verified`, `أهلاً بك ${bioLoginName} • تم التحقق بالبصمة`), 'success', { category: 'system', targetView: 'home' });
         if (isAdminSession()) {
           loadAdminUsersList();
         } else if (isFbMatch) {
@@ -2856,7 +2927,8 @@
         ui.bioFailedCount = 0;
         sessionStorage.setItem(PIN_UNLOCK_SESSION_KEY, state.session?.uid || state.session?.id || '1');
         render();
-        toast(L('App Unlocked ✓', 'تم فتح التطبيق ✓'), 'success', { skipHistory: true });
+        const bioUnlockName = state.session?.name || state.settings?.ownerName || 'User';
+        toast(L(`Welcome ${bioUnlockName} • Fingerprint Verified`, `أهلاً بك ${bioUnlockName} • تم التحقق بالبصمة`), 'success', { category: 'system', targetView: 'home' });
       } catch (err) {
         ui.bioFailedCount = Number(ui.bioFailedCount || 0) + 1;
         if (ui.bioFailedCount >= 3) {
@@ -3231,7 +3303,7 @@
             email: res.user?.email || '',
             name: res.user?.displayName || 'Google User',
             photo: res.user?.photoURL || ''
-          });
+          }, { scopeDenied: !res.accessToken });
         }
         clearFailedPasswordAttempts();
         localStorage.removeItem(EXPLICIT_SIGNOUT_KEY);
@@ -3259,6 +3331,11 @@
           refreshDriveBackupsList();
         }
         toast(L(`Welcome, ${state.session?.name || 'User'} ✓`, `أهلاً بك، ${state.session?.name || 'User'} ✓`), 'success');
+        if (!res.accessToken) {
+          setTimeout(() => {
+            toast(L('Google Drive permission was not granted. Open Profile to connect Drive again.', 'لم يتم منح صلاحية Google Drive. افتح الملف الشخصي لربط Drive مجدداً.'), 'error', { category: 'system', targetView: 'profile' });
+          }, 900);
+        }
         maybePromptBiometricSetup();
       } catch (err) {
         ui.loginPending = false;
@@ -3973,14 +4050,22 @@
     async function loadAdminUsersList() {
       const cloud = getCloud();
       if (!cloud || !isAdminSession()) return;
-      ui.adminLoading = true;
-      render();
+      if (!Array.isArray(ui.adminUsers) || ui.adminUsers.length === 0) {
+        ui.adminLoading = true;
+        render();
+      }
       try {
-        const [usersRes, logsRes] = await Promise.all([
+        const fastUsers = await cloud.adminListAllUsers({ skipBackups: true });
+        if (Array.isArray(fastUsers) && fastUsers.length > 0) {
+          ui.adminUsers = fastUsers;
+          ui.adminLoading = false;
+          render();
+        }
+        const [fullUsersRes, logsRes] = await Promise.all([
           cloud.adminListAllUsers(),
           cloud.adminListActivityLogs().catch(() => [])
         ]);
-        ui.adminUsers = usersRes || [];
+        ui.adminUsers = fullUsersRes || fastUsers || [];
         ui.adminLogs = logsRes || [];
       } catch (err) {
         toast('Users list load nahi ho saki: ' + (err.message || err), 'error');
@@ -4008,14 +4093,30 @@
         ui.adminCustomerFilter = 'all';
       }
       ui.adminInspectUid = uidVal;
-      if (!keepSubView) ui.adminInspectData = null;
-      ui.adminLoading = true;
+      ui.adminInspectError = '';
+      const cached = !opts.forceReload && ui.adminInspectCache ? ui.adminInspectCache[uidVal] : null;
+      if (cached) {
+        ui.adminInspectData = cached;
+        ui.adminLoading = false;
+      } else {
+        if (!keepSubView) ui.adminInspectData = null;
+        ui.adminLoading = !keepSubView || !ui.adminInspectData;
+      }
       ui.view = 'admin-inspect';
       render();
       try {
-        ui.adminInspectData = await cloud.adminLoadUserInspection(uidVal);
+        const loaded = await cloud.adminLoadUserInspection(uidVal);
+        if (!ui.adminInspectCache) ui.adminInspectCache = {};
+        ui.adminInspectCache[uidVal] = loaded;
+        if (ui.adminInspectUid === uidVal) {
+          ui.adminInspectData = loaded;
+          ui.adminInspectError = '';
+        }
       } catch (err) {
-        toast('User data load error: ' + (err.message || err), 'error');
+        if (!ui.adminInspectData) {
+          ui.adminInspectError = err?.message || 'Failed to load user data.';
+        }
+        toast('Failed to load user data: ' + (err?.message || err), 'error');
       } finally {
         ui.adminLoading = false;
         render();
@@ -4023,8 +4124,11 @@
       stopAdminLiveWatcher();
       if (typeof cloud.adminWatchUserLive === 'function') {
         unsubAdminLiveWatch = cloud.adminWatchUserLive(uidVal, (liveInspection) => {
+          if (!ui.adminInspectCache) ui.adminInspectCache = {};
+          ui.adminInspectCache[uidVal] = liveInspection;
           if (ui.view !== 'admin-inspect' || ui.adminInspectUid !== uidVal) return;
           ui.adminInspectData = liveInspection;
+          ui.adminInspectError = '';
           const activeEl = document.activeElement;
           if (!activeEl || !['admin-cust-search', 'admin-order-search'].includes(activeEl.id)) {
             render();
@@ -4359,10 +4463,7 @@
             owner1Number: migQr
           },
           driveAutoBackup: d.settings.driveAutoBackup !== undefined ? Boolean(d.settings.driveAutoBackup) : true,
-          appBackground: {
-            ...def.settings.appBackground,
-            ...(d.settings.appBackground || {})
-          },
+          appBackground: normalizeAppBackground(d.settings.appBackground),
           notifications: {
             ...def.settings.notifications,
             ...(d.settings.notifications || {})
@@ -7179,8 +7280,9 @@
       }).reverse().slice(0, 5);
 
       const lowItems = getLowStockItems();
-      const unreadNotifs = getUnreadNotificationCount();
-      const badgeTotal = unreadNotifs + lowItems.length;
+      const prefs = state.settings?.notifications || {};
+      const unreadNotifs = prefs.master === false ? 0 : getUnreadNotificationCount();
+      const badgeTotal = unreadNotifs;
       const gr = getWorkshopGreeting();
       const logoSrc = (state.settings?.customLogo || '').trim() || DEFAULT_LOGO_PATH;
 
@@ -7211,7 +7313,7 @@
           ` : ''}
 
           <!-- 1) TRANSPARENT GLASS + ROYAL GOLD DASHBOARD HERO -->
-          <section class="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/25 p-5 text-white shadow-2xl">
+          <section class="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/30 p-5 text-white shadow-2xl">
             <div class="flex items-center justify-between gap-2.5">
               <div class="flex items-center gap-2.5 min-w-0">
                 <button type="button" data-action="refresh-dashboard" aria-label="${esc(L('Refresh Dashboard', 'تحديث لوحة التحكم'))}" title="${esc(L('Refresh Dashboard', 'تحديث لوحة التحكم'))}" class="w-10 h-10 rounded-full bg-[#071330] ring-2 ring-[#C9A227]/90 shadow-md overflow-hidden flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform">
@@ -7224,11 +7326,11 @@
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <button type="button" data-modal="notifications" aria-label="${esc(L('Notifications', 'الإشعارات'))}" class="relative w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center transition-colors cursor-pointer">
+                <button type="button" id="dashboard-bell-btn" data-modal="notifications" aria-label="${esc(L('Notifications', 'الإشعارات'))}" class="relative w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 flex items-center justify-center transition-colors cursor-pointer">
                   ${icon('bell', 'w-5 h-5 text-white')}
-                  ${badgeTotal > 0 ? `<span class="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-slate-900 tabular-nums">${badgeTotal > 99 ? '99+' : badgeTotal}</span>` : ''}
+                  ${badgeTotal > 0 ? `<span id="dashboard-bell-badge" class="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center ring-2 ring-slate-900 tabular-nums">${badgeTotal > 99 ? '99+' : badgeTotal}</span>` : ''}
                 </button>
-                <button type="button" data-nav="settings" aria-label="${esc(L('Settings', 'الإعدادات'))}" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/25 flex items-center justify-center transition-colors cursor-pointer">
+                <button type="button" data-nav="settings" aria-label="${esc(L('Settings', 'الإعدادات'))}" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/30 flex items-center justify-center transition-colors cursor-pointer">
                   ${icon('gear', 'w-5 h-5 text-white')}
                 </button>
               </div>
@@ -7241,7 +7343,7 @@
             </div>
 
             <!-- Transparent Glass Total Profit Card (Tap to open Monthly Report) -->
-            <div data-nav="report" role="button" tabindex="0" class="rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/25 p-4 mt-3.5 transition-colors cursor-pointer">
+            <div data-nav="report" role="button" tabindex="0" class="rounded-2xl bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/30 p-4 mt-3.5 transition-colors cursor-pointer">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-white/85">${esc(L('Total Profit', 'إجمالي الأرباح'))}</span>
                 <button type="button" data-action="toggle-hide-balance" data-stop-prop aria-label="${esc(L('Toggle balance visibility', 'إخفاء أو إظهار الرصيد'))}" class="w-8 h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-white/85 cursor-pointer">
@@ -7268,25 +7370,25 @@
               <button type="button" data-modal="add-income" class="h-11 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/30 transition-colors cursor-pointer whitespace-nowrap">
                 <span>+ ${esc(L('Add Income', 'إضافة دخل'))}</span>
               </button>
-              <button type="button" data-modal="add-expense" class="h-11 rounded-full bg-white/12 hover:bg-white/20 border border-white/25 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap">
+              <button type="button" data-modal="add-expense" class="h-11 rounded-full bg-white/12 hover:bg-white/20 border border-white/30 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap">
                 <span>+ ${esc(L('Add Expense', 'إضافة مصروف'))}</span>
               </button>
             </div>
           </section>
 
-          <!-- 2) 3 QUICK ACTION BUTTONS IN ONE ROW (Customer merged with Work) -->
+          <!-- 2) 3 QUICK ACTION BUTTONS IN ONE ROW (Dark Navy Transparent Glass) -->
           <section class="grid grid-cols-3 gap-2.5">
-            <button type="button" data-quick-cust-modal="add-customer" class="rounded-2xl bg-white hover:bg-white/95 text-slate-950 py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] shadow-lg transition-transform active:scale-95 cursor-pointer">
-              <span class="w-8 h-8 rounded-xl bg-slate-900/10 text-slate-900 flex items-center justify-center">${icon('users', 'w-4 h-4')}</span>
-              <span class="text-[11px] font-extrabold leading-tight text-center">+ ${esc(L('Add Customer', 'إضافة عميل'))}</span>
+            <button type="button" data-quick-cust-modal="add-customer" class="glass-card rounded-2xl border border-white/30 text-white py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] shadow-lg hover:border-cyan-400/50 transition-transform active:scale-95 cursor-pointer">
+              <span class="w-8 h-8 rounded-full bg-slate-400/25 text-slate-200 flex items-center justify-center">${icon('users', 'w-4 h-4')}</span>
+              <span class="text-[11px] font-bold leading-tight text-center">+ ${esc(L('Add Customer', 'إضافة عميل'))}</span>
             </button>
-            <button type="button" data-nav="stock" class="glass-card rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] hover:border-cyan-400/50 transition-colors cursor-pointer">
-              <span class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">${icon('stock', 'w-4 h-4')}</span>
-              <span class="text-[11px] font-semibold leading-tight text-center">${esc(L('Stock', 'المخزون'))}</span>
+            <button type="button" data-nav="stock" class="glass-card rounded-2xl border border-white/30 text-white py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] shadow-lg hover:border-cyan-400/50 transition-transform active:scale-95 cursor-pointer">
+              <span class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center">${icon('stock', 'w-4 h-4')}</span>
+              <span class="text-[11px] font-bold leading-tight text-center">${esc(L('Stock', 'المخزون'))}</span>
             </button>
-            <button type="button" data-action="print-summary" class="glass-card rounded-2xl py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] hover:border-cyan-400/50 transition-colors cursor-pointer">
-              <span class="w-8 h-8 rounded-xl bg-violet-500/20 text-violet-400 flex items-center justify-center">${icon('print', 'w-4 h-4')}</span>
-              <span class="text-[11px] font-semibold leading-tight text-center">${esc(L('Print', 'طباعة'))}</span>
+            <button type="button" data-action="print-summary" class="glass-card rounded-2xl border border-white/30 text-white py-2.5 px-2 flex flex-col items-center justify-center gap-1.5 min-h-[72px] shadow-lg hover:border-cyan-400/50 transition-transform active:scale-95 cursor-pointer">
+              <span class="w-8 h-8 rounded-full bg-violet-500/20 text-violet-300 flex items-center justify-center">${icon('print', 'w-4 h-4')}</span>
+              <span class="text-[11px] font-bold leading-tight text-center">${esc(L('Print', 'طباعة'))}</span>
             </button>
           </section>
 
@@ -8972,19 +9074,34 @@
       const kycColor = k.status === 'approved' ? 'text-emerald-400' : k.status === 'verifying' ? 'text-amber-300' : 'text-sec';
       const syncLabel = ui.syncStatus === 'synced' ? L('Synced ✅', 'تمت المزامنة ✅') : (ui.syncStatus === 'syncing' ? L('Syncing ⏳', 'جاري المزامنة ⏳') : L('Pending ⏳', 'قيد الانتظار ⏳'));
       const syncColor = ui.syncStatus === 'synced' ? 'text-emerald-400' : 'text-amber-300';
+      const profilePic = String(s.photo || k.selfiePhoto || '').trim();
 
       return `
         <div class="space-y-4">
-          <h1 class="text-xl font-extrabold">${L('Profile', 'الملف الشخصي')}</h1>
-          <div class="glass-card rounded-3xl p-4 flex items-center gap-3.5">
-            ${renderLogoAvatar('w-16 h-16', 'ring-2 ring-cyan-400/60')}
-            <div class="min-w-0 flex-1">
-              <div class="text-base font-extrabold truncate">${esc(s.name || L('User', 'المستخدم'))}</div>
-              <div class="text-xs text-sec truncate">${esc(s.email || s.mobile || s.identifier || '')}</div>
-              <div class="flex items-center gap-3 mt-1 text-xs font-bold">
-                <span class="${kycColor}">${L('KYC', 'التحقق')}: ${esc(kycLabel)}</span>
-                <span class="${syncColor}">${esc(syncLabel)}</span>
+          <div class="flex items-center justify-between gap-2">
+            <h1 class="text-xl font-extrabold">${L('Profile', 'الملف الشخصي')}</h1>
+            <button type="button" data-modal="edit-profile" class="px-3.5 h-9 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">✏️ ${L('Edit Profile', 'تعديل الملف')}</button>
+          </div>
+          <div class="glass-card rounded-3xl p-4 space-y-3">
+            <div class="flex items-center gap-3.5">
+              ${profilePic ? `<img src="${esc(profilePic)}" alt="${esc(s.name || 'User')}" referrerpolicy="no-referrer" class="w-16 h-16 rounded-full object-cover ring-2 ring-[#C9A227] shrink-0 bg-slate-900" />` : renderLogoAvatar('w-16 h-16', 'ring-2 ring-[#C9A227]')}
+              <div class="min-w-0 flex-1">
+                <div class="text-base font-extrabold truncate">${esc(s.name || L('User', 'المستخدم'))}</div>
+                <div class="text-xs text-sec truncate">${esc(s.email || s.identifier || '')}</div>
+                ${(s.mobile || state.settings?.ownerMobile) ? `<div class="text-xs text-cyan-300 truncate tabular-nums mt-0.5" dir="ltr">📞 ${esc(s.mobile || state.settings?.ownerMobile)}</div>` : ''}
+                ${state.settings?.shopAddress ? `<div class="text-[11px] text-sec truncate mt-0.5">📍 ${esc(state.settings.shopAddress)}</div>` : ''}
+                <div class="flex items-center gap-3 mt-1 text-xs font-bold">
+                  <span class="${kycColor}">${L('KYC', 'التحقق')}: ${esc(kycLabel)}</span>
+                  <span class="${syncColor}">${esc(syncLabel)}</span>
+                </div>
               </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
+              <label class="h-9 rounded-xl glass-card text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>📷 ${L('Change Photo', 'تغيير الصورة')}</span>
+                <input id="profile-pic-file" type="file" accept="image/*" class="hidden" />
+              </label>
+              <button type="button" data-modal="edit-profile" class="h-9 rounded-xl glass-card text-xs font-bold text-amber-300 cursor-pointer">✏️ ${L('Edit Details', 'تعديل البيانات')}</button>
             </div>
           </div>
 
@@ -8998,7 +9115,7 @@
               ${L('Last Backup', 'آخر نسخة احتياطية')}: <span class="font-bold text-amber-300">${esc(formatLastBackupText())}</span>
             </div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
-              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl bg-white text-slate-900 font-bold text-xs cursor-pointer">${L('Backup Now', 'نسخ احتياطي الآن')}</button>
+              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl btn-primary-grad text-white font-bold text-xs shadow-lg cursor-pointer">${L('Backup Now', 'نسخ احتياطي الآن')}</button>
               <button type="button" data-action="cloud-restore-now" class="h-11 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white font-bold text-xs cursor-pointer">${L('Restore My Data', 'استعادة بياناتي')}</button>
               <button type="button" data-action="export-json" class="h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs cursor-pointer">${L('Export JSON', 'تصدير JSON')}</button>
               <button type="button" data-action="print-summary" class="h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs cursor-pointer">${L('Export PDF', 'تصدير PDF')}</button>
@@ -9239,25 +9356,29 @@
     function renderSettings() {
       const themes = [
         { id: 'dark-blue', label: L('Blue', 'أزرق'), swatch: 'bg-[#0a1535] border-blue-500' },
+        { id: 'black', label: L('Black', 'أسود'), swatch: 'bg-zinc-950 border-zinc-600' },
         { id: 'light', label: L('White', 'أبيض'), swatch: 'bg-white border-blue-500' },
-        { id: 'purple', label: L('Purple', 'بنفسجي'), swatch: 'bg-[#1a0b2e] border-purple-500' },
-        { id: 'black', label: L('Black', 'أسود'), swatch: 'bg-zinc-950 border-zinc-600' }
+        { id: 'purple', label: L('Purple', 'بنفسجي'), swatch: 'bg-[#1a0b2e] border-purple-500' }
       ];
-      const bgCfg = state.settings?.appBackground || { imageUrl: '', blur: 0, overlay: 30 };
+      const bgCfg = normalizeAppBackground(state.settings?.appBackground);
       const notifCfg = state.settings?.notifications || { master: true, sound: true, vibration: true, payment: true, expense: true, system: true };
-      const unreadNotifs = getUnreadNotificationCount();
+      const unreadNotifs = notifCfg.master === false ? 0 : getUnreadNotificationCount();
       const pinOn = Boolean(state.pinSecurity?.enabled && state.pinSecurity?.hash);
       const bioOn = Boolean(state.biometric?.enabled);
       const kycVerified = isKycVerified();
+      const s = state.session || {};
+      const profPic = String(s.photo || state.kyc?.selfiePhoto || '').trim();
+      const waSupportNum = String(state.settings?.whatsappQr?.ownerNumber || '966552869405').replace(/\D/g, '') || '966552869405';
+
       return `
         <div class="space-y-4">
           <h1 class="text-xl font-extrabold">${L('Settings', 'الإعدادات')}</h1>
 
-          <!-- 1st Card: Shop Name (Editable Per User, Live Sync) -->
+          <!-- 1) SHOP NAME -->
           <div class="glass-card rounded-3xl p-4 space-y-2.5 border border-[#C9A227]/35">
             <div class="flex items-center justify-between gap-2">
               <div>
-                <h2 class="text-sm font-extrabold">${L('Shop Name', 'اسم المحل / الورشة')}</h2>
+                <h2 class="text-sm font-extrabold">${L('1. Shop Name', '1. اسم المحل / الورشة')}</h2>
                 <p class="text-[11px] text-sec mt-0.5">${L('Displayed in Dashboard header & synced to your account (max 30 chars).', 'يظهر في أعلى لوحة التحكم ويُحفظ بحسابك (بحد أقصى 30 حرفاً).')}</p>
               </div>
               <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 border border-amber-400/35 text-amber-300 shrink-0">${L('Live', 'مباشر')}</span>
@@ -9265,11 +9386,11 @@
             <input id="quick-shop-name" type="text" maxlength="30" value="${esc(state.settings?.shopName || 'Warsha Aluminium')}" placeholder="Warsha Aluminium" class="w-full h-11 px-3.5 rounded-xl glass-input text-sm font-bold" />
           </div>
 
-          <!-- Language / اللغة Section -->
+          <!-- 2) LANGUAGE (ENGLISH + ARABIC) -->
           <div class="glass-card rounded-3xl p-4 space-y-3 border border-cyan-400/25">
             <div class="flex items-center justify-between gap-2">
               <div>
-                <h2 class="text-sm font-extrabold">Language / اللغة</h2>
+                <h2 class="text-sm font-extrabold">2. Language / اللغة</h2>
                 <p class="text-xs text-sec mt-0.5">${L('Choose app language and layout direction', 'اختر لغة التطبيق واتجاه العرض')}</p>
               </div>
               <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 shrink-0">
@@ -9288,57 +9409,178 @@
             </div>
           </div>
 
-          <!-- App Background & Theme -->
-          <div class="glass-card rounded-3xl p-4 space-y-3.5">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-sm font-bold">${L('App Background & Theme', 'خلفية التطبيق والمظهر')}</h2>
-                <p class="text-xs text-sec mt-0.5">${L('Pick a theme color or set a custom Gallery wallpaper.', 'اختر لون المظهر أو صورة خلفية من المعرض.')}</p>
-              </div>
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/15 border border-cyan-400/35 text-cyan-300">${state.settings.theme === 'light' ? '☀️ ' + L('Light', 'فاتح') : '🌙 ' + L('Dark', 'داكن')}</span>
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              ${themes.map(t => `
-                <button type="button" data-set-theme="${t.id}" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer ${state.settings.theme === t.id ? 'border-cyan-400 bg-cyan-500/15' : 'border-white/10 glass-card'}">
-                  <span class="w-4 h-4 rounded-full border shrink-0 ${t.swatch}"></span>
-                  <span class="truncate">${esc(t.label)}</span>
-                </button>
-              `).join('')}
-            </div>
-            <div class="pt-2 border-t border-white/10 space-y-3">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="text-xs font-bold">${L('Custom Photo Background', 'خلفية صورة مخصصة')}</span>
-                <div class="flex items-center gap-2">
-                  <label class="px-3.5 h-9 rounded-xl btn-primary-grad text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
-                    <span>🖼️ ${L('Gallery Photo', 'صورة من المعرض')}</span>
-                    <input id="app-bg-file" type="file" accept="image/*" class="hidden" />
-                  </label>
-                  ${bgCfg.imageUrl ? `
-                    <button type="button" data-action="remove-custom-bg" class="px-3 h-9 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">${L('Remove Custom Background', 'إزالة الخلفية')}</button>
-                  ` : ''}
+          <!-- 3) PROFILE (EDIT NAME, PIC, PHONE, EMAIL, ADDRESS) -->
+          <div class="glass-card rounded-3xl p-4 space-y-3 border border-white/20">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                ${profPic ? `<img src="${esc(profPic)}" alt="${esc(s.name || 'User')}" referrerpolicy="no-referrer" class="w-12 h-12 rounded-full object-cover ring-2 ring-[#C9A227] shrink-0 bg-slate-900" />` : renderLogoAvatar('w-12 h-12', 'ring-2 ring-[#C9A227]')}
+                <div class="min-w-0">
+                  <h2 class="text-sm font-extrabold truncate">3. ${esc(s.name || L('Profile', 'الملف الشخصي'))}</h2>
+                  <p class="text-[11px] text-sec truncate">${esc(s.email || s.mobile || s.identifier || '')}</p>
                 </div>
               </div>
-              ${bgCfg.imageUrl ? `
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-2xl bg-white/5 border border-white/10 p-3">
-                  <div>
-                    <div class="flex items-center justify-between text-[11px] mb-1">
-                      <span class="text-sec">${L('Blur', 'التضبيب')}</span>
-                      <span id="app-bg-blur-val" class="font-bold text-white tabular-nums">${Number(bgCfg.blur || 0)}px</span>
-                    </div>
-                    <input id="app-bg-blur" type="range" min="0" max="20" step="1" value="${Number(bgCfg.blur || 0)}" class="w-full h-7 accent-amber-400 cursor-pointer" />
-                  </div>
-                  <div>
-                    <div class="flex items-center justify-between text-[11px] mb-1">
-                      <span class="text-sec">${L('Dark Overlay', 'طبقة التعتيم')}</span>
-                      <span id="app-bg-overlay-val" class="font-bold text-white tabular-nums">${Number(bgCfg.overlay ?? 30)}%</span>
-                    </div>
-                    <input id="app-bg-overlay" type="range" min="0" max="70" step="5" value="${Number(bgCfg.overlay ?? 30)}" class="w-full h-7 accent-amber-400 cursor-pointer" />
-                  </div>
-                </div>
-              ` : ''}
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" data-modal="edit-profile" class="px-3 h-9 rounded-xl btn-primary-grad text-xs font-bold cursor-pointer">✏️ ${L('Edit', 'تعديل')}</button>
+                <button type="button" data-nav="profile" class="px-3 h-9 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Open', 'فتح')}</button>
+              </div>
             </div>
           </div>
 
+          <!-- 4) APP BACKGROUND / CUSTOM BACKGROUND -->
+          <div class="glass-card rounded-3xl p-4 space-y-3.5 border border-white/25">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-extrabold">4. ${L('App Background', 'خلفية التطبيق')}</h2>
+                <p class="text-xs text-sec mt-0.5">${L('Applies uniformly across Dashboard and all app screens.', 'تطبق بشكل موحد على لوحة التحكم وجميع شاشات التطبيق.')}</p>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-400/35 text-amber-300 shrink-0">
+                ${bgCfg.mode === 'gallery' ? L('Gallery', 'معرض الصور') : (bgCfg.mode === 'color' ? L('Color', 'لون عادي') : L('Workshop', 'صورة الورشة'))}
+              </span>
+            </div>
+
+            <!-- 3 Background Mode Buttons -->
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" data-action="set-bg-workshop" class="h-11 rounded-2xl border px-2 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer ${bgCfg.mode === 'workshop' ? 'border-amber-400 bg-amber-500/15 text-white' : 'border-white/15 glass-card text-sec'}">
+                <span>🏭</span>
+                <span class="truncate">${L('Workshop', 'الورشة')}</span>
+              </button>
+              <label class="h-11 rounded-2xl border px-2 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer ${bgCfg.mode === 'gallery' ? 'border-cyan-400 bg-cyan-500/15 text-white' : 'border-white/15 glass-card text-sec'}">
+                <span>🖼️</span>
+                <span class="truncate">${L('Gallery', 'المعرض')}</span>
+                <input id="app-bg-file" type="file" accept="image/*" class="hidden" />
+              </label>
+              <button type="button" data-action="reset-bg-default" class="h-11 rounded-2xl border border-white/15 glass-card px-2 flex items-center justify-center gap-1.5 text-xs font-bold text-cyan-300 cursor-pointer">
+                <span>↺</span>
+                <span class="truncate">${L('Reset Default', 'إعادة ضبط')}</span>
+              </button>
+            </div>
+
+            <!-- Plain Color Swatches (Blue, Black, White, Purple — Never Green) -->
+            <div class="space-y-1.5">
+              <div class="text-[11px] font-bold text-sec">${L('Plain Color', 'لون عادي')}</div>
+              <div class="grid grid-cols-4 gap-2">
+                ${themes.map(t => `
+                  <button type="button" data-set-theme="${t.id}" class="h-10 rounded-xl border px-2 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer ${bgCfg.mode === 'color' && state.settings.theme === t.id ? 'border-cyan-400 bg-cyan-500/15' : 'border-white/15 glass-card'}">
+                    <span class="w-3.5 h-3.5 rounded-full border shrink-0 ${t.swatch}"></span>
+                    <span class="truncate">${esc(t.label)}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Blur (0-20) + Dark Overlay (0-70%) Sliders -->
+            ${bgCfg.mode !== 'color' ? `
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-2xl bg-white/5 border border-white/15 p-3">
+                <div>
+                  <div class="flex items-center justify-between text-[11px] mb-1">
+                    <span class="text-sec">${L('Blur', 'التضبيب')} (0–20)</span>
+                    <span id="app-bg-blur-val" class="font-bold text-white tabular-nums">${Number(bgCfg.blur ?? 14)}px</span>
+                  </div>
+                  <input id="app-bg-blur" type="range" min="0" max="20" step="1" value="${Number(bgCfg.blur ?? 14)}" class="w-full h-7 accent-amber-400 cursor-pointer" />
+                </div>
+                <div>
+                  <div class="flex items-center justify-between text-[11px] mb-1">
+                    <span class="text-sec">${L('Dark Overlay', 'طبقة التعتيم')} (0–70%)</span>
+                    <span id="app-bg-overlay-val" class="font-bold text-white tabular-nums">${Number(bgCfg.overlay ?? 45)}%</span>
+                  </div>
+                  <input id="app-bg-overlay" type="range" min="0" max="70" step="5" value="${Number(bgCfg.overlay ?? 45)}" class="w-full h-7 accent-amber-400 cursor-pointer" />
+                </div>
+              </div>
+            ` : ''}
+
+            ${bgCfg.mode === 'gallery' && bgCfg.imageUrl ? `
+              <button type="button" data-action="remove-custom-bg" class="w-full h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-300 text-xs font-bold cursor-pointer">${L('Remove Custom Background', 'إزالة الخلفية المخصصة')}</button>
+            ` : ''}
+          </div>
+
+          <!-- 5) FINGERPRINT ON/OFF -->
+          <div class="glass-card rounded-3xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold">5. ${L('Fingerprint / App Open Lock', 'قفل البصمة / فتح التطبيق')}</h2>
+                <p class="text-xs text-sec mt-0.5">${bioOn ? L('Active on app open & after 5 min in background.', 'مفعل عند فتح التطبيق وبعد 5 دقائق في الخلفية.') : L('Turn on Fingerprint lock for app open & quick login.', 'فعّل قفل البصمة عند فتح التطبيق والدخول السريع.')}</p>
+              </div>
+              <span class="text-xs font-bold ${bioOn ? 'text-emerald-400' : 'text-sec'}">${bioOn ? L('ON ✓', 'مفعل ✓') : L('OFF', 'متوقف')}</span>
+            </div>
+            ${bioOn ? `
+              <button type="button" data-action="disable-biometric" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-amber-400 cursor-pointer">${L('Turn Off Fingerprint Login', 'إيقاف الدخول بالبصمة')}</button>
+            ` : `
+              <button type="button" data-action="enable-biometric" class="w-full h-10 rounded-xl btn-primary-grad text-xs font-bold flex items-center justify-center gap-2 cursor-pointer">${icon('fingerprint', 'w-4 h-4')} ${L('Turn On Fingerprint Login', 'تفعيل الدخول بالبصمة')}</button>
+            `}
+          </div>
+
+          <!-- 6) BACKUP / RESTORE + GOOGLE DRIVE -->
+          <div class="glass-card rounded-3xl p-4 space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-bold">6. ${L('Auto Backup & Restore (JSON)', 'النسخ الاحتياطي والاستعادة (JSON)')}</h2>
+                <p class="text-[11px] text-sec mt-0.5">${L('Saves full data in readable JSON daily at 12:00 AM without encryption.', 'يحفظ جميع البيانات بصيغة JSON يومياً الساعة 12:00 منتصف الليل.')}</p>
+              </div>
+              <span class="text-[11px] text-cyan-300 font-semibold shrink-0">${esc(formatLastBackupText())}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Backup Now (JSON)', 'نسخ الآن (JSON)')}</button>
+              <button type="button" data-action="cloud-restore-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Restore Auto Backup', 'استعادة النسخة التلقائية')}</button>
+              <button type="button" data-action="export-json" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Download Simple JSON', 'تنزيل ملف JSON')}</button>
+              <label class="h-11 rounded-xl glass-card text-xs font-bold flex items-center justify-center cursor-pointer">
+                <span>${L('Import JSON Backup', 'استيراد ملف JSON')}</span>
+                <input id="import-json-input" type="file" accept=".json,application/json" class="hidden" />
+              </label>
+              <button type="button" data-action="export-excel" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to Excel', 'تصدير إلى Excel')}</button>
+              <button type="button" data-action="print-summary" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to PDF', 'تصدير إلى PDF')}</button>
+            </div>
+            <button type="button" data-share-wa="" class="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer">${L('WhatsApp Share Summary', 'مشاركة ملخص الحساب على واتساب')}</button>
+          </div>
+
+          ${renderGoogleDriveCard()}
+
+          <!-- 7) NOTIFICATIONS SETTINGS -->
+          <div class="glass-card rounded-3xl p-4 space-y-3 border border-amber-400/20">
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-sm font-extrabold">7. ${L('Notifications Settings', 'إعدادات الإشعارات')}</h2>
+                <p class="text-[11px] text-sec mt-0.5">${L('Manage sound, vibration, and alert categories.', 'التحكم بالصوت والاهتزاز وفئات التنبيهات.')}</p>
+              </div>
+              <button type="button" data-modal="notifications" class="px-2.5 h-8 rounded-xl glass-card text-[11px] font-bold text-amber-300 shrink-0 cursor-pointer">
+                🔔 ${L('History', 'السجل')} ${unreadNotifs > 0 ? `(${unreadNotifs})` : ''}
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              ${[
+                { key: 'master', label: L('Master Alerts', 'جميع التنبيهات') },
+                { key: 'sound', label: L('Sound', 'الصوت') },
+                { key: 'vibration', label: L('Vibration', 'الاهتزاز') },
+                { key: 'payment', label: L('Payment Alerts', 'تنبيهات الدفع') },
+                { key: 'expense', label: L('Expense Alerts', 'تنبيهات المصاريف') },
+                { key: 'system', label: L('System Alerts', 'تنبيهات النظام') }
+              ].map(n => `
+                <button type="button" data-notif-toggle="${n.key}" class="h-10 px-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer ${notifCfg[n.key] !== false ? 'bg-emerald-500/10 border-emerald-400/35 text-white' : 'bg-white/5 border-white/10 text-sec'}">
+                  <span class="font-semibold truncate">${esc(n.label)}</span>
+                  <span class="text-[10px] font-extrabold ${notifCfg[n.key] !== false ? 'text-emerald-300' : 'text-mut'}">${notifCfg[n.key] !== false ? 'ON' : 'OFF'}</span>
+                </button>
+              `).join('')}
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" data-action="notif-mark-all-read" class="h-9 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">${L('Mark All Read', 'تحديد الكل كمقروء')}</button>
+              <button type="button" data-action="notif-clear-all" class="h-9 rounded-xl glass-card text-xs font-bold text-rose-300 cursor-pointer">${L('Clear History', 'مسح السجل')}</button>
+            </div>
+          </div>
+
+          <!-- 8) CONTACT US -->
+          <div class="glass-card rounded-3xl p-4 space-y-2.5 border border-cyan-400/20">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <h2 class="text-sm font-extrabold">8. ${L('Contact Us / Support', 'تواصل معنا / الدعم الفني')}</h2>
+                <p class="text-[11px] text-sec mt-0.5 truncate" dir="ltr">${esc(ADMIN_EMAIL)}</p>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <a href="mailto:${esc(ADMIN_EMAIL)}" class="px-3 h-9 rounded-xl btn-primary-grad text-xs font-bold inline-flex items-center justify-center">✉️ ${L('Email', 'بريد')}</a>
+                <a href="https://wa.me/${esc(waSupportNum)}" target="_blank" rel="noopener noreferrer" class="px-3 h-9 rounded-xl bg-emerald-600 text-white text-xs font-bold inline-flex items-center justify-center">💬 ${L('WhatsApp', 'واتساب')}</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- 9) REMAINING SETTINGS (KYC, INVOICE, BANKS, SIGNATURE, QR, SESSION, PIN, APK, PASSWORD & TERMS) -->
           <!-- KYC Status -->
           <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3">
             <div>
@@ -9360,21 +9602,21 @@
               <p class="text-[11px] text-sec mt-0.5">${L('Save once — appears automatically on every invoice & saved in Cloud.', 'احفظها مرة واحدة وستظهر تلقائياً في كل فاتورة.')}</p>
             </div>
 
-            <!-- Invoice Language / انوائس کی زبان -->
+            <!-- Invoice Language -->
             ${(() => {
               const curInvLang = getInvoiceLanguage();
               return `
                 <div class="rounded-2xl bg-white/5 border border-cyan-400/25 p-3 space-y-2.5">
                   <div class="flex items-center justify-between gap-2">
                     <div>
-                      <h3 class="text-xs font-extrabold">Invoice Language / انوائس کی زبان</h3>
+                      <h3 class="text-xs font-extrabold">Invoice Language / لغة الفاتورة</h3>
                       <p class="text-[11px] text-sec mt-0.5">${L('Separate from App Language — used for customer bills, PDF & print.', 'منفصلة عن لغة التطبيق — تُستخدم لفواتير العملاء وملفات PDF والطباعة.')}</p>
                     </div>
                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 border border-cyan-400/35 text-cyan-300 shrink-0">
                       ${curInvLang === 'ar' ? 'العربية (RTL)' : 'English (LTR)'}
                     </span>
                   </div>
-                  <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Invoice Language / انوائس کی زبان">
+                  <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Invoice Language">
                     <label data-set-inv-setting-lang="en" class="h-11 rounded-2xl border px-3 flex items-center gap-2 text-xs font-bold cursor-pointer transition-colors ${curInvLang !== 'ar' ? 'border-cyan-400 bg-cyan-500/15 text-white' : 'border-white/10 glass-card text-sec'}">
                       <input type="radio" name="invoice-language" value="en" ${curInvLang !== 'ar' ? 'checked' : ''} class="w-4 h-4 accent-cyan-400 cursor-pointer shrink-0" />
                       <span class="truncate">English</span>
@@ -9458,7 +9700,7 @@
             </div>
           </div>
 
-          <!-- Saudi Payment / Bank Details Settings (Multi-Bank Max 3 on Invoice) -->
+          <!-- Saudi Payment / Bank Details Settings -->
           ${(() => {
             const curBank = LEGACY_BANK_NAME_MAP[state.settings.defaultBank] || state.settings.defaultBank || 'Al Rajhi';
             const bankMap = state.settings.bankAccounts || {};
@@ -9523,7 +9765,7 @@
             `;
           })()}
 
-          <!-- Single Owner Signature System -->
+          <!-- Owner Signature System -->
           ${(() => {
             const sig1 = getSignatureConfig('owner1');
             const previewH = Math.round(44 * (sig1.size / 100));
@@ -9531,7 +9773,7 @@
               <div class="glass-card rounded-3xl p-4 space-y-3.5">
                 <div>
                   <h2 class="text-sm font-bold">${L('Owner Signature (Invoice)', 'توقيع المالك (الفاتورة)')}</h2>
-                  <p class="text-[11px] text-sec mt-0.5">${L('Uploading paper photo auto-removes background & lines.', 'عند رفع صورة توقيع، تتم إزالة الخلفية والخطوط تلقائياً.')}</p>
+                  <p class="text-[11px] text-sec mt-0.5">${L('Uploading paper photo auto-removes background & lines.', 'عند رفع صورة توقيع، تتم إزالة الخلفية والخطوط تلقياً.')}</p>
                 </div>
                 <div class="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2.5">
                   <div class="flex items-center justify-between gap-2">
@@ -9619,7 +9861,7 @@
             `;
           })()}
 
-          <!-- Active Session Control & Device Security (1 Account = 1 Mobile) -->
+          <!-- Active Session Control & Device Security -->
           ${(() => {
             const sum = ui.activeDeviceSummary || {};
             const actCount = Number(sum.activeCount !== undefined ? sum.activeCount : (state.session ? 1 : 0));
@@ -9643,7 +9885,7 @@
                   </span>
                 </div>
                 <div class="grid grid-cols-2 gap-2.5">
-                  <button type="button" data-action="logout-all-devices" class="h-10 rounded-xl bg-rose-600/25 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 text-xs font-extrabold cursor-pointer">${L('Sab Devices se Logout', 'تسجيل الخروج من جميع الأجهزة')}</button>
+                  <button type="button" data-action="logout-all-devices" class="h-10 rounded-xl bg-rose-600/25 hover:bg-rose-600/40 border border-rose-500/40 text-rose-200 text-xs font-extrabold cursor-pointer">${L('Logout All Devices', 'تسجيل الخروج من جميع الأجهزة')}</button>
                   <button type="button" data-nav="login-history" class="h-10 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${L('Login History', 'سجل الدخول')}</button>
                 </div>
               </div>
@@ -9668,79 +9910,6 @@
             </div>
           </div>
 
-          <!-- Fingerprint / App Open Lock -->
-          <div class="glass-card rounded-3xl p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <h2 class="text-sm font-bold">${L('Fingerprint / App Open Lock', 'قفل البصمة / فتح التطبيق')}</h2>
-                <p class="text-xs text-sec mt-0.5">${bioOn ? L('Active on app open & after 5 min in background.', 'مفعل عند فتح التطبيق وبعد 5 دقائق في الخلفية.') : L('Turn on Fingerprint lock for app open & quick login.', 'فعّل قفل البصمة عند فتح التطبيق والدخول السريع.')}</p>
-              </div>
-              <span class="text-xs font-bold ${bioOn ? 'text-emerald-400' : 'text-sec'}">${bioOn ? L('ON ✓', 'مفعل ✓') : L('OFF', 'متوقف')}</span>
-            </div>
-            ${bioOn ? `
-              <button type="button" data-action="disable-biometric" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-amber-400 cursor-pointer">${L('Turn Off Fingerprint Login', 'إيقاف الدخول بالبصمة')}</button>
-            ` : `
-              <button type="button" data-action="enable-biometric" class="w-full h-10 rounded-xl btn-primary-grad text-xs font-bold flex items-center justify-center gap-2 cursor-pointer">${icon('fingerprint', 'w-4 h-4')} ${L('Turn On Fingerprint Login', 'تفعيل الدخول بالبصمة')}</button>
-            `}
-          </div>
-
-          <!-- Notifications Settings -->
-          <div class="glass-card rounded-3xl p-4 space-y-3 border border-amber-400/20">
-            <div class="flex items-center justify-between gap-2">
-              <div>
-                <h2 class="text-sm font-extrabold">${L('Notifications Settings', 'إعدادات الإشعارات')}</h2>
-                <p class="text-[11px] text-sec mt-0.5">${L('Manage sound, vibration, and alert categories.', 'التحكم بالصوت والاهتزاز وفئات التنبيهات.')}</p>
-              </div>
-              <button type="button" data-modal="notifications" class="px-2.5 h-8 rounded-xl glass-card text-[11px] font-bold text-amber-300 shrink-0 cursor-pointer">
-                🔔 ${L('History', 'السجل')} ${unreadNotifs > 0 ? `(${unreadNotifs})` : ''}
-              </button>
-            </div>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              ${[
-                { key: 'master', label: L('Master Alerts', 'جميع التنبيهات') },
-                { key: 'sound', label: L('Sound', 'الصوت') },
-                { key: 'vibration', label: L('Vibration', 'الاهتزاز') },
-                { key: 'payment', label: L('Payment Alerts', 'تنبيهات الدفع') },
-                { key: 'expense', label: L('Expense Alerts', 'تنبيهات المصاريف') },
-                { key: 'system', label: L('System Alerts', 'تنبيهات النظام') }
-              ].map(n => `
-                <button type="button" data-notif-toggle="${n.key}" class="h-10 px-3 rounded-xl border flex items-center justify-between gap-2 cursor-pointer ${notifCfg[n.key] !== false ? 'bg-emerald-500/10 border-emerald-400/35 text-white' : 'bg-white/5 border-white/10 text-sec'}">
-                  <span class="font-semibold truncate">${esc(n.label)}</span>
-                  <span class="text-[10px] font-extrabold ${notifCfg[n.key] !== false ? 'text-emerald-300' : 'text-mut'}">${notifCfg[n.key] !== false ? 'ON' : 'OFF'}</span>
-                </button>
-              `).join('')}
-            </div>
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <button type="button" data-action="notif-mark-all-read" class="h-9 rounded-xl glass-card text-xs font-bold text-cyan-300 cursor-pointer">${L('Mark All Read', 'تحديد الكل كمقروء')}</button>
-              <button type="button" data-action="notif-clear-all" class="h-9 rounded-xl glass-card text-xs font-bold text-rose-300 cursor-pointer">${L('Clear History', 'مسح السجل')}</button>
-            </div>
-          </div>
-
-          <!-- Auto Backup (Daily 12:00 AM · Simple Unencrypted JSON), Export & WhatsApp -->
-          <div class="glass-card rounded-3xl p-4 space-y-2.5">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <h2 class="text-sm font-bold">${L('Auto Backup (Daily 12:00 AM · Simple JSON)', 'النسخ التلقائي (يومياً 12:00 ص · JSON بسيط)')}</h2>
-                <p class="text-[11px] text-sec mt-0.5">${L('Saves full data in readable JSON daily at 12:00 AM without encryption.', 'يحفظ جميع البيانات بصيغة JSON يومياً الساعة 12:00 منتصف الليل.')}</p>
-              </div>
-              <span class="text-[11px] text-cyan-300 font-semibold shrink-0">${esc(formatLastBackupText())}</span>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5">
-              <button type="button" data-action="cloud-backup-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Backup Now (JSON)', 'نسخ الآن (JSON)')}</button>
-              <button type="button" data-action="cloud-restore-now" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Restore Auto Backup', 'استعادة النسخة التلقائية')}</button>
-              <button type="button" data-action="export-json" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Download Simple JSON', 'تنزيل ملف JSON')}</button>
-              <label class="h-11 rounded-xl glass-card text-xs font-bold flex items-center justify-center cursor-pointer">
-                <span>${L('Import JSON Backup', 'استيراد ملف JSON')}</span>
-                <input id="import-json-input" type="file" accept=".json,application/json" class="hidden" />
-              </label>
-              <button type="button" data-action="export-excel" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to Excel', 'تصدير إلى Excel')}</button>
-              <button type="button" data-action="print-summary" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Export to PDF', 'تصدير إلى PDF')}</button>
-            </div>
-            <button type="button" data-share-wa="" class="w-full h-11 rounded-xl bg-emerald-600 text-white text-xs font-bold cursor-pointer">${L('WhatsApp Share Summary', 'مشاركة ملخص الحساب على واتساب')}</button>
-          </div>
-
-          ${renderGoogleDriveCard()}
-
           <!-- Official Digital Khata APK Install Card -->
           ${(() => {
             const installed = isOfficialApkAppInstalled();
@@ -9757,31 +9926,17 @@
                   <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/45 text-emerald-300 text-xs font-extrabold shrink-0">App Already Installed ✓</span>
                 ` : `
                   <button type="button" data-action="open-apk-install-modal" class="px-3.5 h-10 rounded-xl btn-primary-grad text-xs font-extrabold shrink-0 cursor-pointer">
-                    App Install Karein
+                    ${L('Install App', 'تثبيت التطبيق')}
                   </button>
                 `}
               </div>
             `;
           })()}
 
-          <!-- Contact Us Card -->
-          <div class="glass-card rounded-3xl p-4 flex items-center justify-between gap-3 border border-cyan-400/20">
-            <div class="min-w-0">
-              <h2 class="text-sm font-extrabold">${L('Contact Us / Support', 'تواصل معنا / الدعم الفني')}</h2>
-              <p class="text-[11px] text-sec mt-0.5 truncate" dir="ltr">${esc(ADMIN_EMAIL)}</p>
-            </div>
-            <a href="mailto:${esc(ADMIN_EMAIL)}" class="px-3.5 h-9 rounded-xl btn-primary-grad text-xs font-bold inline-flex items-center justify-center shrink-0">
-              ✉️ ${L('Email', 'إرسال بريد')}
-            </a>
-          </div>
-
-          <!-- Password & Security (Clear Data restricted to Admin only) -->
+          <!-- Password & Terms -->
           <div class="glass-card rounded-3xl p-4 space-y-3">
-            <h2 class="text-sm font-bold">${L('Security & Data', 'الأمان والبيانات')}</h2>
-            <div class="grid grid-cols-2 gap-2.5">
-              <button type="button" data-modal="change-password" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Change Password', 'تغيير كلمة المرور')}</button>
-              <button type="button" data-action="signout" class="h-11 rounded-xl glass-card text-xs font-bold text-amber-400 cursor-pointer">${L('Sign Out', 'تسجيل الخروج')}</button>
-            </div>
+            <h2 class="text-sm font-bold">${L('Security & Privacy Policy', 'الأمان وسياسة الخصوصية')}</h2>
+            <button type="button" data-modal="change-password" class="w-full h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${L('Change Password', 'تغيير كلمة المرور')}</button>
             <p class="text-[11px] text-sec leading-relaxed">${esc(L('Account data is protected with real-time Auto Backup. Contact Admin if you ever need account data deleted or restored.', 'بيانات الحساب محمية بالنسخ الاحتياطي التلقائي. تواصل مع المسؤول إذا كنت بحاجة إلى حذف البيانات أو استعادتها.'))}</p>
             <div class="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
               <div class="min-w-0">
@@ -9790,6 +9945,13 @@
               </div>
               <button type="button" data-action="open-terms" class="px-3.5 h-9 rounded-xl glass-card border border-cyan-400/35 text-xs font-bold text-cyan-300 shrink-0 cursor-pointer">${esc(L('View Terms', 'عرض الشروط'))}</button>
             </div>
+          </div>
+
+          <!-- 10) LOGOUT -->
+          <div class="glass-card rounded-3xl p-4 border border-rose-500/30">
+            <button type="button" data-action="signout" class="w-full h-11 rounded-xl bg-rose-600/25 hover:bg-rose-600/40 border border-rose-400/50 text-xs font-extrabold text-rose-200 cursor-pointer">
+              10. ${L('Logout / Sign Out', 'تسجيل الخروج')}
+            </button>
           </div>
         </div>
       `;
@@ -10040,8 +10202,14 @@
               </div>
             </div>
 
-            ${ui.adminLoading ? `
-              <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Users aur Auto Backups load ho rahe hain...</div>
+            ${ui.adminLoading && users.length === 0 ? `
+              <div class="fixed inset-0 z-[1500] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4">
+                <div class="glass-card rounded-3xl p-8 flex flex-col items-center justify-center gap-3 text-center max-w-xs w-full border border-[#C9A227]/40 shadow-2xl">
+                  <div class="w-12 h-12 rounded-full border-4 border-[#C9A227]/30 border-t-[#F5D061] animate-spin"></div>
+                  <div class="text-sm font-extrabold text-white">Loading user data...</div>
+                  <div class="text-xs text-sec">Please wait...</div>
+                </div>
+              </div>
             ` : filtered.length === 0 ? `
               <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">Is filter me koi user nahi mila.</div>
             ` : `
@@ -10147,8 +10315,9 @@
         : null;
 
       const topAdminActionsBar = `
-        <div class="grid grid-cols-3 gap-2 pt-1 border-t border-white/15">
-          <button type="button" data-admin-approve-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-extrabold cursor-pointer">✓ Approve KYC</button>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-white/15">
+          <button type="button" data-admin-approve-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400/45 text-emerald-100 text-xs font-extrabold cursor-pointer">✓ Approve KYC</button>
+          <button type="button" data-admin-reject-kyc="${esc(uidVal)}" class="h-10 rounded-xl bg-rose-500/25 hover:bg-rose-500/35 border border-rose-400/45 text-rose-100 text-xs font-extrabold cursor-pointer">✕ Reject KYC</button>
           <button type="button" data-admin-mark-duplicate="${esc(uidVal)}" class="h-10 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-extrabold cursor-pointer">⚠ Mark Duo</button>
           <button type="button" data-admin-toggle-block="${esc(uidVal)}:${p.blocked ? 'unblock' : 'block'}" class="h-10 rounded-xl ${p.blocked ? 'bg-cyan-400 text-slate-950' : 'bg-rose-500 text-white'} text-xs font-extrabold cursor-pointer">${p.blocked ? 'Unblock User' : 'Block User'}</button>
         </div>
@@ -10208,17 +10377,28 @@
         </div>`;
       };
 
-      const renderSharedAccountModulesHtml = () => `
+      const renderSharedAccountModulesHtml = () => {
+        const dieselEntries = txs.filter(x => x.type === 'expense' && String(x.category || '').toLowerCase().includes('diesel'));
+        const dieselSum = dieselEntries.reduce((s, x) => s + Number(x.amount || 0), 0);
+        const messSum = messEntries.reduce((s, x) => s + Number(x.amount || 0), 0);
+        const lowStockCount = stock.filter(s => Number(s.qty || 0) <= Number(s.minQty ?? 5)).length;
+        return `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="glass-card rounded-3xl p-4 space-y-2">
-            <h2 class="text-sm font-bold">Stock Items (${stock.length})</h2>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="text-sm font-bold">Stock Items (${stock.length})</h2>
+              ${lowStockCount > 0 ? `<span class="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/45 text-rose-300 text-[10px] font-extrabold">⚠ ${lowStockCount} Low Stock</span>` : ''}
+            </div>
             <div class="max-h-56 overflow-y-auto space-y-1">
-              ${stock.map(s => `
-                <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between text-xs tabular-nums">
-                  <span class="truncate">${esc(s.item)} (${esc(s.category || '-')})</span>
-                  <span class="font-bold text-cyan-300 shrink-0">${esc(s.qty)} ${esc(s.unit || 'Pcs')}</span>
-                </div>
-              `).join('') || `<p class="text-xs text-sec">No stock items.</p>`}
+              ${stock.map(s => {
+                const isLow = Number(s.qty || 0) <= Number(s.minQty ?? 5);
+                return `
+                  <div class="py-1.5 border-b border-white/10 last:border-0 flex justify-between items-center gap-2 text-xs tabular-nums ${isLow ? 'text-rose-200' : ''}">
+                    <span class="truncate">${esc(s.item)} (${esc(s.category || '-')}) ${isLow ? '<span class="text-rose-300 font-bold">⚠ Low</span>' : ''}</span>
+                    <span class="font-bold ${isLow ? 'text-rose-300' : 'text-cyan-300'} shrink-0">${esc(s.qty)} ${esc(s.unit || 'Pcs')}</span>
+                  </div>
+                `;
+              }).join('') || `<p class="text-xs text-sec">No stock items.</p>`}
             </div>
           </div>
 
@@ -10247,11 +10427,12 @@
           </div>
 
           <div class="glass-card rounded-3xl p-4 space-y-2">
-            <h2 class="text-sm font-bold">Payments &amp; Operations (${custPayments.length + partyPayments.length + messEntries.length + rentPayments.length + committees.length})</h2>
+            <h2 class="text-sm font-bold">Payments &amp; Operations (${custPayments.length + partyPayments.length + messEntries.length + dieselEntries.length + rentPayments.length + committees.length})</h2>
             <div class="max-h-56 overflow-y-auto space-y-1 text-xs">
               <div class="flex justify-between py-1 border-b border-white/10"><span>Customer Payments</span><span class="font-bold text-emerald-400">${custPayments.length}</span></div>
               <div class="flex justify-between py-1 border-b border-white/10"><span>Party Payments</span><span class="font-bold text-amber-300">${partyPayments.length}</span></div>
-              <div class="flex justify-between py-1 border-b border-white/10"><span>Mess Entries</span><span class="font-bold">${messEntries.length}</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Mess Entries</span><span class="font-bold tabular-nums">${messEntries.length} (${esc(fmtRs(messSum))})</span></div>
+              <div class="flex justify-between py-1 border-b border-white/10"><span>Diesel Entries</span><span class="font-bold text-amber-300 tabular-nums">${dieselEntries.length} (${esc(fmtRs(dieselSum))})</span></div>
               <div class="flex justify-between py-1 border-b border-white/10"><span>Rent Records / Payments</span><span class="font-bold">${rentRecords.length} / ${rentPayments.length}</span></div>
               <div class="flex justify-between py-1 border-b border-white/10"><span>Committees &amp; Archives</span><span class="font-bold">${committees.length} / ${archived.length}</span></div>
               ${backups.slice(0, 3).map(b => `
@@ -10264,6 +10445,7 @@
           </div>
         </div>
       `;
+      };
 
       // SUB-VIEW 1: CUSTOMERS LIST
       const renderAdminCustomersListSubView = () => {
@@ -10410,8 +10592,23 @@
             </div>
           </div>
 
-          ${ui.adminLoading || !d ? `
-            <div class="glass-card rounded-3xl p-8 text-center text-sm text-sec">User ka poora backed-up Cloud data load ho raha hai...</div>
+          ${!d && ui.adminInspectError ? `
+            <div class="fixed inset-0 z-[1500] bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+              <div class="w-full max-w-xs glass-strong rounded-3xl p-6 space-y-4 border border-rose-400/40 shadow-2xl">
+                <div class="text-sm font-extrabold text-rose-300">Failed to load user data.</div>
+                <p class="text-xs text-sec">${esc(ui.adminInspectError)}</p>
+                <div class="space-y-2">
+                  <button type="button" data-action="admin-retry-inspect" class="w-full h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">Failed to load. Tap to Retry</button>
+                  <button type="button" data-action="admin-back" class="w-full h-10 rounded-xl glass-card text-xs font-bold text-sec cursor-pointer">Back to Users</button>
+                </div>
+              </div>
+            </div>
+          ` : (ui.adminLoading && !d) || !d ? `
+            <div class="fixed inset-0 z-[1500] bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+              <div class="w-14 h-14 rounded-full border-4 border-[#C9A227]/30 border-t-[#F5D061] animate-spin shadow-lg"></div>
+              <div class="mt-4 text-base font-extrabold text-white">Loading user data...</div>
+              <div class="mt-1 text-xs text-amber-200/90 font-semibold">Please wait...</div>
+            </div>
           ` : subView === 'customers' ? renderAdminCustomersListSubView()
             : subView === 'customer-detail' ? renderAdminSingleCustomerDetailSubView()
             : `
@@ -11157,9 +11354,10 @@
             </div>
           </div>`;
       } else if (type === 'notifications') {
+        markNotificationsRead();
+        document.getElementById('dashboard-bell-badge')?.remove();
         const lowItems = getLowStockItems();
         const history = Array.isArray(state.notificationHistory) ? state.notificationHistory : [];
-        const unread = getUnreadNotificationCount();
         const todayKey = todayISO();
         const yd = new Date(); yd.setDate(yd.getDate() - 1);
         const ydayKey = yd.getFullYear() + '-' + String(yd.getMonth() + 1).padStart(2, '0') + '-' + String(yd.getDate()).padStart(2, '0');
@@ -11171,7 +11369,7 @@
           else if (dk === ydayKey) groups.Yesterday.push(n);
           else groups.Older.push(n);
         });
-        title = `${L('Notifications', 'الإشعارات')} (${unread + lowItems.length})`;
+        title = `${L('Notifications', 'الإشعارات')} (${history.length + lowItems.length})`;
         content = `
           <div class="space-y-3.5">
             <div class="flex items-center justify-between gap-2">
@@ -11205,10 +11403,9 @@
                 <div class="space-y-2">
                   <div class="text-[11px] font-extrabold text-sec uppercase tracking-wider">${esc(gkLabel)}</div>
                   ${items.map(n => `
-                    <div class="rounded-2xl p-3 flex items-start justify-between gap-2 border ${n.read ? 'bg-white/5 border-white/10' : 'bg-cyan-500/10 border-cyan-400/35'}">
+                    <div data-notif-row="${esc(n.id)}" class="rounded-2xl p-3 flex items-start justify-between gap-2 border transition-transform duration-150 ${n.read ? 'bg-white/5 border-white/10' : 'bg-cyan-500/10 border-cyan-400/35'}">
                       <button type="button" data-notif-open="${esc(n.id)}" class="min-w-0 flex-1 text-start cursor-pointer">
                         <div class="flex items-center gap-1.5">
-                          ${!n.read ? `<span class="w-2 h-2 rounded-full bg-rose-400 shrink-0"></span>` : ''}
                           <span class="text-xs font-bold text-white leading-snug">${esc(n.title)}</span>
                         </div>
                         <div class="text-[10px] text-sec mt-1 tabular-nums" dir="ltr">${esc(formatNotifFullDate(n.createdAt))}</div>
@@ -11220,6 +11417,28 @@
               `;
             }).join('')}
           </div>`;
+      } else if (type === 'edit-profile') {
+        const s = state.session || {};
+        const curPic = String(s.photo || state.kyc?.selfiePhoto || '').trim();
+        title = L('Edit Profile', 'تعديل الملف الشخصي');
+        content = `
+          <form id="modal-edit-profile-form" class="space-y-3.5">
+            <div class="flex items-center gap-3.5">
+              ${curPic ? `<img src="${esc(curPic)}" alt="Profile" referrerpolicy="no-referrer" class="w-16 h-16 rounded-full object-cover ring-2 ring-[#C9A227] shrink-0 bg-slate-900" />` : renderLogoAvatar('w-16 h-16', 'ring-2 ring-[#C9A227]')}
+              <label class="px-4 h-10 rounded-xl btn-primary-grad text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer">
+                <span>📷 ${esc(L('Upload Photo from Gallery', 'رفع صورة من المعرض'))}</span>
+                <input id="profile-pic-file" type="file" accept="image/*" class="hidden" />
+              </label>
+            </div>
+            <div><label class="block text-xs text-sec mb-1">${esc(L('Full Name *', 'الاسم الكامل *'))}</label><input name="name" type="text" required value="${esc(s.name || '')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div><label class="block text-xs text-sec mb-1">${esc(L('Phone Number', 'رقم الهاتف'))}</label><input name="mobile" type="tel" dir="ltr" value="${esc(s.mobile || state.settings?.ownerMobile || '')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm tabular-nums" /></div>
+              <div><label class="block text-xs text-sec mb-1">${esc(L('Email', 'البريد الإلكتروني'))}</label><input name="email" type="email" dir="ltr" value="${esc(s.email || state.settings?.ownerEmail || '')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            </div>
+            <div><label class="block text-xs text-sec mb-1">${esc(L('Shop Name', 'اسم الورشة'))}</label><input name="shopName" type="text" maxlength="30" value="${esc(state.settings?.shopName || 'Warsha Aluminium')}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            <div><label class="block text-xs text-sec mb-1">${esc(L('Address', 'العنوان'))}</label><input name="address" type="text" value="${esc(state.settings?.shopAddress || '')}" placeholder="${esc(L('Shop / City Address', 'عنوان الورشة / المدينة'))}" class="w-full h-11 px-3 rounded-xl glass-input text-sm" /></div>
+            <button type="submit" class="w-full h-12 rounded-xl btn-primary-grad font-bold text-sm cursor-pointer">${esc(L('Save Profile Changes', 'حفظ تغييرات الملف'))}</button>
+          </form>`;
       } else if (type === 'add-supplier') {
         title = L('Add Supplier Party', 'إضافة مورد / تاجر');
         content = `
@@ -11449,11 +11668,12 @@
               ${esc(L('Your Khata data will be restored from', 'سيتم استعادة بيانات الدفتر من الملف'))}
               <span class="font-bold text-white" dir="ltr">${esc(info.fileName || 'DigitalKhata_Warsha_Backup.json')}</span>
               ${info.modifiedTime ? ` (${esc(L('Saved:', 'تاريخ الحفظ:'))} <span class="font-bold text-amber-300">${esc(formatDriveIsoTime(info.modifiedTime))}</span>)` : ''},
-              ${esc(L('replacing current local records. Do you want to continue?', 'وسيتم استبدال السجلات المحلية الحالية. هل تريد المتابعة؟'))}
+              ${esc(L('replacing your current local data.', 'مما يستبدل بياناتك المحلية الحالية.'))}
+              <strong class="block mt-2 text-amber-300">${esc(L('Overwrite? YES / NO', 'هل تريد الاستبدال؟ نعم / لا'))}</strong>
             </p>
             <div class="grid grid-cols-2 gap-3">
-              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('Cancel', 'إلغاء'))}</button>
-              <button type="button" data-action="confirm-drive-restore" class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">${esc(L('Yes, Restore Data', 'نعم، استعادة البيانات'))}</button>
+              <button type="button" data-close-modal class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('NO, Cancel', 'لا، إلغاء'))}</button>
+              <button type="button" data-action="confirm-drive-restore" class="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">${esc(L('YES, Overwrite & Restore', 'نعم، استبدال واستعادة'))}</button>
             </div>
           </div>`;
       } else if (type === 'confirm-admin-restore') {
@@ -11604,21 +11824,27 @@
           </div>`;
       } else if (type === 'bg-preview') {
         const previewSrc = ui.pendingBgPreview || '';
-        const blurPx = Number(state.settings?.appBackground?.blur || 0);
-        const ovOp = Math.min(0.70, Math.max(0, Number(state.settings?.appBackground?.overlay ?? 30) / 100));
-        title = L('Apply Custom Background?', 'تطبيق الخلفية المخصصة؟');
+        const fitMode = ui.pendingBgPreviewFit === 'contain' ? 'contain' : 'cover';
+        const curBg = normalizeAppBackground(state.settings?.appBackground);
+        const blurPx = Number(curBg.blur ?? 14);
+        const ovOp = Math.min(0.70, Math.max(0, Number(curBg.overlay ?? 45) / 100));
+        title = L('Background Preview', 'معاينة الخلفية');
         content = `
           <div class="space-y-4">
-            <div class="relative h-56 w-full rounded-2xl overflow-hidden border border-white/20 bg-slate-950">
-              ${previewSrc ? `<img src="${esc(previewSrc)}" alt="Background Preview" style="filter:blur(${blurPx}px);transform:scale(1.06);" class="w-full h-full object-cover" />` : ''}
+            <div class="relative h-56 w-full rounded-2xl overflow-hidden border border-white/30 bg-slate-950">
+              ${previewSrc ? `<img src="${esc(previewSrc)}" alt="Background Preview" style="filter:blur(${blurPx}px);transform:scale(1.06);" class="w-full h-full ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}" />` : ''}
               <div style="background:rgba(0,0,0,${ovOp});" class="absolute inset-0 flex items-center justify-center">
-                <div class="rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 px-4 py-2 text-xs font-extrabold text-white">${esc((state.settings?.shopName || '').trim() || 'Warsha Aluminium')}</div>
+                <div class="rounded-2xl bg-white/15 backdrop-blur-md border border-white/30 px-4 py-2 text-xs font-extrabold text-white">${esc((state.settings?.shopName || '').trim() || 'Warsha Aluminium')}</div>
               </div>
             </div>
-            <p class="text-xs text-sec text-center">${esc(L('Do you want to apply this wallpaper across the app?', 'هل تريد تطبيق هذه الخلفية على كامل التطبيق؟'))}</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-bg-preview-fit="cover" class="h-9 rounded-xl border text-xs font-bold cursor-pointer ${fitMode === 'cover' ? 'border-cyan-400 bg-cyan-500/20 text-white' : 'border-white/15 glass-card text-sec'}">${esc(L('Fill / Crop Screen', 'ملء الشاشة'))}</button>
+              <button type="button" data-bg-preview-fit="contain" class="h-9 rounded-xl border text-xs font-bold cursor-pointer ${fitMode === 'contain' ? 'border-cyan-400 bg-cyan-500/20 text-white' : 'border-white/15 glass-card text-sec'}">${esc(L('Fit Full Photo', 'احتواء الصورة'))}</button>
+            </div>
+            <p class="text-sm font-bold text-white text-center">${esc(L('Ye background lagana hai?', 'هل تريد تعيين هذه الخلفية؟'))}</p>
             <div class="grid grid-cols-2 gap-3">
               <button type="button" data-action="cancel-bg-preview" class="h-11 rounded-xl glass-card text-xs font-bold cursor-pointer">${esc(L('NO', 'لا'))}</button>
-              <button type="button" data-action="apply-bg-preview" class="h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${esc(L('YES, Apply', 'نعم، تطبيق'))}</button>
+              <button type="button" data-action="apply-bg-preview" class="h-11 rounded-xl btn-primary-grad text-xs font-extrabold cursor-pointer">${esc(L('YES', 'نعم'))}</button>
             </div>
           </div>`;
       } else if (type === 'confirm-logout-drive') {
@@ -12353,8 +12579,26 @@
 
       const themeBtn = t.closest('[data-set-theme]');
       if (themeBtn) {
-        state.settings.theme = themeBtn.getAttribute('data-set-theme');
-        saveState(); render(); toast(L('Theme updated', 'تم تحديث المظهر'), 'success'); return;
+        const nextTheme = themeBtn.getAttribute('data-set-theme');
+        if (['dark-blue', 'light', 'purple', 'black'].includes(nextTheme)) {
+          state.settings.theme = nextTheme;
+          if (!isAdminSession()) {
+            const curBg = normalizeAppBackground(state.settings.appBackground);
+            state.settings.appBackground = { ...curBg, mode: 'color', imageUrl: '' };
+          }
+          saveState();
+          applyTheme();
+          render();
+          toast(L('Theme & Background updated ✓', 'تم تحديث اللون والخلفية ✓'), 'success');
+        }
+        return;
+      }
+
+      const bgFitBtn = t.closest('[data-bg-preview-fit]');
+      if (bgFitBtn) {
+        ui.pendingBgPreviewFit = bgFitBtn.getAttribute('data-bg-preview-fit') === 'contain' ? 'contain' : 'cover';
+        openModal('bg-preview');
+        return;
       }
 
       const langBtn = t.closest('[data-set-lang]');
@@ -12440,10 +12684,28 @@
           toast(L('User KYC Approved ✓', 'تمت الموافقة على هوية المستخدم ✓'), 'success');
           await loadAdminUsersList();
           if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
-            await openAdminInspectUser(targetUid, { preserveSubView: true });
+            await openAdminInspectUser(targetUid, { forceReload: true, preserveSubView: true });
           }
         } catch (err) {
           toast(L('Approve failed: ', 'فشلت الموافقة: ') + (err.message || err), 'error');
+        }
+        return;
+      }
+
+      const adminRejectBtn = t.closest('[data-admin-reject-kyc]');
+      if (adminRejectBtn) {
+        const targetUid = adminRejectBtn.getAttribute('data-admin-reject-kyc');
+        const cloud = getCloud();
+        if (!cloud || !isAdminSession() || !targetUid) return;
+        try {
+          await cloud.adminUpdateUserStatus(targetUid, { kycStatus: 'none', kycDuplicateOf: '' });
+          toast(L('User KYC Rejected / Reset ✕', 'تم رفض / إعادة تعيين توثيق المستخدم ✕'), 'info');
+          await loadAdminUsersList();
+          if (ui.view === 'admin-inspect' && ui.adminInspectUid === targetUid) {
+            await openAdminInspectUser(targetUid, { forceReload: true, preserveSubView: true });
+          }
+        } catch (err) {
+          toast(L('Reject failed: ', 'فشل الرفض: ') + (err.message || err), 'error');
         }
         return;
       }
@@ -12605,6 +12867,7 @@
         const nid = notifDelBtn.getAttribute('data-notif-delete');
         state.notificationHistory = (state.notificationHistory || []).filter(n => n.id !== nid);
         saveState();
+        updateBellBadgeDom();
         openModal('notifications');
         render();
         return;
@@ -12861,6 +13124,7 @@
         markNotificationsRead();
         if (document.getElementById('modal-backdrop')) openModal('notifications');
         render();
+        updateBellBadgeDom();
         toast(L('All notifications marked read ✓', 'تم تحديد جميع الإشعارات كمقروءة ✓'), 'info', { skipHistory: true });
       }
       else if (act === 'notif-clear-all') {
@@ -12868,30 +13132,59 @@
         saveState();
         if (document.getElementById('modal-backdrop')) openModal('notifications');
         render();
+        updateBellBadgeDom();
         toast(L('Notification history cleared', 'تم مسح سجل الإشعارات'), 'info', { skipHistory: true });
       }
+      else if (act === 'set-bg-workshop') {
+        const curBg = normalizeAppBackground(state.settings?.appBackground);
+        state.settings.appBackground = { ...curBg, mode: 'workshop', imageUrl: '' };
+        saveState();
+        applyTheme();
+        render();
+        toast(L('Workshop Photo Background active ✓', 'تم تفعيل خلفية صورة الورشة ✓'), 'success');
+      }
+      else if (act === 'reset-bg-default') {
+        state.settings.theme = 'dark-blue';
+        state.settings.appBackground = { mode: 'workshop', imageUrl: '', fit: 'cover', blur: 14, overlay: 45 };
+        saveState();
+        applyTheme();
+        render();
+        toast(L('Background reset to Default Workshop Photo ✓', 'تمت إعادة ضبط الخلفية للافتراضي ✓'), 'success');
+      }
       else if (act === 'apply-bg-preview') {
-        if (!state.settings.appBackground) state.settings.appBackground = { imageUrl: '', blur: 0, overlay: 30 };
-        if (ui.pendingBgPreview) {
-          state.settings.appBackground.imageUrl = ui.pendingBgPreview;
-        }
+        const curBg = normalizeAppBackground(state.settings?.appBackground);
+        state.settings.appBackground = {
+          mode: 'gallery',
+          imageUrl: ui.pendingBgPreview || curBg.imageUrl || '',
+          fit: ui.pendingBgPreviewFit === 'contain' ? 'contain' : 'cover',
+          blur: curBg.blur ?? 14,
+          overlay: curBg.overlay ?? 45
+        };
         ui.pendingBgPreview = '';
         closeModal();
         saveState();
         applyTheme();
         render();
-        toast(L('Custom background applied ✓', 'تم تطبيق الخلفية المخصصة ✓'), 'success');
+        flushCloudSync();
+        toast(L('Custom background applied across app ✓', 'تم تطبيق الخلفية المخصصة على كامل التطبيق ✓'), 'success');
       }
       else if (act === 'cancel-bg-preview') {
         ui.pendingBgPreview = '';
         closeModal();
+        setTimeout(() => document.getElementById('app-bg-file')?.click(), 60);
       }
       else if (act === 'remove-custom-bg') {
-        state.settings.appBackground = { imageUrl: '', blur: 0, overlay: 30 };
+        state.settings.appBackground = { mode: 'workshop', imageUrl: '', fit: 'cover', blur: 14, overlay: 45 };
         saveState();
         applyTheme();
         render();
-        toast(L('Custom background removed', 'تمت إزالة الخلفية المخصصة'), 'info');
+        flushCloudSync();
+        toast(L('Custom background removed — Default Workshop Photo active', 'تمت إزالة الخلفية — الخلفية الافتراضية مفعلة'), 'info');
+      }
+      else if (act === 'admin-retry-inspect') {
+        if (ui.adminInspectUid) {
+          await openAdminInspectUser(ui.adminInspectUid, { forceReload: true, preserveSubView: true });
+        }
       }
       else if (act === 'cloud-backup-now') { await manualCloudBackupNow(); }
       else if (act === 'cloud-restore-now') { await restoreFromCloudBackup(); }
@@ -13035,18 +13328,24 @@
         localStorage.removeItem(ACTIVE_UID_KEY);
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PENDING_SYNC_KEY);
+        localStorage.removeItem(THEME_PREF_KEY);
+        saveBioMeta(null);
         sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
         if (cloud) { try { await cloud.signOutUser(); } catch (e) {} }
         const remKeep = loadRememberMe();
         state = defaultData();
         state.rememberMe = remKeep;
+        state.settings.theme = 'dark-blue';
+        state.settings.appBackground = { mode: 'workshop', imageUrl: '', fit: 'cover', blur: 14, overlay: 45 };
         ui.cloudHydrating = false;
         ui.loginPending = false;
         ui.pendingApproval = null;
         ui.pinLocked = false;
+        ui.appLocked = false;
         ui.authMode = 'login';
         ui.view = 'login';
         closeModal();
+        applyTheme();
         render();
         toast(L('Logged out from all devices ✓', 'تم تسجيل الخروج من جميع الأجهزة ✓'), 'success');
       }
@@ -13326,10 +13625,14 @@
       localStorage.removeItem(ACTIVE_UID_KEY);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(PENDING_SYNC_KEY);
+      localStorage.removeItem(THEME_PREF_KEY);
+      saveBioMeta(null);
       sessionStorage.removeItem(PIN_UNLOCK_SESSION_KEY);
       const remKeep = loadRememberMe();
       state = defaultData();
       state.rememberMe = remKeep;
+      state.settings.theme = 'dark-blue';
+      state.settings.appBackground = { mode: 'workshop', imageUrl: '', fit: 'cover', blur: 14, overlay: 45 };
       ui.appLocked = false;
       ui.bioFailedCount = 0;
       ui.pendingBgPreview = '';
@@ -14483,6 +14786,39 @@
         return;
       }
 
+      if (f.id === 'modal-edit-profile-form') {
+        const fd = new FormData(f);
+        const newName = String(fd.get('name') || '').trim();
+        const newMobile = String(fd.get('mobile') || '').trim();
+        const newEmail = String(fd.get('email') || '').trim();
+        const newShop = String(fd.get('shopName') || '').trim().slice(0, 30);
+        const newAddr = String(fd.get('address') || '').trim();
+        if (!newName) { toast(L('Name is required.', 'الاسم مطلوب.'), 'error'); return; }
+        if (state.session) {
+          state.session.name = newName;
+          if (newMobile) state.session.mobile = newMobile;
+          if (newEmail) state.session.email = newEmail;
+        }
+        if (state.settings) {
+          state.settings.ownerName = newName;
+          if (newMobile) state.settings.ownerMobile = newMobile;
+          if (newEmail) state.settings.ownerEmail = newEmail;
+          if (newShop) state.settings.shopName = newShop;
+          state.settings.shopAddress = newAddr;
+        }
+        if (state.kyc) {
+          state.kyc.fullName = newName;
+          if (newMobile) state.kyc.mobile = newMobile;
+          if (newShop) state.kyc.shopName = newShop;
+        }
+        saveState();
+        closeModal();
+        render();
+        await flushCloudSync();
+        toast(L('Profile updated & synced ✓', 'تم تحديث الملف الشخصي ومزامنته ✓'), 'success');
+        return;
+      }
+
       if (f.id === 'modal-chpass-form') {
         const fd = new FormData(f);
         const np = fd.get('newPass').toString();
@@ -14790,8 +15126,8 @@
       }
       if (t.id === 'app-bg-blur') {
         const v = Math.min(20, Math.max(0, Number(t.value || 0)));
-        if (!state.settings.appBackground) state.settings.appBackground = { imageUrl: '', blur: 0, overlay: 30 };
-        state.settings.appBackground.blur = v;
+        const curBg = normalizeAppBackground(state.settings?.appBackground);
+        state.settings.appBackground = { ...curBg, blur: v };
         const lbl = document.getElementById('app-bg-blur-val');
         if (lbl) lbl.textContent = v + 'px';
         applyAppBackground();
@@ -14799,8 +15135,8 @@
       }
       if (t.id === 'app-bg-overlay') {
         const v = Math.min(70, Math.max(0, Number(t.value || 0)));
-        if (!state.settings.appBackground) state.settings.appBackground = { imageUrl: '', blur: 0, overlay: 30 };
-        state.settings.appBackground.overlay = v;
+        const curBg = normalizeAppBackground(state.settings?.appBackground);
+        state.settings.appBackground = { ...curBg, overlay: v };
         const lbl = document.getElementById('app-bg-overlay-val');
         if (lbl) lbl.textContent = v + '%';
         applyAppBackground();
@@ -15027,20 +15363,79 @@
         if (t.checked) maybeRunDriveAutoBackup();
         return;
       }
+      if (t.id === 'profile-pic-file' && t.files && t.files[0]) {
+        try {
+          const picUrl = await compressImageFile(t.files[0], 320, 0.78);
+          if (state.session) state.session.photo = picUrl;
+          saveState();
+          if (document.getElementById('modal-edit-profile-form')) openModal('edit-profile');
+          render();
+          await flushCloudSync();
+          toast(L('Profile picture updated ✓', 'تم تحديث صورة الملف الشخصي ✓'), 'success');
+        } catch (err) {
+          toast(L('Could not load photo. Check Gallery permission or image format.', 'تعذر تحميل الصورة. تحقق من صلاحية المعرض.'), 'error');
+        } finally {
+          t.value = '';
+        }
+        return;
+      }
       if (t.id === 'app-bg-file' && t.files && t.files[0]) {
         try {
           toast(L('Preparing wallpaper preview...', 'جاري تجهيز معاينة الخلفية...'), 'info', { skipHistory: true });
           const dataUrl = await compressImageFile(t.files[0], 800, 0.68);
           ui.pendingBgPreview = dataUrl;
+          ui.pendingBgPreviewFit = state.settings?.appBackground?.fit === 'contain' ? 'contain' : 'cover';
           openModal('bg-preview');
         } catch (err) {
-          toast(L('Could not load wallpaper image.', 'تعذر تحميل صورة الخلفية.'), 'error');
+          toast(L('Could not load wallpaper image. Please select a valid photo.', 'تعذر تحميل صورة الخلفية. يرجى اختيار صورة صالحة.'), 'error');
         } finally {
           t.value = '';
         }
         return;
       }
     });
+
+    // Swipe-to-Delete on Notification History rows inside Bell modal
+    let notifSwipeRow = null;
+    let notifSwipeStartX = 0;
+    let notifSwipeDx = 0;
+    document.addEventListener('touchstart', (ev) => {
+      const row = ev.target?.closest?.('[data-notif-row]');
+      if (!row || !ev.touches || !ev.touches[0]) return;
+      notifSwipeRow = row;
+      notifSwipeStartX = ev.touches[0].clientX;
+      notifSwipeDx = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', (ev) => {
+      if (!notifSwipeRow || !ev.touches || !ev.touches[0]) return;
+      notifSwipeDx = ev.touches[0].clientX - notifSwipeStartX;
+      if (Math.abs(notifSwipeDx) > 10) {
+        notifSwipeRow.style.transform = `translateX(${notifSwipeDx}px)`;
+        notifSwipeRow.style.opacity = String(Math.max(0.25, 1 - Math.abs(notifSwipeDx) / 140));
+      }
+    }, { passive: true });
+    document.addEventListener('touchend', () => {
+      if (!notifSwipeRow) return;
+      const row = notifSwipeRow;
+      const dx = notifSwipeDx;
+      notifSwipeRow = null;
+      notifSwipeDx = 0;
+      if (Math.abs(dx) > 70) {
+        const nid = row.getAttribute('data-notif-row');
+        row.style.transform = `translateX(${dx > 0 ? 180 : -180}px)`;
+        row.style.opacity = '0';
+        setTimeout(() => {
+          state.notificationHistory = (state.notificationHistory || []).filter(n => n.id !== nid);
+          saveState();
+          updateBellBadgeDom();
+          if (document.getElementById('modal-backdrop')) openModal('notifications');
+          render();
+        }, 140);
+      } else {
+        row.style.transform = '';
+        row.style.opacity = '';
+      }
+    }, { passive: true });
 
     // Cloud Bridge + Offline/Online Auto Sync Listeners
     let cloudBridgeBound = false;

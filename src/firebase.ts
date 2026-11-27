@@ -2016,15 +2016,16 @@ export const dkCloud = {
   },
 
   // ---------------- ADMIN PANEL OPERATIONS ----------------
-  async adminListAllUsers(): Promise<Array<Record<string, unknown>>> {
+  async adminListAllUsers(options?: { skipBackups?: boolean }): Promise<Array<Record<string, unknown>>> {
     if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
       throw new Error('Admin authorization required.');
     }
     try {
-      const [userSnaps, backupSnaps] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'adminBackups')).catch(() => null)
-      ]);
+      const userSnapsPromise = getDocs(collection(db, 'users'));
+      const backupSnapsPromise = options?.skipBackups
+        ? Promise.resolve(null)
+        : getDocs(collection(db, 'adminBackups')).catch(() => null);
+      const [userSnaps, backupSnaps] = await Promise.all([userSnapsPromise, backupSnapsPromise]);
       const backupMap = new Map<string, Record<string, unknown>>();
       if (backupSnaps) {
         backupSnaps.docs.forEach((bDoc) => {
@@ -2048,7 +2049,7 @@ export const dkCloud = {
           email: String(u.email || bk?.email || ''),
           isDataDeleted: Boolean(bk?.isDataDeleted ?? false),
           deletedAt: Number(bk?.deletedAt ?? 0),
-          recordCount: Number(bk?.recordCount ?? 0),
+          recordCount: Number(bk?.recordCount ?? u.customerCount ?? 0),
           adminBackupAt: Number(bk?.lastBackupAt ?? bk?.updatedAt ?? u.lastSyncAt ?? 0),
           lastRestoredAt: Number(bk?.lastRestoredAt ?? u.lastAdminRestoreAt ?? 0),
           lastRestoredBy: String(bk?.lastRestoredBy ?? '')
@@ -2091,36 +2092,44 @@ export const dkCloud = {
     if (!auth.currentUser || !isAdminEmail(auth.currentUser.email)) {
       throw new Error('Admin authorization required.');
     }
-    let profile: Record<string, unknown> | null = null;
-    try {
-      const snap = await getDoc(doc(db, 'users', uid));
-      if (snap.exists()) profile = snap.data();
-    } catch (err) {
-      handleFirestoreError(err, OperationType.GET, `users/${uid}`);
-    }
+    const shardIds = ['core', 'ledger', 'operations', 'kyc'] as const;
 
-    let adminBackup: Record<string, unknown> | null = null;
-    try {
-      const abSnap = await getDoc(doc(db, 'adminBackups', uid));
-      if (abSnap.exists()) adminBackup = abSnap.data();
-    } catch (err) {
-      handleFirestoreError(err, OperationType.GET, `adminBackups/${uid}`);
-    }
+    const [profileSnap, abSnap, shardSnaps, backupsSnap] = await Promise.all([
+      getDoc(doc(db, 'users', uid)).catch((err) => {
+        handleFirestoreError(err, OperationType.GET, `users/${uid}`);
+        return null;
+      }),
+      getDoc(doc(db, 'adminBackups', uid)).catch((err) => {
+        handleFirestoreError(err, OperationType.GET, `adminBackups/${uid}`);
+        return null;
+      }),
+      Promise.all(
+        shardIds.map((shardId) =>
+          getDoc(doc(db, 'users', uid, 'vault', shardId)).catch((err) => {
+            handleFirestoreError(err, OperationType.GET, `users/${uid}/vault/${shardId}`);
+            return null;
+          })
+        )
+      ),
+      getDocs(query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(10))).catch(() => null)
+    ]);
+
+    const profile: Record<string, unknown> | null = profileSnap && profileSnap.exists() ? profileSnap.data() : null;
+    const adminBackup: Record<string, unknown> | null = abSnap && abSnap.exists() ? abSnap.data() : null;
 
     const vaultData: Record<string, unknown> = {};
-    for (const shardId of ['core', 'ledger', 'operations', 'kyc'] as const) {
-      try {
-        const snap = await getDoc(doc(db, 'users', uid, 'vault', shardId));
-        if (snap.exists()) {
-          const d = snap.data();
-          if (typeof d.payloadJson === 'string' && d.payloadJson.length >= 2) {
+    shardSnaps.forEach((snap) => {
+      if (snap && snap.exists()) {
+        const d = snap.data();
+        if (typeof d.payloadJson === 'string' && d.payloadJson.length >= 2) {
+          try {
             Object.assign(vaultData, JSON.parse(d.payloadJson));
+          } catch {
+            /* ignore malformed shard */
           }
         }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, `users/${uid}/vault/${shardId}`);
       }
-    }
+    });
 
     // Prefer rich backed-up Admin snapshot (especially recoverable lastGoodBackupJson if user cleared/deleted data)
     if (adminBackup) {
@@ -2151,14 +2160,7 @@ export const dkCloud = {
       }
     }
 
-    const backups: Array<Record<string, unknown>> = [];
-    try {
-      const q = query(collection(db, 'users', uid, 'backups'), orderBy('createdAt', 'desc'), limit(10));
-      const snaps = await getDocs(q);
-      snaps.docs.forEach((d) => backups.push(d.data()));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.LIST, `users/${uid}/backups`);
-    }
+    const backups: Array<Record<string, unknown>> = backupsSnap ? backupsSnap.docs.map((d) => d.data()) : [];
 
     return { profile, vaultData, backups, adminBackup };
   },
